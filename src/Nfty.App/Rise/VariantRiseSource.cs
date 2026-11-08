@@ -11,8 +11,8 @@ namespace Nfty.App.Rise;
 
 /// <summary>
 /// The variants of one layer, risen as their STORED pixels (a Dynamic or Static variant is its
-/// grayscale value-map, exactly what <c>nfty model x.igt --variant v</c> writes). The only source
-/// that can save: depth goes back into the CookBook through <see cref="CookBookPersistence"/>, or into
+/// grayscale value-map, exactly what <c>nfty model x.igt --variant v</c> writes). Saved depth goes
+/// back into the CookBook through <see cref="CookBookPersistence"/>, or into
 /// the loose <c>.igt</c> the layer came from.
 /// </summary>
 public sealed class VariantRiseSource : RiseSource
@@ -160,6 +160,8 @@ public sealed class VariantRiseSource : RiseSource
     private async Task SaveCoreAsync()
     {
         bool loose = _looseSavePath is not null;
+        using var write = loose ? null : _session.TryBeginWrite()
+            ?? throw new InvalidOperationException("Wait for the CookBook's current save before writing depth.");
         var live = loose ? _looseLive : LiveIngredient();
 
         // Start from the live ingredient's depths so every variant we did not change keeps exactly
@@ -289,6 +291,8 @@ public sealed class VariantRiseSource : RiseSource
     {
         try
         {
+            using var write = _looseSavePath is not null ? null : _session.TryBeginWrite()
+                ?? throw new InvalidOperationException("Wait for the CookBook's current save before making art voxel-ready.");
             var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
             var result = VoxelReady.Apply(book);
             if (result.Changes.Count == 0) { result.Dispose(); return null; }
@@ -320,6 +324,8 @@ public sealed class VariantRiseSource : RiseSource
         _writeBusy = true;
         try
         {
+            using var write = _looseSavePath is not null ? null : _session.TryBeginWrite()
+                ?? throw new InvalidOperationException("Wait for the CookBook's current save before undoing voxel-ready.");
             var book = ScopeBook() ?? throw new InvalidOperationException("The CookBook is no longer open.");
             // Refuses (InvalidOperationException naming the variants) when any snapped variant was edited since.
             var restored = VoxelReady.Undo(book, applied);

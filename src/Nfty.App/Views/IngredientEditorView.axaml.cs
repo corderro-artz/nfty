@@ -240,13 +240,13 @@ public partial class IngredientEditorView : UserControl
         Rebind();
     }
 
-    /// <summary>The gesture the tools should act on: the raw path, or what the held modifiers make
-    /// of it. One helper, called by the preview and by the commit, so the two cannot disagree about
-    /// what was drawn.</summary>
     /// <summary>The tool this gesture is using: the armed one, or the eraser while the right button
     /// is down. Null means "whatever is armed", which is what the ViewModel's own default says.</summary>
     private EditorTool? _gestureTool => _erasing ? EditorTool.Eraser : null;
 
+    /// <summary>The gesture the tools should act on: the raw path, or what the held modifiers make
+    /// of it. One helper, called by the preview and by the commit, so the two cannot disagree about
+    /// what was drawn.</summary>
     private IReadOnlyList<(int x, int y)> Gesture()
     {
         if (_vm is null || _img.Source is not Bitmap bmp) return _points;
@@ -447,7 +447,7 @@ public partial class IngredientEditorView : UserControl
     }
 
     /// <summary>
-    /// Repaints the overlay: the live rubber band for the gesture in progress, plus the standing
+    /// Repaints the selection overlay: the Select tool's live band, plus the standing
     /// marquee if a region is marked. Both are outlines only — they show where something WILL be,
     /// and drawing them filled would hide the art they are being positioned against.
     /// </summary>

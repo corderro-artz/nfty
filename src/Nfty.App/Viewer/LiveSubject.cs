@@ -47,12 +47,14 @@ public sealed class LiveSubject : ViewerSubject
     private IReadOnlyList<ViewerFact> _facts = Array.Empty<ViewerFact>();
     private bool _pending;
     private bool _disposed;
+    private readonly Dispatcher _dispatcher;
 
     /// <summary>Follows a page.</summary>
     /// <param name="source">The page; it is not kept once it detaches.</param>
     public LiveSubject(ILiveViewerSource source)
     {
         ArgumentNullException.ThrowIfNull(source);
+        _dispatcher = Dispatcher.UIThread;
         _source = source;
         _title = source.ViewerTitle;
         AllowExport = source.AllowExport;
@@ -81,7 +83,7 @@ public sealed class LiveSubject : ViewerSubject
     {
         if (_pending || _disposed) return;
         _pending = true;
-        Dispatcher.UIThread.Post(Refresh, DispatcherPriority.Background);
+        _dispatcher.Post(Refresh, DispatcherPriority.Background);
     }
 
     private void Refresh()

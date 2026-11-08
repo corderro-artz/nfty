@@ -11,7 +11,9 @@ namespace Nfty.App;
 /// that need a window — the file picker, the folder revealer and the clipboard — on top.</summary>
 public static class ServiceRegistration
 {
-    /// <summary>Registers all Nfty.App services and ViewModels. Extended by later tasks.</summary>
+    /// <summary>Registers the shared services and view-model factories for an application head.</summary>
+    /// <param name="services">The container to extend.</param>
+    /// <returns>The same container, ready for platform-specific service overrides.</returns>
     public static IServiceCollection AddNftyApp(this IServiceCollection services)
     {
         services.AddSingleton<INavigationService, NavigationService>();
@@ -86,14 +88,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IParallelismSetting>(),
             viewer: sp.GetService<IViewerHost>(),
             settings: sp.GetRequiredService<IAppSettings>(),
-            bookCandidates: () =>
-            {
-                var session = sp.GetRequiredService<ICookBookSession>();
-                var paths = new List<string>();
-                if (session.SourcePath is { Length: > 0 } open) paths.Add(open);
-                paths.AddRange(sp.GetRequiredService<IRecentsService>().Items.Select(i => i.Path));
-                return paths;
-            }));
+            bookCandidates: () => BookCandidates(sp)));
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(sp =>
             (ing, recipe, book, isEditing) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,
@@ -198,15 +193,7 @@ public static class ServiceRegistration
             // Set recorded. The open book first - cooking from it and exporting the result is the
             // ordinary path - then whatever was opened recently. Only a HASH match is accepted, so
             // the list is a shortlist rather than a guess.
-            () =>
-            {
-                var session = sp.GetRequiredService<ICookBookSession>();
-                var recents = sp.GetRequiredService<IRecentsService>();
-                var paths = new List<string>();
-                if (session.SourcePath is { Length: > 0 } open) paths.Add(open);
-                paths.AddRange(recents.Items.Select(i => i.Path));
-                return paths;
-            },
+            () => BookCandidates(sp),
             // Rise this Set's assets: Back returns here, to the same browser and selection.
             rise: sp.GetRequiredService<Func<Nfty.App.Rise.RiseSource, RiseViewModel>>(),
             nav: sp.GetRequiredService<INavigationService>(),
@@ -215,10 +202,17 @@ public static class ServiceRegistration
             publishing: sp.GetRequiredService<IPublishingSettings>(),
             clipboard: sp.GetRequiredService<IClipboardService>())));
 
-        // Further VM registrations are added incrementally by the task that creates each
-        // ViewModel (see Tasks 12-13).
-
         return services;
+    }
+
+    /// <summary>Reads candidates when requested, keeping the current book ahead of recent paths.</summary>
+    private static IReadOnlyList<string> BookCandidates(IServiceProvider services)
+    {
+        var paths = new List<string>();
+        if (services.GetRequiredService<ICookBookSession>().SourcePath is { Length: > 0 } open)
+            paths.Add(open);
+        paths.AddRange(services.GetRequiredService<IRecentsService>().Items.Select(item => item.Path));
+        return paths;
     }
 
     /// <summary>

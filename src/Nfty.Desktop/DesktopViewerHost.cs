@@ -81,7 +81,8 @@ public sealed class DesktopViewerHost : IViewerHost
         // fallback, and with neither the window simply opens centered.
         var main = _mainWindow();
         var screens = (main is { IsVisible: true } ? main.Screens : null) ?? window.Screens;
-        window.Place(entry, screens?.All.Select(s => s.WorkingArea).ToList() ?? new List<PixelRect>());
+        window.Place(entry, screens?.All.Select(s => (s.WorkingArea, s.Scaling)).ToArray()
+            ?? Array.Empty<(PixelRect WorkingArea, double Scaling)>());
 
         Opened?.Invoke(window);
         window.Show();

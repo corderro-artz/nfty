@@ -25,10 +25,8 @@ namespace Nfty.App.Controls;
 /// are BALANCED rather than greedy: see <c>Breaks</c> for why filling each line to the brim is what
 /// makes a wrapped toolbar look broken.</para>
 ///
-/// <para><b>It never scrolls and never clips.</b> A group wider than the line still gets the whole
-/// line rather than being cut at the edge, which is the failure mode a Grid star column has here (see
-/// the palette strip's own history: a star given nothing was arranged at zero width and the saved
-/// swatches were simply not drawn).</para>
+/// <para>An oversized group is arranged at its desired width and can overhang the line. The panel
+/// does not add scrolling or clipping; its host determines whether that overhang remains visible.</para>
 /// </remarks>
 public class StripPanel : Panel
 {
@@ -124,13 +122,13 @@ public class StripPanel : Panel
     /// <para>So the breaks are chosen to minimize the sum of SQUARED residual gap. Squared rather
     /// than linear because the complaint is not about total emptiness — which is fixed, being the
     /// row's width less its content — but about emptiness <i>concentrated in one place</i>, and only
-    /// a convex penalty says so. Two lines beat three under this rule automatically: moving a group
-    /// off a line only ever widens that line's gap, so an extra line never pays for itself and the
-    /// panel still uses the fewest lines the width allows.</para>
+    /// a convex penalty says so. Total residual cost is minimized first; fewer lines break a tie.
+    /// Elastic groups can change the cost, so this is not an unconditional minimum-line-count rule.</para>
     ///
     /// <para>Measure and arrange must agree exactly about where the breaks fall, so both call this
     /// rather than each walking the children themselves — two copies of a break rule is two rules.
-    /// It is O(n^2) over GROUPS, of which a strip has a handful.</para>
+    /// It evaluates O(n^2) spans and scans each for its first elastic child: O(n^3) worst-case work
+    /// over the handful of groups in a toolbar.</para>
     /// </remarks>
     private List<Line> Breaks(double width, IReadOnlyList<Control> kids)
     {

@@ -22,6 +22,9 @@ public class VariantRiseSourceSaveTests
         private readonly CookBookSession _inner;
         public Action? OnReplace;
         public HookedSession(CookBookSession inner) => _inner = inner;
+        public bool IsWriting => _inner.IsWriting;
+        public IDisposable? TryBeginWrite() => _inner.TryBeginWrite();
+        public Task WaitForWriteAsync() => _inner.WaitForWriteAsync();
         public LoadedCookBook? Current => _inner.Current;
         public string? SourcePath => _inner.SourcePath;
         public event Action? Changed { add => _inner.Changed += value; remove => _inner.Changed -= value; }

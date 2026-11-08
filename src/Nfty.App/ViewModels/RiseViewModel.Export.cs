@@ -42,6 +42,12 @@ public sealed partial class RiseViewModel
     private const double VoxelSizeMin = ModelVoxelSize.Min;
     private const double VoxelSizeMax = ModelVoxelSize.Max;
 
+    /// <summary>The canonical minimum in the numeric field's decimal type.</summary>
+    public static decimal MinimumVoxelSize => (decimal)ModelVoxelSize.Min;
+
+    /// <summary>The canonical maximum in the numeric field's decimal type.</summary>
+    public static decimal MaximumVoxelSize => (decimal)ModelVoxelSize.Max;
+
     private bool _bulkChecking;
     private string _manifestSize = "";
     private RiseItem? _sizedItem;
@@ -153,14 +159,15 @@ public sealed partial class RiseViewModel
 
     partial void OnMeshChanged(Mesh? value) => OnPropertyChanged(nameof(ModelDimensionsText));
 
-    /// <summary>"model 6 × 6 × 1": the model's extent in world units, mesh extent times voxel size.</summary>
+    /// <summary>The model's world-unit extents, retaining the supported voxel-size precision and
+    /// quarter-voxel depth steps instead of rounding small models to zero.</summary>
     public string ModelDimensionsText
     {
         get
         {
             if (Mesh is not { } m) return "";
             var e = m.Max - m.Min;
-            string F(float v) => ((double)v * VoxelSize).ToString("0.##", CultureInfo.InvariantCulture);
+            string F(float v) => ((double)v * VoxelSize).ToString("0.#####", CultureInfo.InvariantCulture);
             return $"model {F(e.X)} × {F(e.Y)} × {F(e.Z)}";
         }
     }
@@ -310,8 +317,8 @@ public sealed partial class RiseViewModel
         }
     }
 
-    /// <summary>The exact size of a single model, or empty: a batch states counts and names, never a
-    /// figure it would have to estimate.</summary>
+    /// <summary>The size of a single model, or empty for a batch. GLB and embedded glTF are exact;
+    /// glTF plus bin is prefixed with ~ because the final file stem changes JSON length.</summary>
     public string ManifestSize => _manifestSize;
 
     /// <summary>Why nothing can be exported, in words; null when something can.</summary>
@@ -395,7 +402,7 @@ public sealed partial class RiseViewModel
     private TaskCompletionSource? _sizeIdle;
 
     /// <summary>The size figure is being counted again: the last exact one stands in fainter ink until
-    /// the new one lands. Never an estimate.</summary>
+    /// the new one lands. glTF plus bin retains its approximate marker.</summary>
     [ObservableProperty] private bool _isSizePending;
 
     /// <summary>Completes when no size count is waiting or running and <see cref="ManifestSize"/> is final;
@@ -407,7 +414,8 @@ public sealed partial class RiseViewModel
 
     /// <summary>Counts the one model's bytes (ruling 8), only while the EXPORT tab shows: debounced, so a
     /// run of edits counts once, and built off the UI thread from an export snapshot taken on it.</summary>
-    /// <remarks>Exact, never estimated: the figure is the bytes <see cref="ModelBatch.Build"/> produces.
+    /// <remarks>The figure is the bytes <see cref="ModelBatch.Build"/> produces. GLB and embedded glTF
+    /// are exact; glTF plus bin is approximate because the final chosen stem changes JSON length.
     /// While a count is due the last figure of the SAME model stays, marked <see cref="IsSizePending"/>;
     /// another model's figure is never shown for this one, even marked.</remarks>
     private void RecomputeSize()
@@ -431,13 +439,14 @@ public sealed partial class RiseViewModel
         var wait = new CancellationTokenSource();
         _sizeWait = wait;
         var delay = SizeDelay;
+        var dispatcher = Dispatcher.UIThread;
         _ = Task.Run(async () =>
         {
             try { await delay(wait.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) { return; }     // a newer change owns the count
             // A closed page posts nothing: a late post from a page already gone is work the UI
             // thread (and, in the test harness, the NEXT test's fresh dispatcher) never asked for.
-            if (!_disposed) Dispatcher.UIThread.Post(() => SizeDue(gen));
+            if (!Volatile.Read(ref _disposed)) dispatcher.Post(() => SizeDue(gen));
         });
     }
 
@@ -462,6 +471,7 @@ public sealed partial class RiseViewModel
         // The .gltf names its .bin, so its bytes depend on the stem the user has not picked yet:
         // that format's figure is said to be approximate; the other two carry no name at all.
         string prefix = options.Format == ModelFormat.GltfWithBin ? "~" : "";
+        var dispatcher = Dispatcher.UIThread;
         _ = Task.Run(() =>
         {
             string text = "";
@@ -479,7 +489,7 @@ public sealed partial class RiseViewModel
                 text = "";     // a figure we cannot stand behind is left off, not guessed
             }
             finally { snapshot.Dispose(); }
-            if (!_disposed) Dispatcher.UIThread.Post(() => SizeLanded(gen, text));
+            if (!Volatile.Read(ref _disposed)) dispatcher.Post(() => SizeLanded(gen, text));
         });
     }
 

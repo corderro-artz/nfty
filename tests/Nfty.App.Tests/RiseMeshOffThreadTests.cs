@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using Nfty.App.ViewModels;
@@ -101,11 +103,31 @@ public class RiseMeshOffThreadTests
         vm.Dispose();                                    // frees the subject the builds were taken from
 
         gate.SetResult();
-        RisePages.Settle(vm);                            // completes, and does not fault: the build read its own copies
+        // A closed page has no UI queue left to drain. The worker frees its snapshots and settles
+        // without pumping, even if the next isolated application has not been initialized yet.
+        Assert.True(SpinWait.SpinUntil(() => vm.PendingMeshBuild.IsCompleted, TimeSpan.FromSeconds(5)));
+        Assert.True(vm.PendingMeshBuild.IsCompletedSuccessfully);
 
         Assert.Empty(applied);
         Assert.Same(shown, vm.Mesh);
         Assert.Equal(1, vm.MeshBuildsRun);               // the waiting one never started
+    }
+
+    [AvaloniaFact]
+    public void Closing_after_a_mesh_result_is_queued_settles_without_draining_the_dispatcher()
+    {
+        var (vm, gate, applied) = HeldPage();
+        using var owner = vm;
+        vm.PreviewDepthStroke(Path(3), DepthSide.Front, false);
+        gate.SetResult();
+        Assert.True(SpinWait.SpinUntil(() => vm.PendingMeshWorker.IsCompleted, TimeSpan.FromSeconds(5)));
+        Assert.True(vm.PendingMeshWorker.IsCompletedSuccessfully);
+        Assert.False(vm.PendingMeshBuild.IsCompleted); // the UI delivery is still queued.
+
+        vm.Dispose();
+
+        Assert.True(vm.PendingMeshBuild.IsCompletedSuccessfully);
+        Assert.Empty(applied);
     }
 
     [AvaloniaFact]

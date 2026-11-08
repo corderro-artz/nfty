@@ -299,6 +299,11 @@ public partial class IngredientEditorViewModel
 
     private void BuildReferences()
     {
+        var siblings = Siblings.ToDictionary(r => r.Key, StringComparer.Ordinal);
+        var kitchenRows = KitchenLayers.ToDictionary(r => r.Key, StringComparer.OrdinalIgnoreCase);
+        Siblings.Clear();
+        KitchenLayers.Clear();
+        _ingById.Clear();
         var recipe = _recipe.Manifest;
         try { _pinDepth = LayerDepth.DepthOf(recipe, _ing.Manifest.Id); }
         catch (KeyNotFoundException) { _pinDepth = null; }
@@ -320,6 +325,7 @@ public partial class IngredientEditorViewModel
                 depth.ToString(), isKitchen: false)
             { Tip = n == 1 ? "1 variant" : $"{n} variants", IsAbove = depth > _pinDepth.Value };
             row.SetKind(ing.Manifest.Kind);
+            if (siblings.TryGetValue(id, out var previous)) row.IsOn = previous.IsOn;
             Siblings.Add(row);
         }
 
@@ -346,9 +352,13 @@ public partial class IngredientEditorViewModel
 
             var row = new ReferenceLayer(path, Path.GetFileNameWithoutExtension(path),
                 Path.GetFileName(path), "—", isKitchen: true) { Tip = path };
-            SetPlacement(row, StackDepth);   // on top, matching the CLI's `--with <file>`
+            if (kitchenRows.TryGetValue(path, out var previous)) row = previous;
+            SetPlacement(row, kitchenRows.ContainsKey(path) ? row.Gap : StackDepth);
             KitchenLayers.Add(row);
         }
+        OnPropertyChanged(nameof(HasSiblings));
+        OnPropertyChanged(nameof(HasKitchenLayers));
+        OnPropertyChanged(nameof(ReferenceCountText));
     }
 
     /// <summary>How many layers the recipe stacks — the largest gap a Kitchen file can sit in.</summary>

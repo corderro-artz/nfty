@@ -93,7 +93,8 @@ public abstract class RiseSource : IDisposable
     /// <summary>Chips under the header.</summary>
     public abstract IReadOnlyList<string> Facts { get; }
 
-    /// <summary>Whether nothing in this source can rise: all of it is flat 2D art.</summary>
+    /// <summary>Whether this source reports a 2D-only warning. Its scope depends on the source:
+    /// a picture source reports any partial-alpha item; a variant source reports its authoring scope.</summary>
     public virtual bool IsTwoDOnly => false;
 
     /// <summary>Whether depth may be painted and saved.</summary>

@@ -22,6 +22,6 @@ public partial class ConfirmDialogViewModel : ViewModelBase
     public ConfirmDialogViewModel(IDialogService dialogs, string title, string message, string confirmLabel)
     { _dialogs = dialogs; Title = title; Message = message; ConfirmLabel = confirmLabel; }
 
-    [RelayCommand] private void Confirm() => _dialogs.Close(true);
-    [RelayCommand] private void Cancel() => _dialogs.Close(false);
+    [RelayCommand] private void Confirm() => _dialogs.Close(this, true);
+    [RelayCommand] private void Cancel() => _dialogs.Close(this, false);
 }

@@ -41,8 +41,9 @@ public sealed class RiseSubject : IDisposable
     /// <summary>The finished picture.</summary>
     public Image<Rgba32> Art { get; }
 
-    /// <summary>The model texture: the <see cref="FaceAtlas"/> of <see cref="Art"/>, built once and
-    /// owned here. The preview rasterizes it against a mesh risen from the same art.</summary>
+    /// <summary>The owned model texture: the <see cref="FaceAtlas"/> of <see cref="Art"/> and the
+    /// current face owners. Reseed and ReplaceCombined replace it; UpdateCombined rewrites it in place.
+    /// The preview rasterizes it against a mesh risen from the same art.</summary>
     public Image<Rgba32> Texture { get; private set; }
 
     /// <summary>The stack's face owners (what the model's front and back show), or null when the

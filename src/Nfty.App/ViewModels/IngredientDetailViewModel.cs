@@ -75,6 +75,7 @@ public partial class VariantRow : ObservableObject
 /// <param name="Derived">Whether it was derived from a fixed color rather than stated as a range.</param>
 public record ColorwayAxis(string Label, string Value, bool Derived);
 
+/// <summary>Borrows an ingredient graph and owns every generated display bitmap.</summary>
 public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly Action _editIngredient;
@@ -119,8 +120,10 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     public IReadOnlyList<Color>? HueBandStops { get; }
     /// <summary>Whether to draw the hue band — a fixed color has no range to show.</summary>
     public bool HasHueBand => HueBandStops is not null;
-    /// <summary>Sample swatches across the layer's color range.</summary>
-    public IReadOnlyList<Bitmap> Colorways { get; }
+    /// <summary>Lazily rendered legacy sample bitmaps, owned by this pane; the live view uses color swatches.</summary>
+    public IReadOnlyList<Bitmap> Colorways => _colorways ??= _variants.Count == 0
+        ? Array.Empty<Bitmap>() : VariantImagery.Colorways(_bridge, _ing);
+    private IReadOnlyList<Bitmap>? _colorways;
     /// <summary>The hue and saturation readouts.</summary>
     public IReadOnlyList<ColorwayAxis> ColorwayAxes { get; }
 
@@ -185,8 +188,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// for. Ties keep their input order — <c>OrderByDescending</c> is stable — so a layer of equal
     /// weights pages through them in its own order rather than an arbitrary one.</para>
     /// </remarks>
-    public IReadOnlyList<VariantRow> HeroBars =>
-        _variants.OrderByDescending(v => v.OverallPercent).ToArray();
+    public IReadOnlyList<VariantRow> HeroBars { get; }
 
     /// <summary>Which page of the hero strip is showing, zero-based.</summary>
     /// <remarks>Reset to 0 is deliberately NOT wired to anything: the pane is rebuilt whenever the
@@ -390,6 +392,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
                 VariantImagery.Render(bridge, ing, v.Id));
         }).ToList();
 
+        HeroBars = _variants.OrderByDescending(v => v.OverallPercent).ToArray();
+
         // The first row is the selection the pane opens on, which is the variant the hero already
         // showed - so nothing about the screen changes until something is clicked.
         Selected = _variants.Count > 0 ? _variants[0] : null;
@@ -400,12 +404,10 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         // handling of this exact case rather than indexing Variants[0] and crashing browsing.
         if (ing.Manifest.Variants.Count == 0)
         {
-            Colorways = Array.Empty<Bitmap>();
             _hero = null;
         }
         else
         {
-            Colorways = VariantImagery.Colorways(bridge, ing);
             _hero = VariantImagery.Render(bridge, ing, ing.Manifest.Variants[0].Id);
         }
     }
@@ -651,21 +653,16 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanExportPreview))]
     private async Task ExportPreview()
     {
-        if (_picker is null || _variants.Count == 0) return;
-
-        string? path;
-        try { path = await _picker.SaveFileAsync("Export preview", ".png"); }
-        catch (Exception ex) { await ShowPreviewError(ErrorText.For(ex)); return; }
-        if (path is null) return;   // canceled
+        if (_picker is null || Selected is not { } selected) return;
+        string variantId = selected.Id;
 
         try
         {
-            // A colorized layer needs a color; the ingredient's own first fixed color or range
-            // start is the honest default - it is what generation would most likely roll - and the
-            // editor is where a specific one gets chosen.
-            using var img = VariantPreview.Render(_ing, _variants[0].Id, DefaultColorSpec());
-            // Fully qualified: this file deliberately does not import SixLabors.ImageSharp, whose
-            // Image type would collide with Avalonia's.
+            // Render an owned snapshot before the picker yields: the pane or its borrowed graph
+            // may close while the native picker is open, and a later selection belongs to another action.
+            using var img = VariantPreview.Render(_ing, variantId, DefaultColorSpec());
+            string? path = await _picker.SaveFileAsync("Export preview", ".png");
+            if (path is null) return;
             SixLabors.ImageSharp.ImageExtensions.Save(img, path,
                 new SixLabors.ImageSharp.Formats.Png.PngEncoder());
             _status?.Say($"Wrote {path}");
@@ -699,11 +696,14 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     // stays ungated on purpose (the editor is also how you LOOK at a layer); what is gated is the
     // editor's Save, see IngredientEditorViewModel.IsReadOnly.
 
-    /// <summary>Frees every rendered swatch and thumbnail.</summary>
+    private bool _disposed;
+    /// <summary>Frees every rendered swatch and thumbnail without materializing lazy swatches.</summary>
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         Hero?.Dispose();
         foreach (var v in _variants) v.Thumbnail.Dispose();
-        foreach (var b in Colorways) b.Dispose();
+        if (_colorways is not null) foreach (var b in _colorways) b.Dispose();
     }
 }

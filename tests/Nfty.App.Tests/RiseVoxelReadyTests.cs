@@ -394,6 +394,9 @@ public class RiseVoxelReadyTests
         public Action? OnReplace;
         public int Replaces;
         public HookedSession(CookBookSession inner) => _inner = inner;
+        public bool IsWriting => _inner.IsWriting;
+        public IDisposable? TryBeginWrite() => _inner.TryBeginWrite();
+        public Task WaitForWriteAsync() => _inner.WaitForWriteAsync();
         public LoadedCookBook? Current => _inner.Current;
         public string? SourcePath => _inner.SourcePath;
         public event Action? Changed { add => _inner.Changed += value; remove => _inner.Changed -= value; }

@@ -7,14 +7,8 @@ using Nfty.Core.Model;
 
 namespace Nfty.App.Services;
 
-/// <summary>Wraps a standalone (loose) ingredient in a throwaway single-recipe cookbook so the
-/// Ingredient Editor — which needs a canvas + recipe context — can open it. The wrapper is a view/edit
-/// scaffold only; it is never persisted as a cookbook (loose Save writes the .igt directly). The
-/// returned book owns the ingredient, so disposing the book disposes the ingredient's images.</summary>
-/// <summary>
-/// Where a loose Recipe or Ingredient — one edited outside any CookBook — is saved. Defaults into
-/// the open Kitchen when there is one, which is the whole point of a workspace.
-/// </summary>
+/// <summary>Wraps loose ingredients/recipes in editor-only cookbook graphs and validates their atomic
+/// archive writes. Wrappers take ownership of their supplied graphs; write methods borrow them.</summary>
 public static class LooseWorkspace
 {
     /// <summary>Wraps a loose Ingredient in the throwaway Recipe and CookBook the editor needs, since
@@ -46,6 +40,9 @@ public static class LooseWorkspace
     /// rejected (IngredientArchive.Write alone opens CreateNew and throws on an existing path). Returns
     /// the validation problems and writes nothing when there are any; throws on an IO failure. Shared by
     /// every create-loose entry point so they all apply the same standard.</summary>
+    /// <param name="path">The destination archive path.</param>
+    /// <param name="ing">The borrowed ingredient, including its images and depth maps.</param>
+    /// <returns>Validation problems without writing, or an empty list after a successful write.</returns>
     public static IReadOnlyList<string> WriteIngredient(string path, LoadedIngredient ing)
     {
         var problems = Validator.ValidateIngredient(ing);
@@ -62,6 +59,9 @@ public static class LooseWorkspace
     /// next — and <c>Validator.ValidateRecipe</c> rejects an empty layer order, so an empty one is
     /// allowed through here for the same reason the in-book path does not validate a fresh recipe.
     /// Anything with layers is held to the full standard.</summary>
+    /// <param name="path">The destination archive path.</param>
+    /// <param name="recipe">The borrowed recipe to validate and serialize.</param>
+    /// <returns>Validation problems without writing, or an empty list after a successful write.</returns>
     public static IReadOnlyList<string> WriteRecipe(string path, LoadedRecipe recipe)
     {
         var problems = recipe.Manifest.LayerOrder.Count == 0
@@ -77,6 +77,8 @@ public static class LooseWorkspace
     /// can browse it. The recipe is kept as-is (its own id, layer order, rules, ingredients);
     /// <c>RecipeWeights</c> keys the recipe's real id so the synthetic book is internally consistent. The
     /// returned book owns the recipe → its ingredients → their images.</summary>
+    /// <param name="recipe">The loose recipe whose ownership transfers to the returned wrapper.</param>
+    /// <returns>An editor-only cookbook owning the supplied recipe.</returns>
     public static LoadedCookBook WrapRecipe(LoadedRecipe recipe)
     {
         var img = recipe.Ingredients.SelectMany(i => i.VariantImages.Values).FirstOrDefault();

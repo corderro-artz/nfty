@@ -132,9 +132,12 @@ public partial class SetInspectView : UserControl
         var p = e.GetPosition(_viewport);
         var c = new Point(_viewport.Bounds.Width / 2, _viewport.Bounds.Height / 2);
         var k = after / before;
-        vm.PanX = (vm.PanX - (p.X - c.X)) * k + (p.X - c.X);
-        vm.PanY = (vm.PanY - (p.Y - c.Y)) * k + (p.Y - c.Y);
+        var x = (vm.PanX - (p.X - c.X)) * k + (p.X - c.X);
+        var y = (vm.PanY - (p.Y - c.Y)) * k + (p.Y - c.Y);
+        // Pan changes synchronously clamp in Sync: install the new limits first.
         vm.Scale = after;
+        vm.PanX = x;
+        vm.PanY = y;
         Sync();
     }
 

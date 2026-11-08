@@ -28,6 +28,8 @@ public sealed class GalleryItem : ObservableObject, IDisposable
     private volatile bool _disposed;
     private bool _started;
     private int _decodesRun;
+    private readonly object _thumbnailLock = new();
+    private Bitmap? _pendingThumbnail;
 
     /// <summary>Builds a tile.</summary>
     /// <param name="caption">The line under the tile.</param>
@@ -73,6 +75,9 @@ public sealed class GalleryItem : ObservableObject, IDisposable
     {
         if (_started || _loadPng is null) return;
         _started = true;
+        // Keep the dispatcher that owns this tile. A late worker must never discover (or create)
+        // the process's next UI dispatcher after this application has shut down.
+        var dispatcher = Dispatcher.UIThread;
         PendingDecode = Task.Run(async () =>
         {
             await _gate.WaitAsync().ConfigureAwait(false);
@@ -86,11 +91,20 @@ public sealed class GalleryItem : ObservableObject, IDisposable
                 finally { _gate.Exit(); }
             }
             finally { _gate.Release(); }
-            Dispatcher.UIThread.Post(() =>
+            lock (_thumbnailLock)
             {
                 if (_disposed) { bitmap.Dispose(); return; }
-                _thumbnail = bitmap;
-                _missing = missing;
+                _pendingThumbnail = bitmap;
+            }
+            dispatcher.Post(() =>
+            {
+                lock (_thumbnailLock)
+                {
+                    if (_disposed) return; // Dispose already freed the unpublished bitmap.
+                    _pendingThumbnail = null;
+                    _thumbnail = bitmap;
+                    _missing = missing;
+                }
                 OnPropertyChanged(nameof(Thumbnail));
                 OnPropertyChanged(nameof(IsLoading));
                 OnPropertyChanged(nameof(ImageMissing));
@@ -136,8 +150,13 @@ public sealed class GalleryItem : ObservableObject, IDisposable
     /// <summary>Frees the thumbnail. A decode still in flight drops its result instead of publishing it.</summary>
     public void Dispose()
     {
-        _disposed = true;
-        _thumbnail?.Dispose();
-        _thumbnail = null;
+        lock (_thumbnailLock)
+        {
+            _disposed = true;
+            _pendingThumbnail?.Dispose();
+            _pendingThumbnail = null;
+            _thumbnail?.Dispose();
+            _thumbnail = null;
+        }
     }
 }

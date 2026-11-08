@@ -24,5 +24,5 @@ public partial class ErrorDialogViewModel : ViewModelBase
         Message = message;
     }
 
-    [RelayCommand] private void Close() => _dialogs.Close(null);
+    [RelayCommand] private void Close() => _dialogs.Close(this, null);
 }

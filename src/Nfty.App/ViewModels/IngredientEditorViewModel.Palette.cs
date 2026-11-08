@@ -60,11 +60,7 @@ public sealed partial class PaletteSwatch : ObservableObject
     }
 }
 
-/// <summary>
-/// The editor's palette strip and opacity lock: which ramp the ten slots offer, the swatches the
-/// author has saved, the color and alpha the brush lays down, and whether partial alpha is admitted
-/// at all.
-/// </summary>
+// Palette, brush color and opacity-lock presentation for both paint surfaces.
 public partial class IngredientEditorViewModel
 {
     private readonly IPaletteService _palette;

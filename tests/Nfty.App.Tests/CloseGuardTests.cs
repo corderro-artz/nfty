@@ -42,6 +42,9 @@ public class CloseGuardTests
     private sealed class HookedSession(CookBookSession inner) : ICookBookSession
     {
         public Action? OnReplace;
+        public bool IsWriting => inner.IsWriting;
+        public IDisposable? TryBeginWrite() => inner.TryBeginWrite();
+        public Task WaitForWriteAsync() => inner.WaitForWriteAsync();
         public LoadedCookBook? Current => inner.Current;
         public string? SourcePath => inner.SourcePath;
         public event Action? Changed { add => inner.Changed += value; remove => inner.Changed -= value; }

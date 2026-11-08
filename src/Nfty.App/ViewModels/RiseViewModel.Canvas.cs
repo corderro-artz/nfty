@@ -5,15 +5,6 @@ using Nfty.App.Services;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>
-/// HOW THE CANVAS IS LOOKED AT: zoom, pan and the pixel grid. Mirrors
-/// <c>IngredientEditorViewModel.Zoom.cs</c> on <see cref="CanvasMapping"/>'s constants; none of it
-/// touches a pixel or the dirty flag.
-/// </summary>
-/// <remarks>
-/// <see cref="CanvasMapping.TryFrame"/> does not clamp zoom, so the clamp lives here, at the property,
-/// where the wheel, the keys and the commands all go through it.
-/// </remarks>
 public sealed partial class RiseViewModel
 {
     /// <summary>The zoom that fits the whole canvas in the tile.</summary>

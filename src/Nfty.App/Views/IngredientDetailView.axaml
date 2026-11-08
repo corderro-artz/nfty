@@ -113,7 +113,7 @@
                 <!-- THE NAME IS THE ELASTIC ONE. Laid out as a run with a MinWidth name it fitted a
                      WrapPanel's full width and not half of one: at the smallest pane a cell is about
                      215px and 52 + 120 + 34 plus gaps does not go in. The track is a stated 120
-                     (Border.rt, and PercentToWidthConverter.ForBarWidth120 is the same number), the
+                     (Border.rt); its fill reads that track's measured width. The
                      percent is a stated 44 ("15.38%" clipped at 34), and the name takes what is left and trims - the same
                      rule the DNA-space rows follow, and for the same reason: a right-aligned block
                      given less than it asks for overflows its LEADING edge and eats the label. -->
@@ -122,7 +122,14 @@
                   <TextBlock Grid.Column="0" Classes="cshare" Text="{Binding Name}"
                              VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                   <Border Grid.Column="1" Classes="rt" VerticalAlignment="Center">
-                    <Border Width="{Binding OverallPercent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth120}}" />
+                    <Border>
+                      <Border.Width>
+                        <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                          <Binding Path="OverallPercent" />
+                          <Binding Path="$parent[Border].Bounds.Width" />
+                        </MultiBinding>
+                      </Border.Width>
+                    </Border>
                   </Border>
                   <TextBlock Grid.Column="2" Classes="cshare" VerticalAlignment="Center"
                              TextAlignment="Right"

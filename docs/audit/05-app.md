@@ -1,6 +1,6 @@
 # Stage 5 — Nfty.App review
 
-Status: both review passes complete on 2026-11-06. **Implementation approved after publishing v2.4.8; no App fixes implemented at this checkpoint.** Baseline: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. The worktree remains isolated; nothing has been merged or pushed.
+Status: both review passes complete on 2026-11-06. **Implementation approved and active; see [checklist](05-app-implementation.md). Merge/release are on hold until completion.** Baseline: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. The worktree remains isolated; nothing has been merged or pushed.
 
 ## Result
 
@@ -163,4 +163,4 @@ Verification ran on Windows x64 using headless controls, temporary files and syn
 
 ## Stop point
 
-Ticket, Core, Model and CLI are accepted local checkpoints. **App review is complete; the user approved A01–A21, D01–D20 and S01–S12 after publishing v2.4.8.** H01 remains an unresolved validation issue. No App fix, App commit/tag, Desktop review, merge or push has been performed.
+Ticket, Core, Model and CLI are accepted local checkpoints. **App review is complete; the user approved A01–A21, D01–D20 and S01–S12.** The later instruction superseded release-first sequencing: finish and verify App changes before any merge/publication. Implementation is now present in the isolated worktree; acceptance is tracked in 05-app-implementation.md and the final verification report. Desktop and later reviews have not started. No merge or push has been performed.

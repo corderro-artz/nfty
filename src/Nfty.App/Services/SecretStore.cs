@@ -201,13 +201,20 @@ public sealed class WindowsCredentialStore : ISecretStore
 public sealed class SecretToolStore : ISecretStore
 {
     private readonly string _tool;
+    private readonly Func<string[], string?, (int Code, string Output, string Error)>? _run;
 
     /// <summary>Creates the store over <c>secret-tool</c> on the PATH.</summary>
     /// <param name="tool">The executable; tests may point it elsewhere.</param>
     public SecretToolStore(string tool = "secret-tool") => _tool = tool;
 
+    internal SecretToolStore(Func<string[], string?, (int Code, string Output, string Error)> run) : this()
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        _run = run;
+    }
+
     /// <inheritdoc />
-    public bool IsAvailable => Locate() is not null;
+    public bool IsAvailable => _run is not null || Locate() is not null;
 
     /// <inheritdoc />
     public string? UnavailableReason => IsAvailable ? null
@@ -232,7 +239,7 @@ public sealed class SecretToolStore : ISecretStore
     /// <inheritdoc />
     public string? Read(string target)
     {
-        var (code, output) = Run(["lookup", .. Attributes(target)], stdin: null);
+        var (code, output, _) = Run(["lookup", .. Attributes(target)], stdin: null);
         if (code != 0) return null;   // secret-tool exits 1 when nothing matches
         return output.Length == 0 ? null : output;
     }
@@ -241,17 +248,25 @@ public sealed class SecretToolStore : ISecretStore
     public void Write(string target, string secret)
     {
         ArgumentException.ThrowIfNullOrEmpty(secret);
-        var (code, _) = Run(["store", "--label=nfty " + target, .. Attributes(target)], stdin: secret);
+        var (code, _, _) = Run(["store", "--label=nfty " + target, .. Attributes(target)], stdin: secret);
         if (code != 0)
             throw new InvalidOperationException(
                 "secret-tool could not save the key. Is a keyring (GNOME Keyring, KWallet) running and unlocked?");
     }
 
     /// <inheritdoc />
-    public void Delete(string target) => Run(["clear", .. Attributes(target)], stdin: null);
-
-    private (int Code, string Output) Run(string[] args, string? stdin)
+    public void Delete(string target)
     {
+        var (code, _, error) = Run(["clear", .. Attributes(target)], stdin: null);
+        // libsecret uses exit 1 both for no match and for failure; only the latter emits stderr.
+        if (code == 0 || code == 1 && error.Length == 0) return;
+        throw new InvalidOperationException(
+            "secret-tool could not forget the key. Is a keyring (GNOME Keyring, KWallet) running and unlocked?");
+    }
+
+    private (int Code, string Output, string Error) Run(string[] args, string? stdin)
+    {
+        if (_run is not null) return _run(args, stdin);
         var exe = Locate() ?? throw new InvalidOperationException(UnavailableReason);
         var info = new ProcessStartInfo(exe)
         {
@@ -264,12 +279,15 @@ public sealed class SecretToolStore : ISecretStore
         try
         {
             using var process = Process.Start(info) ?? throw new InvalidOperationException(UnavailableReason);
+            // Drain both pipes while the child runs, including while it reads standard input.
+            var outputRead = process.StandardOutput.ReadToEndAsync();
+            var errorRead = process.StandardError.ReadToEndAsync();
             if (stdin is not null) process.StandardInput.Write(stdin);
             process.StandardInput.Close();
-            string output = process.StandardOutput.ReadToEnd();
-            process.StandardError.ReadToEnd();
+            string output = outputRead.GetAwaiter().GetResult();
+            string error = errorRead.GetAwaiter().GetResult();
             process.WaitForExit();
-            return (process.ExitCode, output);
+            return (process.ExitCode, output, error);
         }
         catch (Win32Exception)
         {
@@ -281,7 +299,8 @@ public sealed class SecretToolStore : ISecretStore
 /// <summary>
 /// The macOS login keychain, through Security.framework: a generic password with service
 /// <c>nfty</c> and the target as its account. Reached by P/Invoke, never by the <c>security</c>
-/// tool, whose <c>-w</c> puts the secret on a command line.
+/// tool, whose <c>-w</c> puts the secret on a command line. Replacements update the existing item;
+/// a new item is added only when the update reports that no item matches.
 /// </summary>
 public sealed class MacKeychainStore : ISecretStore
 {
@@ -292,6 +311,7 @@ public sealed class MacKeychainStore : ISecretStore
     private const uint Utf8 = 0x08000100;
 
     [DllImport(Security)] private static extern int SecItemAdd(IntPtr attributes, IntPtr result);
+    [DllImport(Security)] private static extern int SecItemUpdate(IntPtr query, IntPtr attributesToUpdate);
     [DllImport(Security)] private static extern int SecItemCopyMatching(IntPtr query, out IntPtr result);
     [DllImport(Security)] private static extern int SecItemDelete(IntPtr query);
     [DllImport(CoreFoundation)] private static extern IntPtr CFDictionaryCreate(IntPtr allocator, IntPtr[] keys, IntPtr[] values, nint count, IntPtr keyCallbacks, IntPtr valueCallbacks);
@@ -338,26 +358,36 @@ public sealed class MacKeychainStore : ISecretStore
     private static IntPtr Str(string s)
     {
         var b = Encoding.UTF8.GetBytes(s);
-        return CFStringCreateWithBytes(IntPtr.Zero, b, b.Length, Utf8, false);
+        var value = CFStringCreateWithBytes(IntPtr.Zero, b, b.Length, Utf8, false);
+        return value != IntPtr.Zero ? value : throw new InvalidOperationException("The keychain could not allocate an item name.");
     }
 
     private IntPtr Query(string target, IEnumerable<(IntPtr Key, IntPtr Value)> extra, List<IntPtr> owned)
     {
         var s = S;
-        IntPtr service = Str("nfty"), account = Str(target);
+        var service = Str("nfty");
         owned.Add(service);
+        var account = Str(target);
         owned.Add(account);
         var pairs = new List<(IntPtr, IntPtr)> { (s.Class, s.GenericPassword), (s.Service, service), (s.Account, account) };
         pairs.AddRange(extra);
+        return Dictionary(pairs, owned);
+    }
+
+    private IntPtr Dictionary(IReadOnlyList<(IntPtr Key, IntPtr Value)> pairs, List<IntPtr> owned)
+    {
+        var s = S;
         var dict = CFDictionaryCreate(IntPtr.Zero, pairs.Select(p => p.Item1).ToArray(),
             pairs.Select(p => p.Item2).ToArray(), pairs.Count, s.KeyCallbacks, s.ValueCallbacks);
+        if (dict == IntPtr.Zero) throw new InvalidOperationException("The keychain could not allocate item attributes.");
         owned.Add(dict);
         return dict;
     }
 
     private static void Release(List<IntPtr> owned)
     {
-        foreach (var p in owned) if (p != IntPtr.Zero) CFRelease(p);
+        for (int i = owned.Count - 1; i >= 0; i--)
+            if (owned[i] != IntPtr.Zero) CFRelease(owned[i]);
     }
 
     /// <inheritdoc />
@@ -383,20 +413,30 @@ public sealed class MacKeychainStore : ISecretStore
     public void Write(string target, string secret)
     {
         ArgumentException.ThrowIfNullOrEmpty(secret);
-        Delete(target);
         var s = S;
         var owned = new List<IntPtr>();
         try
         {
             var bytes = Encoding.UTF8.GetBytes(secret);
-            var data = CFDataCreate(IntPtr.Zero, bytes, bytes.Length);
-            Array.Clear(bytes);
+            IntPtr data;
+            try { data = CFDataCreate(IntPtr.Zero, bytes, bytes.Length); }
+            finally { Array.Clear(bytes); }
+            if (data == IntPtr.Zero) throw new InvalidOperationException("The keychain could not allocate the key data.");
             owned.Add(data);
-            var q = Query(target, [(s.ValueData, data)], owned);
-            int status = SecItemAdd(q, IntPtr.Zero);
-            if (status != ErrSecSuccess) throw new InvalidOperationException($"The keychain could not save the key (status {status}).");
+            var query = Query(target, [], owned);
+            var attributes = Dictionary([(s.ValueData, data)], owned);
+            Upsert(() => SecItemUpdate(query, attributes),
+                () => SecItemAdd(Query(target, [(s.ValueData, data)], owned), IntPtr.Zero));
         }
         finally { Release(owned); }
+    }
+
+    internal static void Upsert(Func<int> update, Func<int> add)
+    {
+        int status = update();
+        if (status == ErrSecItemNotFound) status = add();
+        if (status != ErrSecSuccess)
+            throw new InvalidOperationException(FormattableString.Invariant($"The keychain could not save the key (status {status})."));
     }
 
     /// <inheritdoc />

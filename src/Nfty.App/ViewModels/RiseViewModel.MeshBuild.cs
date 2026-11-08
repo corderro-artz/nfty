@@ -9,11 +9,6 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>
-/// THE MESH IS BUILT OFF THE UI THREAD. A stroke, an undo, a fill or a cancel brings the surface (and a
-/// recipe's union) up to date on the UI thread, snapshots what <see cref="Riser.TryBuild"/> reads, and
-/// builds on the thread pool; the result is applied back on the UI thread.
-/// </summary>
 /// <remarks>
 /// <para><b>Snapshot, never borrow.</b> The art and the faces are cloned and the depth copied before the
 /// build starts: the surface keeps changing under a drag, a recipe's faces are rewritten in place by its
@@ -53,6 +48,10 @@ public sealed partial class RiseViewModel
     private bool _meshRunning;
     private MeshJob? _meshWaiting;
     private TaskCompletionSource? _meshIdle;
+    private Task _meshWorker = Task.CompletedTask;
+
+    /// <summary>The actual worker, including freeing its snapshots and queuing its result.</summary>
+    internal Task PendingMeshWorker => _meshWorker;
 
     /// <summary>Completes when no mesh build is running or waiting and the last one requested is on screen.
     /// A test awaits it (through <c>UiThreadWait.For</c>, which pumps the dispatcher the result is posted to);
@@ -116,7 +115,8 @@ public sealed partial class RiseViewModel
         if (_meshIdle is null || _meshIdle.Task.IsCompleted)
             _meshIdle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var gate = BeforeMeshBuild;
-        _ = Task.Run(async () =>
+        var dispatcher = Dispatcher.UIThread;
+        _meshWorker = Task.Run(async () =>
         {
             Mesh? mesh = null;
             ExceptionDispatchInfo? error = null;
@@ -128,8 +128,27 @@ public sealed partial class RiseViewModel
             }
             catch (Exception ex) { error = ExceptionDispatchInfo.Capture(ex); }
             finally { job.Dispose(); }
-            Dispatcher.UIThread.Post(() => Landed(job.Seq, mesh, error));
+            if (Volatile.Read(ref _disposed))
+            {
+                // No UI lifetime remains to drain a result. The job's snapshots are already freed;
+                // settle its handle here rather than asking another application's dispatcher.
+                MeshBuildsRun++;
+                _meshIdle?.TrySetResult();
+            }
+            else dispatcher.Post(() => Landed(job.Seq, mesh, error));
         });
+    }
+
+    private void CompleteDisposedMesh()
+    {
+        if (_meshIdle is not { } idle || idle.Task.IsCompleted) return;
+        // A result may already be queued when Dispose runs. Its old UI queue need never drain;
+        // completion still waits for the worker's finally (which frees every snapshot).
+        _ = _meshWorker.ContinueWith(worker =>
+        {
+            if (worker.IsFaulted) idle.TrySetException(worker.Exception.InnerExceptions);
+            else idle.TrySetResult();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
     /// <summary>A build finished: apply it if it is still the newest answer, then start the waiting one.</summary>

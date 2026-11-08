@@ -31,7 +31,7 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     private readonly IImageBridge _bridge;
     private ViewerLayout _layout;
     private Bitmap? _artBitmap;
-    private ModelPreviewViewModel _preview;
+    private readonly ModelPreviewViewModel _preview;
 
     /// <summary>Builds the viewer for a subject.</summary>
     /// <param name="subject">What to show; the caller keeps ownership.</param>
@@ -65,10 +65,17 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
         var old = _artBitmap;
         _artBitmap = null;               // rebuilt from the subject's new picture on the next read
         if (Subject.Model is { } m) _preview.SetSubject(m.Mesh.Min, m.Mesh.Max);
+        else Layout = ViewerLayout.TwoD; // use the model-aware setter to reveal the 2D art
         OnPropertyChanged(nameof(ArtBitmap));
         OnPropertyChanged(nameof(Mesh));
         OnPropertyChanged(nameof(Texture));
         OnPropertyChanged(nameof(CanShowThreeD));
+        OnPropertyChanged(nameof(ThreeDAvailableOpacity));
+        OnPropertyChanged(nameof(LayoutNote));
+        OnPropertyChanged(nameof(HasModelFiles));
+        OnPropertyChanged(nameof(ExportFormatOpacity));
+        OnPropertyChanged(nameof(CanExportModel));
+        ExportModelCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(LayoutTip));
         OnPropertyChanged(nameof(LiveBadge));     // a source closing turns "live" into "snapshot"
         OnPropertyChanged(nameof(IsLive));
@@ -368,11 +375,13 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     private async Task SaveImage(int factor)
     {
         if (!CanExport || Subject.Art is not { } art) return;
+        // A live refresh or closing the viewer may dispose its art while the picker is open.
+        using var snapshot = art.Clone();
         var target = await _picker.SaveFileAsync($"Save {Subject.Title}", ".png");
         if (string.IsNullOrWhiteSpace(target)) return;
         try
         {
-            using var big = Upscale.By(art, factor);
+            using var big = Upscale.By(snapshot, factor);
             await big.SaveAsPngAsync(target);
         }
         catch (Exception ex)

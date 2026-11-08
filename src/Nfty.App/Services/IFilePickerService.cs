@@ -1,7 +1,7 @@
 namespace Nfty.App.Services;
 
-/// <summary>File open/save dialogs. Phase-1 desktop impl returns null (no picker wired yet); the
-/// commands that use it are stubs until Phase 2, so a null result is never dereferenced.</summary>
+/// <summary>File and folder dialogs supplied by the platform head. A null result means the user
+/// canceled or the current head has no picker.</summary>
 public interface IFilePickerService
 {
     /// <summary>Shows an open dialog filtered to the given extensions.</summary>

@@ -12,6 +12,7 @@ using Nfty.Core.Formats;
 using Nfty.Core.Imaging;
 using Nfty.Core.Model;
 using Nfty.Core.Output;
+using PixelImage = SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>;
 
 namespace Nfty.App.ViewModels;
 
@@ -23,7 +24,8 @@ namespace Nfty.App.ViewModels;
 /// ours were display-only text, so the trail showed where you were and offered no way back up.</param>
 public record Crumb(string Text, bool Active, bool Leading, ExplorerNode? Target = null);
 
-public partial class ExplorerViewModel : ViewModelBase, IDisposable
+/// <summary>Borrows the session graph, owns its detail pane and generated display images.</summary>
+public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWork
 {
     private readonly INavigationService _nav;
     private readonly IDialogService _dialogs;
@@ -61,6 +63,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     partial void OnIsEditingChanged(bool value)
     {
         if (CurrentDetail is RecipeDetailViewModel recipe) recipe.CanReorder = value;
+        (CurrentDetail as IngredientDetailViewModel)?.RaiseCanExecuteChanged();
         // The lock's owner pushes it into whatever page is open on top of this one. Both read it on
         // demand and nothing else tells them it moved: the editor's Save and note, and the Rise page's
         // Save, footer and depth note, would otherwise stay as they were until the next edit.
@@ -178,10 +181,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         if (_session.SourcePath is null)
             return new BookSettingsOutcome(false,
                 ["This view isn't backed by a .cbk file on disk, so there is nowhere to save to."]);
-        if (_reordering)
+        using var write = _session.TryBeginWrite();
+        if (write is null)
             return new BookSettingsOutcome(false, ["Still saving the last change - try again in a moment."]);
-
-        _reordering = true;
         try
         {
             var edited = edit(_book);
@@ -198,7 +200,6 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         {
             return new BookSettingsOutcome(false, [ErrorText.For(ex)]);
         }
-        finally { _reordering = false; }
     }
 
     private void RefreshValidity()
@@ -522,6 +523,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         // make changes." The lock governs the Explorer's structural edits (add, delete, reorder);
         // the pencil is deliberately NOT gated by it, so that sentence sat under a canvas that
         // painted perfectly well, claiming the opposite. Say something true on the way in.
+        if (_disposed) return;
         var editor = _editorFactory(i, r, _book, () => IsEditing);
         editor.Saved += OnEditorSaved;
         editor.Closed += () => { if (ReferenceEquals(_openEditor, editor)) _openEditor = null; };
@@ -624,6 +626,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// </param>
     private void ApplyBook(LoadedCookBook book, string? selectId, bool revalidate = true)
     {
+        if (_disposed) return;
         // Which branches were open, before the tree they belong to stops existing. Selection was
         // already carried across by id; expansion has to be, for the same reason and by the same key.
         var open = OpenBranchIds(_fullRoot);
@@ -727,23 +730,19 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// </summary>
     private object? _keepDetailFor;
 
-    /// <summary>
-    /// True while a reorder is being written. Reorders do not queue: <c>OnKeyDown</c> is
-    /// <c>async void</c> and reentrant, so holding Alt+Up fired a second move before the first had
-    /// saved — the two collided on <c>book.cbk.tmp</c> and the loser had already recomputed from the
-    /// stale graph, so one keystroke was silently discarded on top of the error dialog.
-    ///
-    /// <para>ONE FLAG, NOT ONE PER GESTURE. <see cref="MoveLayerAsync"/> is the Recipe pane's drag
-    /// and <see cref="MoveNodeToAsync"/> is the tree's drag and its own Alt+Up chord, and all three
-    /// write the WHOLE book back to the one source archive — so two in flight collide whichever
-    /// gesture started them, and a second flag would only have made each door safe against itself.
-    /// The tree arrived carrying no guard at all, which is the same door this one was opened for.</para>
-    ///
-    /// <para>Refused rather than queued, deliberately. A queue would apply a move computed against a
-    /// stack the user can no longer see, and the honest thing on a seconds-long write is to say so
-    /// and let them press again. The same shape as the editor's <c>IsSaving</c>.</para>
-    /// </summary>
-    private bool _reordering;
+    /// <inheritdoc />
+    public bool HasUnsavedWork => false;
+    /// <inheritdoc />
+    public bool IsBusy => _session.IsWriting;
+    /// <inheritdoc />
+    public async Task<bool> ConfirmLeaveAsync() { await _session.WaitForWriteAsync(); return true; }
+
+    private IDisposable? BeginWrite()
+    {
+        var write = _session.TryBeginWrite();
+        if (write is null) _status.Say("Still saving the last change - try again in a moment.");
+        return write;
+    }
 
     /// <summary>
     /// Applies a rule edit to one recipe and saves the book, the same shape
@@ -760,6 +759,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         string recipeId, Func<RecipeManifest, RecipeManifest> edit, string what)
     {
         if (!CanEditBook(what)) return null;
+        using var write = BeginWrite();
+        if (write is null) return null;
 
         // Captured BEFORE the await: whatever is on screen when the write finishes may not be this.
         object? askedFrom = CurrentDetail;
@@ -797,17 +798,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     internal async Task<LoadedCookBook?> MoveLayerAsync(string recipeId, string ingredientId, int toDepth)
     {
         if (!CanEditBook("reorder the layers")) return null;
-        if (_reordering)
-        {
-            _status.Say("Still saving the last reorder — try that again in a moment.");
-            return null;
-        }
+        using var write = BeginWrite();
+        if (write is null) return null;
         // No special case here for a recipe that stacks a layer it does not carry. There used to be
         // one, because LayerRow.Index was the row's POSITION and got fed back as a depth, so the two
         // diverged on exactly that book. Numbering the rows from LayerDepth instead made the index a
         // depth by construction — the bandaid's premise, not just the bandaid, is gone.
 
-        _reordering = true;
         // Captured BEFORE the await: whatever is on screen when the write finishes may not be this.
         object? askedFrom = CurrentDetail;
         try
@@ -828,7 +825,6 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await _dialogs.ShowErrorAsync("Could not reorder layers", ErrorText.For(ex));
             return null;
         }
-        finally { _reordering = false; }
     }
 
     private static ExplorerNode? FindNode(ExplorerNode root, string? id)
@@ -1015,6 +1011,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await CreateLooseRecipe(result);
             return;
         }
+        using var write = BeginWrite();
+        if (write is null || !CanEditBook("add a recipe")) return;
         if (_book.Recipes.Any(r => r.Manifest.Id == result.DerivedId))
         {
             await _dialogs.ShowErrorAsync("Duplicate recipe", $"A recipe “{result.DerivedId}” already exists.");
@@ -1054,6 +1052,14 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        using var write = BeginWrite();
+        if (write is null || !CanEditBook("add an ingredient")) return;
+        if (!_book.TryRecipe(recipe.Manifest.Id, out var liveRecipe))
+        {
+            _status.Say("That recipe was removed while the dialog was open. Select another recipe and try again.");
+            return;
+        }
+        recipe = liveRecipe;
         var newIng = result.Build(_book.Manifest.Canvas);   // owns the blank image until adopted
         var adopted = false;                                 // true once the persisted book owns its image
         try
@@ -1128,7 +1134,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     /// yes - opening the recipe closes the book, which is not what a button called Add suggests.</summary>
     private async Task<bool> MayLeaveBookAsync(string recipeName)
     {
-        if (_reordering) return false;
+        if (_session.IsWriting) return false;
         foreach (var page in _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork || p.IsBusy).ToList())
             if (!await page.ConfirmLeaveAsync()) return false;
         return await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
@@ -1189,6 +1195,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         string? path = await _picker.OpenFileAsync("Import into this CookBook",
             ".rcp", ".igt", ".png", ".jpg", ".jpeg");
         if (path is null) return;   // canceled
+        using var write = BeginWrite();
+        if (write is null || !CanEditBook("import")) return;
 
         try
         {
@@ -1227,9 +1235,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
                 ? _book.Manifest.RecipeWeights.Values.Average()
                 : 100;
 
+            var replaced = _book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipe.Manifest.Id);
             var next = CookBookEdits.UpsertRecipe(_book, recipe, weight);
-            recipe = null;   // the new graph owns it
-            await CommitAsync(next, selectId: null);
+            var saved = await CookBookPersistence.PersistAsync(_session, next);
+            recipe = null;   // persistence has adopted the incoming graph
+            if (replaced is not null) DisposeOrphans(replaced.Ingredients.SelectMany(i => i.VariantImages.Values), saved);
+            ApplyBook(saved, SelectedNode?.Id);
             _status.Say($"Imported recipe “{Path.GetFileNameWithoutExtension(path)}”.");
         }
         finally { recipe?.Dispose(); }
@@ -1255,9 +1266,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         var ing = IngredientArchive.Read(path);
         try
         {
+            var replaced = target.Ingredients.FirstOrDefault(i => i.Manifest.Id == ing.Manifest.Id);
             var next = CookBookEdits.UpsertIngredient(_book, target.Manifest.Id, ing);
-            ing = null;   // the new graph owns it
-            await CommitAsync(next, selectId: null);
+            var saved = await CookBookPersistence.PersistAsync(_session, next);
+            ing = null;   // persistence has adopted the incoming graph
+            if (replaced is not null) DisposeOrphans(replaced.VariantImages.Values, saved);
+            ApplyBook(saved, SelectedNode?.Id);
             _status.Say($"Imported “{Path.GetFileNameWithoutExtension(path)}” into {target.Manifest.Name}.");
         }
         finally { ing?.Dispose(); }
@@ -1352,26 +1366,40 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         if (SelectedNode is not { } node) return;
         var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs,
             "Delete?", $"Delete “{node.Name}” — this can’t be undone.", "Delete"));
-        if (!ok) return;
+        if (!ok || !CanEditBook("delete")) return;
+        using var write = BeginWrite();
+        if (write is null) return;
+        // Ingredient ids are local to a Recipe, and ids at different domain levels may coincide.
+        // Resolve the confirmed target by its kind and owning Recipe rather than a global id scan.
+        var currentNode = node.Domain switch
+        {
+            (LoadedRecipe recipe, LoadedIngredient ingredient) => _fullRoot.Children
+                .FirstOrDefault(r => r.Id == recipe.Manifest.Id)?.Children
+                .FirstOrDefault(i => i.Id == ingredient.Manifest.Id),
+            LoadedRecipe recipe => _fullRoot.Children.FirstOrDefault(r => r.Id == recipe.Manifest.Id),
+            _ => null,
+        };
+        if (currentNode is null) return;
+        node = currentNode;
         try
         {
             LoadedCookBook book2;
             string? parentId;
-            IDisposable removed;
+            IEnumerable<PixelImage> removed;
             if (node.Domain is (LoadedRecipe r, LoadedIngredient i))
             {
                 book2 = CookBookEdits.RemoveIngredient(_book, r.Manifest.Id, i.Manifest.Id);
-                parentId = r.Manifest.Id; removed = i;
+                parentId = r.Manifest.Id; removed = i.VariantImages.Values;
             }
             else if (node.Domain is LoadedRecipe rr)
             {
                 book2 = CookBookEdits.RemoveRecipe(_book, rr.Manifest.Id);
-                parentId = Root.Id; removed = rr;
+                parentId = Root.Id; removed = rr.Ingredients.SelectMany(i => i.VariantImages.Values);
             }
             else return;   // cookbook root — not deletable (also gated by CanExecute)
 
             var book3 = await CookBookPersistence.PersistAsync(_session, book2);
-            removed.Dispose();                 // free the orphaned subtree's images (recipe cascades)
+            DisposeOrphans(removed, book3);
             ApplyBook(book3, parentId);
         }
         catch (Exception ex)
@@ -1473,13 +1501,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private async Task<bool> MoveNodeToAsync(ExplorerNode node, int toIndex)
     {
         if (!CanEditBook("reorder")) return false;
-        if (_reordering)
-        {
-            _status.Say("Still saving the last reorder — try that again in a moment.");
-            return false;
-        }
+        using var write = BeginWrite();
+        if (write is null) return false;
 
-        _reordering = true;
         try
         {
             LoadedCookBook edited;
@@ -1511,7 +1535,6 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             await _dialogs.ShowErrorAsync("Could not reorder", ErrorText.For(ex));
             return false;
         }
-        finally { _reordering = false; }
     }
 
     /// <summary>
@@ -1532,6 +1555,16 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
     private async Task DeleteVariantAsync(LoadedRecipe recipe, LoadedIngredient ingredient, string variantId)
     {
         if (!CanEditBook("delete a variant")) return;
+        using var write = BeginWrite();
+        if (write is null) return;
+        if (!_book.TryRecipe(recipe.Manifest.Id, out var liveRecipe)
+            || liveRecipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingredient.Manifest.Id) is not { } liveIngredient)
+        {
+            _status.Say("That layer was removed while the dialog was open. Select another layer and try again.");
+            return;
+        }
+        recipe = liveRecipe;
+        ingredient = liveIngredient;
         try
         {
             if (!ingredient.VariantImages.TryGetValue(variantId, out var orphan)) orphan = null;
@@ -1549,7 +1582,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
             }
 
             var book3 = await CookBookPersistence.PersistAsync(_session, book2);
-            orphan?.Dispose();                 // every surviving image is reused; this one is not
+            if (orphan is not null) DisposeOrphans([orphan], book3);
             ApplyBook(book3, ingredient.Manifest.Id);
             _status.Say($"Deleted a variant from \u201c{ingredient.Manifest.Name}\u201d.");
         }
@@ -1612,6 +1645,22 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(Crumbs));
     }
 
-    /// <summary>Disposes the detail pane, which owns its rendered bitmaps.</summary>
-    public void Dispose() => (CurrentDetail as IDisposable)?.Dispose();
+    private bool _disposed;
+    /// <summary>Frees the current detail pane and its display bitmaps.</summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        (CurrentDetail as IDisposable)?.Dispose();
+    }
+
+    private static void DisposeOrphans(
+        IEnumerable<PixelImage> oldImages,
+        LoadedCookBook adopted)
+    {
+        var retained = adopted.Recipes.SelectMany(r => r.Ingredients)
+            .SelectMany(i => i.VariantImages.Values).ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var image in oldImages)
+            if (!retained.Contains(image)) image.Dispose();
+    }
 }

@@ -64,9 +64,9 @@ public partial class PassphraseDialogViewModel : ViewModelBase
 
     /// <summary>Closes with what was typed, for the caller to try.</summary>
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private void Open() => _dialogs.Close(Passphrase);
+    private void Open() => _dialogs.Close(this, Passphrase);
 
     /// <summary>Closes with nothing.</summary>
     [RelayCommand]
-    private void Cancel() => _dialogs.Close(null);
+    private void Cancel() => _dialogs.Close(this, null);
 }

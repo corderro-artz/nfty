@@ -55,7 +55,7 @@ public partial class LayerRow : ObservableObject
     /// <param name="index">Its 1-based depth.</param>
     /// <param name="id">The ingredient's id.</param>
     /// <param name="layer">Its display name.</param>
-    /// <param name="kind">The layer kind, as a lower-case word.</param>
+    /// <param name="kind">The layer kind using its enum spelling: Dynamic, Static or Custom.</param>
     /// <param name="variantCount">How many variants it offers.</param>
     /// <param name="absentPercent">How often the recipe leaves it out, 0..100.</param>
     public LayerRow(int index, string id, string layer, string kind, int variantCount,
@@ -73,7 +73,7 @@ public partial class LayerRow : ObservableObject
     public string Id { get; }
     /// <summary>Its display name.</summary>
     public string Layer { get; }
-    /// <summary>The layer kind, as a lower-case word.</summary>
+    /// <summary>The layer kind using its enum spelling: Dynamic, Static or Custom.</summary>
     public string Kind { get; }
     /// <summary>How many variants it offers.</summary>
     public int VariantCount { get; }
@@ -118,6 +118,7 @@ public record RuleRow(bool IsExclude, RuleTargetRow When, IReadOnlyList<RuleTarg
         : "Always together — if this variant is rolled, every one of these must be too.";
 }
 
+/// <summary>Borrows the session graph, owns the hero bitmap and preserves authored rule identity.</summary>
 public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly Action<string> _openIngredient;
@@ -191,7 +192,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// The default is AS AUTHORED, and that matters beyond taste: the CLI addresses a rule by its
     /// 1-based position in the manifest, so a panel that opened in some other order would be quietly
     /// disagreeing with <c>nfty inspect</c> about which rule is number 3. Sorting is a view the
-    /// reader asks for, and the default is one click away again.
+    /// reader asks for; reopening the pane restores its authored order.
     ///
     /// <para>Rule order is otherwise meaningless — <c>RulesEngine.IsLegal</c> evaluates every rule
     /// and short-circuits on the first violation, so no reordering can change a roll. That is what
@@ -263,7 +264,8 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     public bool IsFilterRequire => RuleFilter == RuleFilter.Require;
 
     /// <summary>The hero's factor arithmetic (mockup .rfactors): one kind-tinted chip per layer,
-    /// multiplied together to reach <see cref="TotalText"/>.</summary>
+    /// illustrating variant counts, rather than the DNA total (which also accounts for colors, rules
+    /// and zero-weight choices).</summary>
     public IReadOnlyList<FactorChip> Factors { get; private set; }
 
     /// <summary>The unique DNA this recipe admits - legal variant combinations times each dynamic
@@ -612,21 +614,27 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         DeleteRuleCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>Where a row sits in the rule list. Rules is an IReadOnlyList — projected once in
-    /// the constructor and never mutated in place — so it has no IndexOf of its own, and reference
-    /// equality is the right comparison: the row IS the projection of that rule.</summary>
+    /// <summary>Finds the row in authored order; filtering and sorting only affect display.</summary>
     private int IndexOfRule(RuleRow row)
     {
-        for (int i = 0; i < Rules.Count; i++)
-            if (ReferenceEquals(Rules[i], row)) return i;
+        for (int i = 0; i < _allRules.Count; i++)
+            if (ReferenceEquals(_allRules[i], row)) return i;
         return -1;
+    }
+
+    private static int IndexOfAuthoredRule(RecipeManifest manifest, IncompatibilityRule rule)
+    {
+        for (int i = 0; i < manifest.Rules.Count; i++)
+            if (ReferenceEquals(manifest.Rules[i], rule)) return i;
+        throw new InvalidOperationException("That rule changed while the dialog was open. Reopen it and try again.");
     }
 
     [RelayCommand(CanExecute = nameof(CanEditRules))]
     private Task AddRule() => ShowRuleDialogAsync(-1);
 
     [RelayCommand(CanExecute = nameof(CanEditRules))]
-    private Task EditRule(RuleRow row) => ShowRuleDialogAsync(IndexOfRule(row));
+    private Task EditRule(RuleRow row) => IndexOfRule(row) is var index && index >= 0
+        ? ShowRuleDialogAsync(index) : Task.CompletedTask;
 
     /// <summary>
     /// Shows the add/edit form and applies what comes back.
@@ -640,13 +648,14 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         if (_dialogs is null || _editRules is null) return;
         if (index < 0 && Rules.Count == 0 && _recipe.Ingredients.Count == 0) return;
 
+        var original = index >= 0 ? _recipe.Manifest.Rules[index] : null;
         var rule = await _dialogs.ShowAsync<IncompatibilityRule>(
             new RuleDialogViewModel(_dialogs, _recipe.Manifest, _recipe.Ingredients, index));
         if (rule is null) return;   // dismissed
 
         await _editRules(
-            m => index >= 0 && index < m.Rules.Count
-                ? RuleEdits.ReplaceAt(m, index, rule)
+            m => original is not null
+                ? RuleEdits.ReplaceAt(m, IndexOfAuthoredRule(m, original), rule)
                 : RuleEdits.Add(m, rule),
             index >= 0 ? "edit a rule" : "add a rule");
     }
@@ -658,6 +667,8 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         int index = IndexOfRule(row);
         if (index < 0) return;
 
+        var original = _recipe.Manifest.Rules[index];
+
         // Confirmed, because a rule is not recoverable from anything on screen once it is gone —
         // and the prompt quotes the rule so the reader can see they picked the one they meant.
         var ok = await _dialogs.ShowAsync<bool>(new ConfirmDialogViewModel(_dialogs, "Delete this rule?",
@@ -666,7 +677,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
             "Delete"));
         if (!ok) return;
 
-        await _editRules(m => RuleEdits.RemoveAt(m, index), "delete a rule");
+        await _editRules(m => RuleEdits.RemoveAt(m, IndexOfAuthoredRule(m, original)), "delete a rule");
     }
 
     /// <summary>Re-projects this pane onto the saved graph after a reorder: the same rows, re-seated,

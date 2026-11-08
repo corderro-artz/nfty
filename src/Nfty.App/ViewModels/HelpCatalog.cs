@@ -114,6 +114,8 @@ public static class HelpMarkup
     private static readonly Regex Marks = new(@"[*^]", RegexOptions.Compiled);
 
     /// <summary>The text without its emphasis marks.</summary>
+    /// <param name="markup">Help text containing emphasis markers.</param>
+    /// <returns>The text with asterisks and carets removed.</returns>
     public static string Strip(string markup) => Marks.Replace(markup, "");
 }
 
@@ -126,6 +128,8 @@ public static class HelpCatalog
     private const string Kinds = "LAYER KINDS";
 
     /// <summary>The uppercased tab label, as the tab and the result chips spell it.</summary>
+    /// <param name="tab">The help page.</param>
+    /// <returns>Its display label; unknown values use the viewer label.</returns>
     public static string TabLabel(HelpTab tab) => tab switch
     {
         HelpTab.Basics => "BASICS",
@@ -292,6 +296,8 @@ public static class HelpCatalog
 
     /// <summary>The entries matching <paramref name="query"/>: every whitespace-separated word must
     /// appear (case-insensitive) in the entry's tab, section, term, description or key.</summary>
+    /// <param name="query">Whitespace-separated search terms; blank returns no results.</param>
+    /// <returns>Matching entries in catalog order.</returns>
     public static IReadOnlyList<HelpEntry> Search(string query)
     {
         var words = query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);

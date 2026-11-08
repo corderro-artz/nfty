@@ -697,6 +697,8 @@ public sealed class RecipeRiseSource : RiseSource
     private async Task SaveCoreAsync()
     {
         var session = _session!;
+        using var write = session.TryBeginWrite()
+            ?? throw new InvalidOperationException("Wait for the CookBook's current save before writing depth.");
         var book = session.Current ?? throw new InvalidOperationException("The CookBook is no longer open.");
         var recipe = book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id)
             ?? throw new InvalidOperationException($"Recipe '{_recipe.Manifest.Id}' is no longer in the CookBook.");

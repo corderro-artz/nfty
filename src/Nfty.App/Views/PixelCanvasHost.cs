@@ -94,6 +94,7 @@ internal sealed class PixelCanvasHost
 
     /// <summary>The drawn art as a rectangle in the surface's coordinates, or empty while there is
     /// no frame.</summary>
+    /// <returns>The drawn art rectangle in logical control units, or an empty rectangle.</returns>
     public Rect Geometry()
     {
         if (_image.Source is not Bitmap bmp || !TryGeometry(out var s, out var x, out var y)) return default;
@@ -101,6 +102,7 @@ internal sealed class PixelCanvasHost
     }
 
     /// <summary>The frame as the value the pointer mapping takes, or null while there is none.</summary>
+    /// <returns>The art's scale and offset in logical control units, or null without a frame.</returns>
     public CanvasFrame? Frame() =>
         TryGeometry(out var s, out var x, out var y) ? new CanvasFrame(s, x, y) : null;
 

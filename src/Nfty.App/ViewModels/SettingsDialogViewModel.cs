@@ -42,12 +42,12 @@ public enum ConnectionState
 }
 
 /// <summary>
-/// The Settings card: four tabbed pages over the app's own preferences — GENERAL (theme, starting
+/// The Settings card: four cross-platform tabbed pages over the app's own preferences — GENERAL (theme, starting
 /// canvas), PERFORMANCE (worker threads), PUBLISHING (where an upload goes, and whether nfty can talk
-/// to it), DATA (what the app remembers, and where).
+/// to it), DATA (what the app remembers, and where). Windows adds SYSTEM for file associations.
 /// </summary>
 /// <remarks>
-/// <para>Every page is one tab of the export card's underline vocabulary, and all four share one
+/// <para>Every page is one tab of the export card's underline vocabulary, and all pages share one
 /// reserved height, so switching tabs moves nothing below them.</para>
 /// <para><b>The connection check never blocks.</b> It runs on open, on a provider change and on
 /// Test connection, each cancelling the one before; <see cref="PendingCheck"/> is the handle a test
@@ -136,7 +136,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
     [RelayCommand] private void Close()
     {
         _checkCts?.Cancel();
-        _dialogs.Close(null);
+        _dialogs.Close(this, null);
     }
 
     // ================================================================ GENERAL
@@ -292,6 +292,11 @@ public partial class SettingsDialogViewModel : ViewModelBase
 
     partial void OnKuboApiChanged(string value)
     {
+        if (IsLocalIpfs)
+        {
+            _checkCts?.Cancel();
+            SetStatus(ConnectionState.Unchecked, "not checked", "The address changed. Test the connection.");
+        }
         if (KuboPinning.ApiProblem(value) is not null) return;
         if (value.Trim() == _publishing.KuboApi) return;
         _publishing.SetKuboApi(value);
@@ -391,7 +396,8 @@ public partial class SettingsDialogViewModel : ViewModelBase
     private async Task CheckAsync()
     {
         _checkCts?.Cancel();
-        var cts = _checkCts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
+        _checkCts = cts;
         SetStatus(ConnectionState.Checking, "checking…", $"Asking {(IsPinata ? "Pinata" : _publishing.KuboApi)}…");
         try
         {
@@ -405,6 +411,10 @@ public partial class SettingsDialogViewModel : ViewModelBase
         {
             if (!cts.IsCancellationRequested)
                 SetStatus(ConnectionState.NotReachable, "not reachable", ErrorText.For(ex));
+        }
+        finally
+        {
+            if (ReferenceEquals(_checkCts, cts)) _checkCts = null;
         }
     }
 

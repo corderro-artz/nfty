@@ -11,16 +11,21 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>Phase-1 New Ingredient wizard: collects the fields an Ingredient manifest needs (name,
-/// kind, colorization config, and where it's saved). Create is a stub — Phase 2 builds the manifest
-/// and writes the .igt.</summary>
+/// <summary>Collects Ingredient fields and returns this form on Create. The caller builds and saves
+/// the archive, and owns the built images until its book adopts them.</summary>
 public partial class NewIngredientViewModel : WizardViewModelBase
 {
+    /// <summary>The Ingredient display name and source of its derived id.</summary>
     [ObservableProperty] private string _name = "";
+    /// <summary>Whether the layer rolls color, uses a fixed color, or retains custom art.</summary>
     [ObservableProperty] private LayerKind _kind = LayerKind.Dynamic;
+    /// <summary>Whether the caller inserts the Ingredient or saves a loose archive.</summary>
     [ObservableProperty] private RecipeDestination _destination = RecipeDestination.IntoCookBook;
+    /// <summary>Hue endpoints in degrees and saturation endpoints in percent for dynamic colorization.</summary>
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
+    /// <summary>The typed color specification used for a static layer.</summary>
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
+    /// <summary>Loose canvas dimensions as width x height; book insertion inherits its canvas.</summary>
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private string _canvasSize = "32x32";
 
     /// <summary>Ink for the large-canvas warning under the loose canvas field: always laid out.</summary>
@@ -175,6 +180,8 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     public string DerivedIdText => IdChipText(DerivedId);
 
     /// <summary>Parse the CanvasSize field ("{W}x{H}") into positive dimensions.</summary>
+    /// <param name="canvas">Positive dimensions on success; default on invalid text.</param>
+    /// <returns>True for positive dimensions within the supported pixel budget.</returns>
     public bool TryGetCanvas(out Dimensions canvas)
     {
         canvas = default!;
@@ -188,11 +195,14 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     }
 
     /// <summary>Build the colorization config from the wizard fields (quantize defaults 12/4).</summary>
+    /// <returns>A configuration for dynamic/static layers, or null for custom art.</returns>
     public Colorization? BuildColorization() => Colorization.Starter(Kind, ColorModel,
         new ColorRange(HueMin, HueMax, SatMin, SatMax), FixedColor);
 
     /// <summary>Turn the wizard into a loaded ingredient with one blank starter variant at the given
     /// canvas size. The caller owns the returned image until the book adopts it.</summary>
+    /// <param name="canvas">The validated canvas inherited from the book or parsed for a loose Ingredient.</param>
+    /// <returns>A caller-owned Ingredient and its blank starter image; dispose it if adoption fails.</returns>
     public LoadedIngredient Build(Dimensions canvas)
     {
         const string variantId = "variant-1";
@@ -208,5 +218,5 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
-    private void Create() => Dialogs.Close(this);
+    private void Create() => Dialogs.Close(this, this);
 }

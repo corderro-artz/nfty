@@ -5,11 +5,6 @@ using Nfty.Core.Stats;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>
-/// A recipe page that WRITES THROUGH: depth belongs to the layers' own variants, so the page first asks which
-/// layer a stroke is for (the pick), then paints only that one while the 3D tile goes on showing the whole
-/// character.
-/// </summary>
 public sealed partial class RiseViewModel
 {
     private RecipeRiseSource? Recipe => Source as RecipeRiseSource;
@@ -56,6 +51,7 @@ public sealed partial class RiseViewModel
     /// is solid at (everything else is dimmed and inert).</summary>
     /// <param name="x">Canvas x.</param>
     /// <param name="y">Canvas y.</param>
+    /// <returns>True when this pixel belongs to the editable region for the current picking state.</returns>
     public bool IsHittable(int x, int y)
     {
         if (Recipe is not { IsEditable: true } recipe) return true;

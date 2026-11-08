@@ -155,6 +155,9 @@ public class SessionLifecycleTests
 
     private sealed class RecordingSession(Action onClose) : ICookBookSession
     {
+        public bool IsWriting => false;
+        public IDisposable? TryBeginWrite() => throw new NotSupportedException();
+        public Task WaitForWriteAsync() => Task.CompletedTask;
         public LoadedCookBook? Current => null;
         public string? SourcePath => null;
         public event Action? Changed { add { } remove { } }

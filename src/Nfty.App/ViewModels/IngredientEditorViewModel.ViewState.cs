@@ -2,19 +2,8 @@ using Nfty.App.Services;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>
-/// WHAT OF THE EDITOR'S VIEW IS REMEMBERED BETWEEN SESSIONS.
-/// </summary>
-/// <remarks>
-/// <para>The pixel grid is already documented as view state that must never mark the editor dirty.
-/// This is the other half of that sentence: state that is not part of the work should not have to be
-/// re-chosen every time the work is opened. An author who paints 16px sprites on an 8px lattice sets
-/// that on every layer they open, and the app forgot it every time.</para>
-///
-/// <para><b>Two things are deliberately left out</b>, and the reasons are in
-/// <see cref="IEditorViewState"/>: zoom and pan belong to the IMAGE, and "fill pane with preview"
-/// is a mode entered to LOOK at something rather than to work that way.</para>
-/// </remarks>
+// Persist view preferences without marking artwork dirty. Zoom/pan belong to the
+// image and fill-pane preview is temporary; IEditorViewState defines the saved subset.
 public partial class IngredientEditorViewModel
 {
     private IEditorViewState _viewState = new EditorViewStateService(StateStore.InMemory());

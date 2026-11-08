@@ -14,20 +14,29 @@ namespace Nfty.App.ViewModels;
 /// <summary>Runs the real generate+write pipeline for a borrowed <see cref="LoadedCookBook"/>.
 /// The book is owned by the caller — never disposed here; only the <see cref="GeneratedSet"/>
 /// this run produces is disposed once written.</summary>
-public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
+public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancellableDialog
 {
     /// <inheritdoc />
     public bool HasUnsavedWork => false;
     /// <inheritdoc />
-    public bool IsBusy => IsRunning;
+    public bool IsBusy => IsRunning || _cts is not null;
     /// <inheritdoc />
-    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsRunning);
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsBusy);
 
     private readonly LoadedCookBook _book;
     private readonly IFilePickerService _picker;
     private readonly IFolderRevealer _revealer;
     private readonly IDialogService _dialogs;
     private CancellationTokenSource? _cts;
+
+    /// <inheritdoc />
+    public async Task CancelAndWaitAsync()
+    {
+        var run = CookCommand.ExecutionTask;
+        _cts?.Cancel();
+        if (run is not null) await run;
+    }
+
     private string? _outDir;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyPropertyChangedFor(nameof(ResultingTotalText))] private int _count = 50;
@@ -314,22 +323,24 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
     [RelayCommand(CanExecute = nameof(CanCook))]
     private async Task Cook()
     {
-        // The button is disabled until the scan lands, but a disabled button is a label (a generated
-        // command's ExecuteAsync does not consult CanExecute): the answer the modeler gate below
-        // reads must be in before anything is decided.
-        await ScanTask;
-
-        var dir = await _picker.PickFolderAsync("Cook to folder");
-        if (dir is null) return;
-
-        // Read ONCE, here: a change on the Settings card applies to the next cook, never this one.
-        var par = Threads;
-        ProvenanceWarning = "";
-        _cts = new CancellationTokenSource();
-        IsRunning = true; IsDone = false; Progress = 0;
+        if (_cts is not null || IsRunning) return;
+        using var cts = new CancellationTokenSource();
+        _cts = cts;
+        CloseCommand.NotifyCanExecuteChanged();
         GeneratedSet? set = null;
         try
         {
+            // Retain the accepted operation through scan and picker awaits. A dismissal can request
+            // cancellation here too; a later picker answer must not start a new write.
+            await ScanTask;
+            cts.Token.ThrowIfCancellationRequested();
+            var dir = await _picker.PickFolderAsync("Cook to folder");
+            if (dir is null) return;
+            cts.Token.ThrowIfCancellationRequested();
+
+            var par = Threads;
+            ProvenanceWarning = "";
+            IsRunning = true; IsDone = false; Progress = 0;
             // EXTEND, when the folder already holds a Set. This is the `extend` command's whole
             // mechanism - CLAUDE.md: "not a second pipeline, the same Generator.Generate call with
             // its existingDnas / startNumber supplied" - and until now the GUI never supplied them.
@@ -340,7 +351,7 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
             // writer was already extend-aware (it loads the existing items and regrades rarity
             // across the whole collection); only the generator was being told nothing.
             PhaseText = "Reading existing…";
-            var existing = await SetWriter.ReadExistingAsync(dir, _cts.Token, par);
+            var existing = await SetWriter.ReadExistingAsync(dir, cts.Token, par);
             IsExtending = existing.Dnas.Count > 0;
             // The CLI's rule and the CLI's words: a warning, never a refusal. Re-cooking a
             // deliberately edited book is legitimate, and the author is the one who knows.
@@ -370,13 +381,13 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
                 EnforceUniqueDna: !Unlimited, Parallelism: par);
             PhaseText = !IsExtending ? "Generating…"
                 : $"Extending {ExistingCount} assets {ResultingTotalText}…" + (SelectedRecipe.Id is null ? "" : " " + RecipeSetAsideText);
-            var genProgress = new Progress<GenerationProgress>(p => Progress = p.Fraction);
+            var genProgress = new Progress<GenerationProgress>(p => { if (ReferenceEquals(_cts, cts) && IsRunning) Progress = p.Fraction; });
             set = await Generator.GenerateAsync(_book, opts, existing.Dnas, existing.NextNumber,
-                genProgress, _cts.Token);
+                genProgress, cts.Token);
 
             PhaseText = modeler is null ? "Writing…" : "Writing models…"; Progress = 0;
-            var writeProgress = new Progress<WriteProgress>(p => Progress = p.Fraction);
-            await SetWriter.WriteAsync(set, dir, Pack, writeProgress, _cts.Token, models: modeler, parallelism: par);
+            var writeProgress = new Progress<WriteProgress>(p => { if (ReferenceEquals(_cts, cts) && IsRunning) Progress = p.Fraction; });
+            await SetWriter.WriteAsync(set, dir, Pack, writeProgress, cts.Token, models: modeler, parallelism: par);
 
             _outDir = dir;
             OutputPath = dir;
@@ -387,7 +398,7 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
                 : $"Cooked {made} {noun}.";
             if (modeler is not null)
             {
-                var written = (await SetWriter.ReadExistingAsync(dir, _cts.Token, par, needDnas: false)).Models;
+                var written = (await SetWriter.ReadExistingAsync(dir, cts.Token, par, needDnas: false)).Models;
                 int skipped = (written?.Skipped ?? []).Count(n => n >= existing.NextNumber);
                 ResultText += $" · {made - skipped} models" + (skipped > 0 ? $" · {skipped} skipped" : "");
             }
@@ -402,6 +413,8 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
         {
             set?.Dispose();
             IsRunning = false;
+            if (ReferenceEquals(_cts, cts)) _cts = null;
+            CloseCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -425,10 +438,10 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork
     /// a <c>.set</c> INSIDE the folder rather than instead of it, so the folder is a readable Set
     /// either way and the answer does not depend on that checkbox.</para>
     /// </remarks>
-    [RelayCommand(CanExecute = nameof(CanReveal))] private void OpenSet() => _dialogs.Close(_outDir);
+    [RelayCommand(CanExecute = nameof(CanReveal))] private void OpenSet() => _dialogs.Close(this, _outDir);
 
-    [RelayCommand(CanExecute = nameof(CanClose))] private void Close() => _dialogs.Close(null);
-    private bool CanClose() => !IsRunning;
+    [RelayCommand(CanExecute = nameof(CanClose))] private void Close() { if (CanClose()) _dialogs.Close(this, null); }
+    private bool CanClose() => !IsBusy;
 }
 
 /// <summary>One entry of the recipe picker.</summary>

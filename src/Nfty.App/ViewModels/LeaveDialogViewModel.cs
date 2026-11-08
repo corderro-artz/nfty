@@ -46,16 +46,16 @@ public partial class LeaveDialogViewModel : ViewModelBase
     public bool CanSave { get; }
 
     /// <summary>Leave without saving.</summary>
-    [RelayCommand] private void Discard() => _dialogs.Close(LeaveChoice.Discard);
+    [RelayCommand] private void Discard() => _dialogs.Close(this, LeaveChoice.Discard);
 
     /// <summary>Save, then leave.</summary>
     [RelayCommand(CanExecute = nameof(CanSave))]
     private void SaveAndLeave()
     {
         if (!CanSave) return;      // a disabled button is a label
-        _dialogs.Close(LeaveChoice.SaveAndLeave);
+        _dialogs.Close(this, LeaveChoice.SaveAndLeave);
     }
 
     /// <summary>Keep editing.</summary>
-    [RelayCommand] private void Stay() => _dialogs.Close(LeaveChoice.Stay);
+    [RelayCommand] private void Stay() => _dialogs.Close(this, LeaveChoice.Stay);
 }

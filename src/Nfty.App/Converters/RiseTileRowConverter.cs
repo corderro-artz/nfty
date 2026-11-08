@@ -42,14 +42,7 @@ public sealed class RiseTileRowConverter : IValueConverter
         if (value is not IReadOnlyList<RiseItem> items || items.Count == 0) return Array.Empty<RiseTileRow>();
         if (_rows is not null && ReferenceEquals(_forItems, items)) return _rows;
 
-        var rows = new List<RiseTileRow>((items.Count + PerRow - 1) / PerRow);
-        for (int i = 0; i < items.Count; i += PerRow)
-        {
-            int take = Math.Min(PerRow, items.Count - i);
-            var tiles = new RiseItem[take];
-            for (int j = 0; j < take; j++) tiles[j] = items[i + j];
-            rows.Add(new RiseTileRow(tiles));
-        }
+        var rows = items.Chunk(PerRow).Select(tiles => new RiseTileRow(tiles)).ToList();
         _forItems = items;
         _rows = rows;
         return rows;

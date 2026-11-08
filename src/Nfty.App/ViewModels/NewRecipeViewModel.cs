@@ -19,14 +19,20 @@ public enum RecipeDestination
 
 /// <summary>One row of the "Resulting mix" readout: a Recipe and the share of the collection its
 /// weight buys once the book normalizes every weight.</summary>
+/// <param name="Name">The displayed Recipe name.</param>
+/// <param name="Percent">Its normalized share, in percent.</param>
+/// <param name="IsCurrent">Whether this row represents the Recipe being created.</param>
 public record ShareRow(string Name, double Percent, bool IsCurrent);
 
-/// <summary>Phase-1 New Recipe wizard: collects the fields a Recipe manifest needs (name, weight,
-/// and where it's saved). Create is a stub — Phase 2 builds the manifest and writes the .rcp.</summary>
+/// <summary>Collects a Recipe name, selection weight and destination. Create returns this form;
+/// the caller builds the manifest and persists the archive.</summary>
 public partial class NewRecipeViewModel : WizardViewModelBase
 {
+    /// <summary>The Recipe display name and source of its derived id.</summary>
     [ObservableProperty] private string _name = "";
+    /// <summary>Raw selection weight relative to the open book’s other Recipes.</summary>
     [ObservableProperty] private double _weight = 100;
+    /// <summary>Whether the caller inserts the Recipe or saves a loose archive.</summary>
     [ObservableProperty] private RecipeDestination _destination = RecipeDestination.IntoCookBook;
 
     /// <summary>Weight only matters when the Recipe joins a CookBook's weighted mix; a loose Recipe
@@ -60,27 +66,27 @@ public partial class NewRecipeViewModel : WizardViewModelBase
         IReadOnlyList<(string Name, double Weight)>? siblings = null) : base(dialogs)
     {
         _siblings = siblings ?? Array.Empty<(string, double)>();
+        RebuildShare();
     }
 
-    /// <summary>The mockup's .share readout. A weight is meaningless on its own — it is RELATIVE to
-    /// its siblings and the book normalizes the set, so the number the user actually cares about is
-    /// the share it buys. The control this replaces was a ProgressBar bound Value=Weight Maximum=100,
-    /// which rendered a weight of 100 as a full bar and so read as "100% of the collection" no matter
-    /// what the siblings weighed.</summary>
-    public IReadOnlyList<ShareRow> ShareRows
-    {
-        get
-        {
-            var total = Weight + _siblings.Sum(s => s.Weight);
-            if (total <= 0) return Array.Empty<ShareRow>();
+    /// <summary>The new Recipe followed by its siblings, normalized together from their raw weights.
+    /// Recomputed when the name or weight changes; an empty/zero-total mix has no rows.</summary>
+    public IReadOnlyList<ShareRow> ShareRows => _shareRows;
 
-            var mine = new ShareRow(
-                string.IsNullOrWhiteSpace(Name) ? "This recipe" : Name,
-                Weight / total * 100, true);
-            return new[] { mine }
-                .Concat(_siblings.Select(s => new ShareRow(s.Name, s.Weight / total * 100, false)))
-                .ToList();
-        }
+    private IReadOnlyList<ShareRow> _shareRows = [];
+    private IReadOnlyList<ShareRow> _shownShareRows = [];
+
+    private void RebuildShare()
+    {
+        // Preserve the original summation order: the new weight plus the siblings' sum.
+        var total = Weight + _siblings.Sum(s => s.Weight);
+        _shareRows = total <= 0 ? [] : new[]
+        {
+            new ShareRow(string.IsNullOrWhiteSpace(Name) ? "This recipe" : Name, Weight / total * 100, true),
+        }.Concat(_siblings.Select(s => new ShareRow(s.Name, s.Weight / total * 100, false))).ToList();
+        _shownShareRows = _shareRows.Count <= ShownShareRowCount ? _shareRows
+            : _shareRows.Take(1).Concat(_shareRows.Skip(1).OrderByDescending(r => r.Percent)
+                .Take(ShownShareRowCount - 1)).ToList();
     }
 
     /// <summary>How many rows of the mix legend are listed. The bar above it always carries every
@@ -88,16 +94,7 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     public const int ShownShareRowCount = 5;
 
     /// <summary>The legend rows actually listed: the new recipe first, then the heaviest siblings.</summary>
-    public IReadOnlyList<ShareRow> ShownShareRows
-    {
-        get
-        {
-            var all = ShareRows;
-            if (all.Count <= ShownShareRowCount) return all;
-            return all.Take(1).Concat(all.Skip(1).OrderByDescending(r => r.Percent)
-                .Take(ShownShareRowCount - 1)).ToList();
-        }
-    }
+    public IReadOnlyList<ShareRow> ShownShareRows => _shownShareRows;
 
     /// <summary>"+7 more recipes" under a capped legend; one line is always laid out, so the card is the same height with or without it.</summary>
     public string MoreSharesText
@@ -116,6 +113,7 @@ public partial class NewRecipeViewModel : WizardViewModelBase
 
     private void NotifyShare()
     {
+        RebuildShare();
         OnPropertyChanged(nameof(ShareRows));
         OnPropertyChanged(nameof(ShownShareRows));
         OnPropertyChanged(nameof(MoreSharesText));
@@ -146,5 +144,5 @@ public partial class NewRecipeViewModel : WizardViewModelBase
     private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
-    private void Create() => Dialogs.Close(this);
+    private void Create() => Dialogs.Close(this, this);
 }

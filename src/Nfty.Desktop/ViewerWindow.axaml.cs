@@ -98,10 +98,10 @@ public partial class ViewerWindow : Window
     /// asks for the center of the screen: an unplugged monitor cannot strand a window.
     /// </summary>
     /// <param name="entry">The remembered window.</param>
-    /// <param name="workingAreas">The working area of every screen.</param>
-    public void Place(ViewerWindowEntry entry, IReadOnlyList<PixelRect> workingAreas)
+    /// <param name="screens">Each screen's working area in pixels and its pixels per DIP.</param>
+    public void Place(ViewerWindowEntry entry, IReadOnlyList<(PixelRect WorkingArea, double Scaling)> screens)
     {
-        if (ViewerWindowPlacement.Resolve(entry, workingAreas) is { } at)
+        if (ViewerWindowPlacement.Resolve(entry, screens) is { } at)
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
             Position = at;

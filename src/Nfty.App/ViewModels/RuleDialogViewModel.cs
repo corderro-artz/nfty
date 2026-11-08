@@ -61,6 +61,7 @@ public partial class RuleTargetDraft : ObservableObject
     public bool IsComplete => Layer is not null && Variant is not null;
 
     /// <summary>The pair, or null while the row is half-filled.</summary>
+    /// <returns>A structurally complete target, or null until both pickers have a choice.</returns>
     public RuleTarget? ToTarget() =>
         IsComplete ? new RuleTarget(Layer!.Id, Variant!.Id) : null;
 
@@ -257,6 +258,7 @@ public partial class RuleDialogViewModel : ViewModelBase
     }
 
     /// <summary>The rule as it currently stands, or null while any picker is empty.</summary>
+    /// <returns>A structurally complete rule or null for an empty picker; RuleEdits.Validate determines validity.</returns>
     public IncompatibilityRule? Build()
     {
         if (!Trigger.IsComplete) return null;

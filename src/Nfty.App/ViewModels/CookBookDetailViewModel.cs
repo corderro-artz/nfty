@@ -12,8 +12,8 @@ using Nfty.Core.Model;
 namespace Nfty.App.ViewModels;
 
 /// <summary>One layer's contribution to a recipe's combination space: the mockup's .fchip, showing
-/// the ingredient's variant count tinted by its kind. Chips are multiplied together (x) to reach the
-/// recipe total, which is why the count alone is the chip's whole content.</summary>
+/// the ingredient's variant count tinted by its kind. The product illustrates combinations; the DNA
+/// total separately accounts for quantized colors, rules and zero-weight choices.</summary>
 /// <param name="Name">The ingredient's display name.</param>
 /// <param name="VariantCount">How many variants it contributes to the product.</param>
 /// <param name="Kind">The layer kind, which tints the chip.</param>
@@ -45,7 +45,6 @@ public record FactorChip(string Name, int VariantCount, LayerKind Kind, bool Sho
     public bool IsStatic => Kind == LayerKind.Static;
     /// <summary>Whether this layer composites as-is, without colorization.</summary>
     public bool IsCustom => Kind == LayerKind.Custom;
-    /// <summary>Tooltip text: name, kind and variant count.</summary>
     /// <summary>
     /// What the chip means, in words.
     /// </summary>
@@ -97,6 +96,7 @@ public record RecipeShareRow(string Name, double SharePercent, string DnaSpaceTe
 /// <param name="IsCurrent">Whether this is the page showing.</param>
 public record PageDot(bool IsCurrent);
 
+/// <summary>Projects a borrowed session graph into cookbook detail rows and count displays.</summary>
 public partial class CookBookDetailViewModel : ViewModelBase
 {
     /// <summary>Shown where a count cannot be computed (an unvalidatable book).</summary>
@@ -555,9 +555,8 @@ public partial class CookBookDetailViewModel : ViewModelBase
     /// <see cref="Unknown"/> em dash: a table cell has room for a figure and not for a sentence,
     /// while the report has room for both and says which problem to go and fix.
     ///
-    /// <para>The compact form survives HERE and nowhere else. A row's figure column is 118px, so it
-    /// still rounds past a billion and still carries the exact digits on its tooltip; the headline
-    /// figure has a cell wide enough to print in full and does neither.</para>
+    /// <para>The row uses compact text and exposes full digits on its tooltip. The headline selects
+    /// full or compact text after measuring available width and always provides its full tooltip.</para>
     /// </remarks>
     private static string Figure((BigInteger Total, SpaceCertainty Certainty)? space) =>
         space is not { } s ? Unknown : SpaceText.Describe(s.Total, s.Certainty, compact: true);

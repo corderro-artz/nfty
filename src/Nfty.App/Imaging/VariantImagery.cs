@@ -42,11 +42,12 @@ public static class VariantImagery
         return Colorizer.Apply(map, c.H, c.S, coloriz.Model);
     }
 
-    /// <summary>Renders one variant once per color the layer can take, for the Colorways panel.</summary>
+    /// <summary>Samples the first variant across the first hue range at fixed midpoint saturation.</summary>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
-    /// <param name="ing">The layer.</param>
+    /// <param name="ing">A layer with at least one variant.</param>
     /// <param name="samples">How many swatches to render across the range.</param>
-    /// <returns>One bitmap per sample.</returns>
+    /// <returns>Caller-owned bitmaps: one per sample, or one rendered variant without a range.</returns>
+    /// <remarks>Any bitmaps allocated before a failure are disposed before the exception escapes.</remarks>
     public static IReadOnlyList<Bitmap> Colorways(IImageBridge bridge, LoadedIngredient ing, int samples = 6)
     {
         var coloriz = ing.Manifest.Colorization;
@@ -58,25 +59,33 @@ public static class VariantImagery
         double sat = (range.SatMin + range.SatMax) / 2.0 / 100.0;
         var map = ing.VariantImages[firstId];
         var result = new List<Bitmap>(samples);
-        for (int i = 0; i < samples; i++)
+        try
         {
-            double t = samples == 1 ? 0 : (double)i / (samples - 1);
-            double hue = range.HueMin + t * (range.HueMax - range.HueMin);
-            using var colored = Colorizer.Apply(map, hue, sat, coloriz.Model);
-            result.Add(bridge.ToBitmap(colored));
+            for (int i = 0; i < samples; i++)
+            {
+                double t = samples == 1 ? 0 : (double)i / (samples - 1);
+                double hue = range.HueMin + t * (range.HueMax - range.HueMin);
+                using var colored = Colorizer.Apply(map, hue, sat, coloriz.Model);
+                result.Add(bridge.ToBitmap(colored));
+            }
+            return result;
         }
-        return result;
+        catch
+        {
+            foreach (var bitmap in result) bitmap.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Renders a value-map with an explicit color range, for the editor's live preview.</summary>
     /// <param name="bridge">Converts an ImageSharp frame to an Avalonia bitmap.</param>
     /// <param name="valueMap">The source image.</param>
-    /// <param name="dynamic">Whether to tint at all; false composites as-is.</param>
+    /// <param name="dynamic">Whether to sample the range; false applies the fixed color.</param>
     /// <param name="hueMin">Lowest hue in degrees.</param>
     /// <param name="hueMax">Highest hue in degrees.</param>
     /// <param name="satMin">Lowest saturation, 0-100.</param>
     /// <param name="satMax">Highest saturation, 0-100.</param>
-    /// <param name="fixedColor">A fixed color spec to use instead of sampling the range, or null.</param>
+    /// <param name="fixedColor">A required fixed color spec used when range sampling is off.</param>
     /// <param name="model">The layer's color model, used to resolve a fixed color and to colorize.</param>
     /// <param name="salt">Varies the sample within that seed.</param>
     /// <returns>The bitmap; the caller owns it.</returns>
@@ -95,7 +104,7 @@ public static class VariantImagery
     /// <param name="hueMax">Highest hue in degrees.</param>
     /// <param name="satMin">Lowest saturation, 0-100.</param>
     /// <param name="satMax">Highest saturation, 0-100.</param>
-    /// <param name="fixedColor">A fixed color spec, or null.</param>
+    /// <param name="fixedColor">A required fixed color spec used when range sampling is off.</param>
     /// <param name="model">The layer's color model.</param>
     /// <param name="salt">Varies the sample.</param>
     /// <returns>A new image the caller owns.</returns>

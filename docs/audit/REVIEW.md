@@ -1,14 +1,14 @@
 # Staged codebase review
 
-Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, fetched 2026-11-05).
+Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
 
-Current status: **Ticket, Core, Model and CLI accepted; App two-pass review complete and implementation approved after release publication.** The user accepted CLI verification and approved proceeding on 2026-11-06. CLI checkpoint: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. App review found 21 behavior issues (five P1, 16 P2), 20 grouped XML corrections and 12 bounded simplifications. The user approved App implementation after publishing the accepted library/CLI checkpoint as v2.4.8. App fixes have not started. Nothing has been merged or pushed.
+Current status: **Ticket, Core, Model and CLI accepted; App both passes, approved fixes and final verification complete.** App local checkpoint: `audit-app-verified-2026-11-08`; awaiting user inspection. Final Release build: zero warnings/errors; 5,335 passed, zero failed, one Linux-only skip. No merge, push or publication. Stop before Desktop and later reviews.
 
 The initial review used stale local `main` (`fea71d8`, 115 commits behind). The user identified the missing seed reroll control during verification. The isolated branch was rebased onto current `origin/main`; fixes were adapted and all verification repeated. Initial results are historical evidence only, not proof of compatibility with the current baseline.
 
-Latest interrupted-release state and continuation instructions: [handoff](HANDOFF.md). Windows v2.4.8 packages are built; release publication remains pending. The user requires releases from main after verification, rather than from the audit branch. New version-2 seals require compatible readers; merge/release readiness remains pending.
+Latest checkpoint and continuation instructions: [handoff](HANDOFF.md). Earlier Windows/Linux v2.4.8 packages require rebuilding after App changes; publication remains on hold. The user requires releases from main after verification, rather than from the audit branch. Old Set compatibility is waived. Code merge gates pass; merge remains on hold and final release assets need rebuilding.
 
-Release gates: [2.4.8 candidate](06-release-gates.md). Cross-platform package verification found and corrected platform-dependent JSON newlines; final candidate gates are pending. The user waived old-Set compatibility and approved main merge/publication only after valid final checks.
+Release gates: [2.4.8 candidate](06-release-gates.md). Cross-platform package verification found and corrected platform-dependent JSON newlines. The canonical-LF checkpoint had 5,231 passing tests/one platform skip and 67/67 Windows/Linux payload parity. The completed App checkpoint has 5,335 passes/one platform skip and 470/470 output preservation; packages still require rebuilding. The user waived old-Set compatibility and approved main merge/publication only after valid final checks.
 
 ## Rules
 
@@ -28,17 +28,17 @@ Release gates: [2.4.8 candidate](06-release-gates.md). Cross-platform package ve
 | 2 | Nfty.Core | Archives, validation, editing, imaging, generation, statistics, publishing; Nfty.Core.Tests | Complete | Complete | Fixed and verified; local tag audit-core-verified-2026-11-05; [evidence](02-core-verification.md) |
 | 3 | Nfty.Model | Rise, meshes, model formats/readers, batch export; Nfty.Model.Tests | Complete | Complete | Fixed and verified; local tag audit-model-verified-2026-11-06; [evidence](03-model-verification.md) |
 | 4 | Nfty.Cli | Command wiring, authoring, options, errors; Nfty.Cli.Tests | Complete | Complete | Accepted; local tag audit-cli-verified-2026-11-06; [evidence](04-cli-verification.md) |
-| 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Complete | Complete | Implementation approved after v2.4.8 release; [report](05-app.md) |
-| 6 | Nfty.Desktop | Desktop startup, windows, platform integration; relevant Nfty.App.Tests | Pending | Pending | Not authorized |
-| 7 | Nfty.Ticket.Sample | Package-free Ticket embedding example and its runtime contract | Pending | Pending | Not authorized |
-| 8 | Nfty.Embedding.Sample | Core/Model embedding example and its runtime contract | Pending | Pending | Not authorized |
-| 9 | Tooling and integration | tools/, CI, shared build/package configuration, release and documentation generators; cross-project consistency | Pending | Pending | Not authorized |
+| 5 | Nfty.App | Avalonia views, controls, view models, services, themes, viewer; Nfty.App.Tests | Complete | Complete | Implemented and verified; [report](05-app-verification.md); local tag audit-app-verified-2026-11-08; awaiting user inspection |
+| 6 | Nfty.Desktop | Desktop startup, windows, platform integration; relevant Nfty.App.Tests | Pending | Pending | Not started; stop before review |
+| 7 | Nfty.Ticket.Sample | Package-free Ticket embedding example and its runtime contract | Pending | Pending | Not started; stop before review |
+| 8 | Nfty.Embedding.Sample | Core/Model embedding example and its runtime contract | Pending | Pending | Not started; stop before review |
+| 9 | Tooling and integration | tools/, CI, shared build/package configuration, release and documentation generators; cross-project consistency | Pending | Pending | Not started; stop before review |
 
 Current solution: six production projects, two sample projects, and six test projects. `Nfty.Ticket.NetStandard.Tests` exercises the same Ticket test sources against the netstandard2.1 assembly; it is included in Stage 1. Test projects are reviewed with their production owner. Stage 9 covers executable code outside those projects; XML review applies where applicable, with equivalent documentation review for scripts.
 
 ## Completed review: Nfty.App
 
-Baseline: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. The two-pass review is complete. App implementation was approved after publishing v2.4.8.
+Baseline: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. The two-pass review and approved implementation are verified. See the [final report](05-app-verification.md). Merge/publication remain on hold; stop before Desktop.
 
 - [x] Inventory 223 production C#/AXAML files (48,136 lines), project wiring and 252 companion C# test files.
 - [x] Split ownership across authoring/editor, Rise/viewer, workflows and shared services/controls/themes; complete both passes in every scope.
@@ -49,9 +49,12 @@ Baseline: `cf67cce`, local tag `audit-cli-verified-2026-11-06`. The two-pass rev
 - [x] Capture 431 frames in each full run; inspect representative screens in both themes and targeted live-model/voxel interactions. No blanket all-frame parity claim.
 - [x] Preserve production, committed tests, fixtures, archives and dependencies; update tracker and stop for approval.
 - [x] User approves App findings and implementation scope after publishing the accepted checkpoint.
-- [ ] Delegate approved fixes and verify actual output/function preservation before another checkpoint.
+- [x] Dispatch approved implementation slices with explicit ownership; [active checklist](05-app-implementation.md).
+- [x] Independently integrate/review fixes; verify final Release build/tests, output, rendered frames, documentation and protected files.
+- [x] Complete A01-A21, D01-D20 and S01-S12; record additional integration corrections, controlled H01 proof and native-platform limits.
+- [x] Prepare the local App commit/tag, update the tracker and stop for user verification before Desktop.
 
-Stage 5 result: authored-rule targeting, editor dirty-state loss, running-modal/chrome lifetime hazards, image leaks, export wiring, live-view state, zoom/voxel presentation and settings/platform boundaries need correction. No additional RNG/DNA/mesh arithmetic defect was established. The intermittent headless initialization/cleanup failure is recorded as H01; a green repeat does not resolve its cause. Desktop review has not started. No App implementation, merge or push.
+Stage 5 result: all 21 behavior findings, 20 XML groups and 12 bounded simplifications addressed; additional identity/close-lifetime/cancellation/readout defects corrected. The demonstrated H01 application callback is fixed without weakening isolation. Final gate: 5,335 passed, zero failed, one platform skip; build zero warnings/errors; 470/470 payloads exact; all 431 frames compared (417 exact, 14 classified). See final report for controlled proofs and platform limits. Desktop review has not started. No merge, push or publication.
 
 ## Completed review: Nfty.Cli
 
@@ -71,7 +74,7 @@ Stage 5 result: authored-rule targeting, editor dirty-state loss, running-modal/
 - [x] Regenerate/check 269 API pages, build the manual strictly and confirm protected files unchanged.
 - [x] Publish [final evidence and limits](04-cli-verification.md), complete the [implementation checklist](04-cli-implementation.md) and stop before App review.
 
-Stage 4 result: all nine findings, 13 grouped XML items and eight bounded simplifications addressed. Model pairs and existing Sets are protected; overflow and parser failures are corrected; secret/sealing boundaries are explicit. Ordinary sampled output and authoring payloads remain byte-identical. Finite Windows x64 verification, culture/thread proof, frame differences and recovery limits are documented. The user accepted CLI verification and approved the next review on 2026-11-06. CLI is locally committed/tagged in the isolated worktree. App review may proceed; no App fixes, merge or push are authorized.
+Stage 4 result: all nine findings, 13 grouped XML items and eight bounded simplifications addressed. Model pairs and existing Sets are protected; overflow and parser failures are corrected; secret/sealing boundaries are explicit. Ordinary sampled output and authoring payloads remain byte-identical. Finite Windows x64 verification, culture/thread proof, frame differences and recovery limits are documented. The user accepted CLI verification and approved the next review on 2026-11-06. CLI is locally committed/tagged in the isolated worktree. Subsequent App implementation is approved; merge and publication remain on hold.
 
 ## Completed review: Nfty.Model
 

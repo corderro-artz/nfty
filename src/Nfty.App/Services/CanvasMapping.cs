@@ -59,7 +59,8 @@ public static class CanvasMapping
     /// <summary>Keeps the art overlapping the surface it is drawn in.</summary>
     /// <remarks>One rule covers both directions: the art stays in contact exactly while the pan is no
     /// further than half the difference between the surface and the art. Zoomed in that reads as "the
-    /// window stays inside the art"; fitted it collapses to zero.</remarks>
+    /// window stays inside the art". At fit, pan is zero on an axis the art fills, while a
+    /// letterboxed axis can move within its remaining margin.</remarks>
     /// <param name="artW">Art width in pixels.</param>
     /// <param name="artH">Art height in pixels.</param>
     /// <param name="surfaceW">Surface width in control pixels.</param>

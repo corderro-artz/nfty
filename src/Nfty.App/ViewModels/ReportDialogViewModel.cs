@@ -65,5 +65,5 @@ public partial class ReportDialogViewModel : ViewModelBase
         CopyLabel = "Copied";
     }
 
-    [RelayCommand] private void Close() => _dialogs.Close(null);
+    [RelayCommand] private void Close() => _dialogs.Close(this, null);
 }

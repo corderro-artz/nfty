@@ -144,7 +144,7 @@ public partial class ValidityDialogViewModel : ViewModelBase
           + $" and “{names[^1]}”";
 
     /// <summary>Dismisses the dialog.</summary>
-    [RelayCommand] private void Close() => _dialogs.Close(null);
+    [RelayCommand] private void Close() => _dialogs.Close(this, null);
 }
 
 /// <summary>One reported problem, with the 1-based position <c>validate</c> lists it at.</summary>

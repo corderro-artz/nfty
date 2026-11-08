@@ -24,6 +24,80 @@ namespace Nfty.App.Tests;
 /// </remarks>
 public class ShareBarWidthTests
 {
+    [AvaloniaTheory]
+    [InlineData(false, 1180)]
+    [InlineData(true, 1416)]
+    public void Ingredient_bars_keep_their_pinned_track_and_follow_the_displayed_share(bool dark, double width)
+    {
+        using var book = VisualCapture.NamedBook("Book", "Cat", "Aura", 12);
+        var recipe = book.Recipes[0];
+        using var vm = new IngredientDetailViewModel(recipe.Ingredients[0], recipe, book,
+            new ImageBridge(), () => { }, () => false);
+        var view = new Views.IngredientDetailView { DataContext = vm };
+        var window = new Window
+        {
+            Content = view, Width = width, Height = 720,
+            RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light,
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var tracks = view.GetVisualDescendants().OfType<Border>()
+                .Where(b => b.Classes.Contains("rt")).ToArray();
+            Assert.Equal(vm.VisibleHeroBars.Count, tracks.Length);
+            foreach (var track in tracks)
+            {
+                var row = Assert.IsType<VariantRow>(track.DataContext);
+                var fill = Assert.Single(track.GetVisualChildren().OfType<Border>());
+                Assert.Equal(120, track.Bounds.Width);
+                var expected = row.OverallPercent * 1.2;
+                Assert.Equal(expected, fill.Width, precision: 10);
+                // Layout snaps measured edges; the bound percentage remains unrounded.
+                Assert.InRange(fill.Bounds.Width, Math.Floor(expected), Math.Ceiling(expected));
+            }
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false, 1180)]
+    [InlineData(true, 1416)]
+    public void Recipe_mix_segments_keep_their_track_width_after_weight_changes(bool dark, double width)
+    {
+        var vm = new NewRecipeViewModel(new FakeDialogs(), [("Fox", 45d), ("Owl", 25d)])
+            { Name = "Cat", Weight = 100 };
+        var view = new Views.NewRecipeView { DataContext = vm };
+        var window = new Window
+        {
+            Content = view, Width = width, Height = 780,
+            RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light,
+        };
+        try
+        {
+            window.Show();
+            foreach (var weight in new[] { 100d, 300d })
+            {
+                vm.Weight = weight;
+                Dispatcher.UIThread.RunJobs();
+                var track = Assert.Single(view.GetVisualDescendants().OfType<Border>(),
+                    b => b.Classes.Contains("mixbar"));
+                Assert.Equal(270, track.Bounds.Width);
+                var segments = track.GetVisualDescendants().OfType<Border>()
+                    .Where(b => b.Classes.Contains("seg-me")).ToArray();
+                Assert.Equal(vm.ShareRows.Count, segments.Length);
+                foreach (var segment in segments)
+                {
+                    var row = Assert.IsType<ShareRow>(segment.DataContext);
+                    var expected = row.Percent * 2.7;
+                    Assert.Equal(expected, segment.Width, precision: 10);
+                    Assert.InRange(segment.Bounds.Width, Math.Floor(expected), Math.Ceiling(expected));
+                }
+            }
+        }
+        finally { window.Close(); }
+    }
+
     // ---------------- the converter ----------------
 
     [Theory]

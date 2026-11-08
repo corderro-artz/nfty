@@ -114,6 +114,8 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
     }
 
     /// <summary>Starts framed on the given bounds — see <see cref="Camera.FramedOn"/>.</summary>
+    /// <param name="boundsMin">Minimum corner of the subject's bounding box.</param>
+    /// <param name="boundsMax">Maximum corner of the subject's bounding box.</param>
     public ModelPreviewViewModel(Vector3 boundsMin, Vector3 boundsMax)
     {
         _boundsMin = boundsMin;
@@ -121,20 +123,27 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
         _cameraState = Camera.FramedOn(boundsMin, boundsMax);
     }
 
-    /// <summary>A left-drag delta in screen pixels, turned into an orbit. Dragging right should make
+    /// <summary>A left-drag delta in logical control units, turned into an orbit. Dragging right should make
     /// content appear to follow the pointer, which means the camera itself orbits the opposite way.</summary>
+    /// <param name="pointerDeltaPixels">Pointer movement in the viewport's logical control units.</param>
     public void Orbit(Vector2 pointerDeltaPixels) =>
         CameraState = CameraState.Orbit(
             -pointerDeltaPixels.X * OrbitRadiansPerPixel,
             -pointerDeltaPixels.Y * OrbitRadiansPerPixel);
 
-    /// <summary>A right- or middle-drag delta in screen pixels.</summary>
+    /// <summary>A right- or middle-drag delta in logical control units.</summary>
+    /// <param name="pointerDeltaPixels">Pointer movement in the viewport's logical control units.</param>
+    /// <param name="viewportHeight">Viewport height in the same units as the movement.</param>
     public void Pan(Vector2 pointerDeltaPixels, int viewportHeight) =>
         CameraState = CameraState.Pan(pointerDeltaPixels, viewportHeight);
 
     /// <summary>One wheel event, anchored on the pointer. The step honors the delta's magnitude (a
     /// trackpad sending many small deltas zooms smoothly, a notched wheel sends a whole 1.0): wheel up
     /// (positive) zooms in by <c>0.9^delta</c>.</summary>
+    /// <param name="wheelDelta">Wheel movement; positive zooms in.</param>
+    /// <param name="pointerScreen">Pointer position relative to the viewport.</param>
+    /// <param name="width">Viewport width in the pointer position's units.</param>
+    /// <param name="height">Viewport height in the pointer position's units.</param>
     public void Zoom(float wheelDelta, Vector2 pointerScreen, int width, int height)
     {
         if (wheelDelta == 0f) return;
@@ -144,6 +153,7 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
 
     /// <summary>The keyboard orbit path: one fixed step along the given axis
     /// (<c>(±1,0)</c> for Left/Right, <c>(0,±1)</c> for Up/Down).</summary>
+    /// <param name="direction">Signed horizontal and vertical orbit direction.</param>
     public void OrbitStep(Vector2 direction) =>
         CameraState = CameraState.Orbit(
             direction.X * KeyOrbitStepRadians,

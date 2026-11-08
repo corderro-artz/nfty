@@ -33,8 +33,8 @@ namespace Nfty.App.Views;
 
 /// <summary>The 3D preview surface: a <see cref="WriteableBitmap"/> painted by <see cref="Raster"/>,
 /// driven by pointer and keyboard gestures resolved through <see cref="ModelPreviewViewModel"/>. This
-/// control knows nothing about where its <see cref="Mesh"/>/<see cref="Texture"/> come from — no page
-/// hosts it yet.</summary>
+/// control knows nothing about where its <see cref="Mesh"/>/<see cref="Texture"/> come from; Rise
+/// and the viewer host the same surface.</summary>
 public sealed partial class ModelPreviewView : UserControl
 {
     /// <summary>Backs <see cref="Mesh"/>.</summary>

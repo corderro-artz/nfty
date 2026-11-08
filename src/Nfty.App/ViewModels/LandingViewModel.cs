@@ -509,16 +509,13 @@ public partial class LandingViewModel : ViewModelBase
     /// nothing was calling it, which is the whole class of defect the sync/async pairs exist to
     /// prevent and the reason they are worth keeping in step.</para>
     ///
-    /// <para><b>Fire-and-forget, deliberately, and every caller is a gesture.</b> Nothing here waits
-    /// for a Set to open - a click on a recent row, a drop, a picker - so the task is started and
-    /// the handler returns. It owes no observable handle for the same reason: unlike the tree
-    /// reorder, it writes nothing, so there is no second gesture that could collide with it and
-    /// nothing a test could race against except the navigation it ends with.</para>
+    /// <para>Gesture callers retain the task in <see cref="PendingOpen"/> so tests and callers can
+    /// observe completion before inspecting navigation or starting dependent work.</para>
     /// </remarks>
     private async Task OpenSetPathAsync(string path)
     {
         // An upload bundle (a marketplace export without set.json) is not a Set: it opens read-only in
-        // the pop-out viewer's gallery, marked as a bundle, and is not added to Recents.
+        // the pop-out viewer's gallery, marked as a bundle, and is recorded in Recents after opening.
         if (_viewer is { } viewerHost && MarketplaceBundle.IsBundle(path))
         {
             var bundle = await Nfty.App.Viewer.ViewerOpener.OpenAsync(path, _dialogs, host: viewerHost,

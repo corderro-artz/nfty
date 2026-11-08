@@ -30,16 +30,13 @@ public partial class CookBookDetailView : UserControl
     private double _lastHost;
 
     /// <summary>
-    /// Tells the ViewModel how many rows fit, from a row it has actually drawn.
+    /// Tells the ViewModel how many rows fit, using the measured host and the row-height token.
     /// </summary>
     /// <param name="sender">The view.</param>
     /// <param name="e">Unused.</param>
     /// <remarks>
-    /// <para><b>Measured, never declared.</b> This is the whole "breathes with the window" behavior:
-    /// two rows at the smallest window the app opens, five at the size it opens at, the whole book
-    /// at full screen. A constant here would be right at one window size and wrong at every other,
-    /// and the height of a row is not something the markup states — it falls out of the font, the
-    /// badge strip and the row's own band.</para>
+    /// <para>The host height varies with the window; the fixed row pitch comes from the same theme
+    /// token as the rendered rows. Page size therefore depends only on the space available.</para>
     ///
     /// <para>It measures the host panel rather than the ItemsControl, because the ItemsControl hugs
     /// its rows and reports the content it has, not the room it was given — and the host is a

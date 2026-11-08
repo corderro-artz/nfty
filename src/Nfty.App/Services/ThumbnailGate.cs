@@ -3,13 +3,11 @@ using Nfty.Core;
 namespace Nfty.App.Services;
 
 /// <summary>
-/// The one limit on how many thumbnails the Set browser decodes at once.
+/// Limits concurrent thumbnail decodes for one browser or gallery operation.
 /// </summary>
 /// <remarks>
-/// <para>A screenful of tiles used to start a thread-pool decode per tile, all at once, which at 1000px
-/// is forty 7 ms decodes competing with everything else the machine is doing - including the cook the
-/// reader may have asked for a thread count for. The same number that bounds a cook now bounds this, so
-/// "use 4 threads" means the app, not four plus however many tiles are on screen.</para>
+/// <para>The limit is captured from the current thread setting when the gate is created. Separate
+/// gates and generation jobs have independent budgets; this is not a global application scheduler.</para>
 /// <para>The in-flight counter is kept apart from the semaphore on purpose: it is what a test reads to
 /// prove the limit holds, and a counter that lived inside the semaphore's critical section would read
 /// zero, and pass, if the semaphore were removed.</para>

@@ -9,16 +9,16 @@ using Nfty.Core.Model;
 namespace Nfty.App.Services;
 
 /// <summary>Persists an already-spliced cookbook graph back to the session's source archive:
-/// crash-safe temp-then-atomic-replace, recompute the archive hash, and swap the session's Current
-/// via its non-disposing Replace. Disposes nothing and shows no UI — the caller owns error handling
-/// and the lifetime of whatever its mutation orphaned.</summary>
+/// atomically replace the archive, recompute its hash, and adopt the graph through the session's
+/// non-disposing Replace. Hashing and adoption follow the file commit; a failure there does not undo
+/// the written archive. Disposes nothing and shows no UI: callers own error handling and orphaned images.</summary>
 public static class CookBookPersistence
 {
     /// <summary>Writes the open book back to where it came from.</summary>
     /// <param name="session">Holds the book and its source path.</param>
     /// <param name="book2">The graph to write.</param>
     /// <param name="ct">Cancels the write.</param>
-    /// <returns>A task that completes when the archive is written.</returns>
+    /// <returns>The adopted graph carrying the hash of the written archive.</returns>
     public static async Task<LoadedCookBook> PersistAsync(ICookBookSession session, LoadedCookBook book2,
         CancellationToken ct = default)
     {
@@ -34,6 +34,9 @@ public static class CookBookPersistence
     /// <summary>Writes a cookbook to a user-chosen path, replacing an existing file: sibling temp plus an
     /// atomic move (CookBookArchive.Write opens CreateNew and would throw on an existing path). Used when
     /// creating a new .cbk.</summary>
+    /// <param name="path">The destination archive path.</param>
+    /// <param name="manifest">The new book's manifest.</param>
+    /// <param name="recipes">Borrowed recipes to serialize; their images are not disposed.</param>
     public static void WriteNew(string path, CookBookManifest manifest, IReadOnlyList<LoadedRecipe> recipes)
     {
         AtomicFile.Replace(path, tmp => CookBookArchive.Write(tmp, manifest, recipes));

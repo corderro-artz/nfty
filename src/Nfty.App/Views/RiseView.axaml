@@ -647,9 +647,12 @@
                   <TextBlock Text="VOXEL SIZE" Classes="plabel" Margin="0" />
                   <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                     <NumericUpDown Grid.Column="0" Classes="qnt" Width="94" Value="{Binding VoxelSize}"
-                                   Minimum="0.01" Increment="0.25" FormatString="0.##"
+                                   Minimum="{x:Static vm:RiseViewModel.MinimumVoxelSize}" Maximum="{x:Static vm:RiseViewModel.MaximumVoxelSize}"
+                                   Increment="0.25" FormatString="0.###"
                                    ToolTip.Tip="World units per pixel: how big one voxel is in the exported model." />
-                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding ModelDimensionsText}" />
+                    <TextBlock Grid.Column="1" Classes="cv" Text="{Binding ModelDimensionsText}"
+                               TextWrapping="Wrap" MaxLines="2" LineHeight="12"
+                               ToolTip.Tip="{Binding ModelDimensionsText}" />
                   </Grid>
                 </StackPanel>
 

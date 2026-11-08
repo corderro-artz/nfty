@@ -12,26 +12,22 @@ public partial class ShellViewModel : ViewModelBase
     private readonly IKitchenSession? _kitchen;
     private readonly ICookBookSession? _session;
 
+    /// <summary>The current navigation page.</summary>
     [ObservableProperty] private ViewModelBase? _currentPage;
+    /// <summary>The top modal card, with suspended parents retained by the dialog service.</summary>
     [ObservableProperty] private ViewModelBase? _activeDialog;
 
     /// <summary>A full-screen view above the page and the dialog layer, for a head with no second
     /// window to open the pop-out viewer in. Null on a desktop.</summary>
     [ObservableProperty] private ViewModelBase? _overlay;
+    /// <summary>Page zoom percentage, clamped by shell commands to 50 through 300.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomScale))]
     [NotifyPropertyChangedFor(nameof(EffectivePageScale))]
     private int _zoom = 100;
 
-    /// <summary>What 100% means. The mockups are authored at CSS 1:1, and reproducing them at exactly
-    /// 1.0 leaves the app noticeably small on a large high-DPI display — every control is the right
-    /// size in logical pixels and too small in physical ones. So the whole shell renders at a base
-    /// scale, and the status bar's "100%" refers to it rather than to raw 1.0.
-    ///
-    /// A base scale, not a bigger token set: the mockups are the locked 1:1 reference, so growing the
-    /// font and padding tokens by a fifth would be design drift spread across hundreds of literals and
-    /// would have to be undone to compare against a mockup ever again. One factor keeps every mockup
-    /// proportion exact and is a single number to revisit.</summary>
+    /// <summary>The shell's base rendering scale. The status bar's 100% zoom is relative to this
+    /// factor; page zoom composes with it while chrome keeps the same physical scale.</summary>
     public const double BaseScale = 1.2;
 
     /// <summary>
@@ -109,6 +105,7 @@ public partial class ShellViewModel : ViewModelBase
     /// <summary>What the page is actually scaled by once both transforms compose. Nothing binds to it;
     /// it exists so the relationship is asserted somewhere rather than inferred from two XAML files.</summary>
     public double EffectivePageScale => ChromeScale * ZoomScale;
+    /// <summary>The most recent guidance from the current page.</summary>
     [ObservableProperty] private string _statusMessage = "";
 
     /// <summary>The titlebar's Kitchen chip / crumbs / lock flag are Explorer-specific (the mockup's
@@ -167,9 +164,9 @@ public partial class ShellViewModel : ViewModelBase
     public async Task<bool> ConfirmCloseAsync()
     {
         // An open card can hold work too: a cook or an export mid-write, or book settings not yet
-        // saved. Cards are never asked (one slot for modals), only refused on - the reader finishes
+        // saved. Cards are not asked by the window close gesture: the reader finishes
         // or dismisses the card, then closes.
-        if (ActiveDialog is IUnsavedWork card && (card.HasUnsavedWork || card.IsBusy))
+        if (_dialogs.OpenDialogs.OfType<IUnsavedWork>().FirstOrDefault(c => c.HasUnsavedWork || c.IsBusy) is { } card)
         {
             _status.Say(card.IsBusy
                 ? "Wait for the open dialog to finish before closing."
@@ -177,10 +174,11 @@ public partial class ShellViewModel : ViewModelBase
             return false;
         }
 
-        var holders = _nav.Pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork || p.IsBusy).ToList();
+        var pages = _nav.Pages;
+        var holders = pages.OfType<IUnsavedWork>().Where(p => p.HasUnsavedWork || p.IsBusy).ToList();
         if (holders.Count == 0) return true;
 
-        // One slot for modals: a second card would replace the open one and orphan its answer.
+        // Finish the open card before asking a page to present its leave decision.
         if (HasDialog)
         {
             _status.Say($"Close the open dialog first \u2014 {holders.Count} unsaved "
@@ -190,6 +188,10 @@ public partial class ShellViewModel : ViewModelBase
 
         foreach (var page in holders)
             if (!await page.ConfirmLeaveAsync()) return false;
+        // Awaiting a writer or a leave decision releases the UI: another operation or navigation
+        // may have started before this continuation. Closing must assess that current lifetime too.
+        if (HasDialog || _session?.IsWriting == true || !pages.SequenceEqual(_nav.Pages)
+            || _nav.Pages.OfType<IUnsavedWork>().Any(p => p.IsBusy)) return false;
         return true;
     }
 
@@ -247,13 +249,22 @@ public partial class ShellViewModel : ViewModelBase
         status.Said += m => StatusMessage = m;
     }
 
-    [RelayCommand] private void ShowHelp() => _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
+    [RelayCommand(CanExecute = nameof(CanOpenChromeDialog))]
+    private void ShowHelp()
+    {
+        if (CanOpenChromeDialog()) _ = _dialogs.ShowAsync<object>(new HelpViewModel(_dialogs));
+    }
+
+    private bool CanOpenChromeDialog() => !HasDialog;
 
     private readonly IParallelismSetting _parallelism;
 
-    [RelayCommand]
-    private void ShowSettings() =>
-        _dialogs.ShowAsync<object>(_settingsCard?.Invoke() ?? new SettingsDialogViewModel(_dialogs, _parallelism));
+    [RelayCommand(CanExecute = nameof(CanOpenChromeDialog))]
+    private void ShowSettings()
+    {
+        if (CanOpenChromeDialog())
+            _ = _dialogs.ShowAsync<object>(_settingsCard?.Invoke() ?? new SettingsDialogViewModel(_dialogs, _parallelism));
+    }
 
     private readonly Func<SettingsDialogViewModel>? _settingsCard;
     private readonly IAppSettings? _general;
@@ -274,15 +285,17 @@ public partial class ShellViewModel : ViewModelBase
     /// asks a job that can stop to stop, and otherwise does nothing — the key is still handled, so it
     /// cannot reach the page the job is working from.</para>
     /// </summary>
-    [RelayCommand(CanExecute = nameof(HasDialog))]
-    private void CloseDialog()
+    [RelayCommand(CanExecute = nameof(HasDialog), AllowConcurrentExecutions = true)]
+    private async Task CloseDialog()
     {
-        if (_dialogs.Active is BusyViewModel busy)
+        var dialog = _dialogs.Active;
+        if (dialog is IUnsavedWork { IsBusy: true } && dialog is ICancellableDialog running)
         {
-            if (busy.CancelCommand.CanExecute(null)) busy.CancelCommand.Execute(null);
+            await running.CancelAndWaitAsync();
             return;
         }
-        _dialogs.Close(null);
+        if (dialog is IUnsavedWork { IsBusy: true }) return;
+        if (dialog is not null) _dialogs.Close(dialog, null);
     }
 
     /// <summary>Whether a modal is open.</summary>
@@ -292,6 +305,9 @@ public partial class ShellViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasDialog));
         CloseDialogCommand.NotifyCanExecuteChanged();
+        CloseDocumentCommand.NotifyCanExecuteChanged();
+        ShowHelpCommand.NotifyCanExecuteChanged();
+        ShowSettingsCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand] private void ZoomIn() => Zoom = Math.Min(300, Zoom + 10);
@@ -322,11 +338,18 @@ public partial class ShellViewModel : ViewModelBase
     /// open: it is a workspace that outlives any one CookBook — explorer.html calls it "fixed for
     /// every item below it" — and closing a book is not leaving the workspace.</para>
     /// </summary>
-    [RelayCommand(CanExecute = nameof(HasOpenDocument))]
-    private void CloseDocument()
+    [RelayCommand(CanExecute = nameof(CanCloseDocument))]
+    private async Task CloseDocument()
     {
-        bool wasCookBook = CurrentPage is ExplorerViewModel;
+        if (!CanCloseDocument()) return;
+        var page = CurrentPage;
+        if (page is IUnsavedWork work && !await work.ConfirmLeaveAsync()) return;
+        if (!ReferenceEquals(page, CurrentPage) || HasDialog || _session?.IsWriting == true
+            || page is IUnsavedWork { IsBusy: true }) return;
+        bool wasCookBook = page is ExplorerViewModel;
         _nav.Back();
         if (wasCookBook) _session?.Close();
     }
+
+    private bool CanCloseDocument() => HasOpenDocument && !HasDialog;
 }

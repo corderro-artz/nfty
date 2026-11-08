@@ -33,6 +33,8 @@ public sealed class SetRiseSource : RiseSource
     private readonly HashSet<int> _unmapped = new();
     private readonly RiseItem _initial;
     private LoadedCookBook? _book;
+    private LoadedCookBook? _pendingBook;
+    private readonly object _bookLock = new();
     private bool _searchDone;
     private bool _disposed;
     private readonly Dictionary<int, string> _refusals = new();
@@ -329,6 +331,7 @@ public sealed class SetRiseSource : RiseSource
         // Read on the calling (UI) thread: the callback reaches into app state.
         var named = (bookCandidates?.Invoke() ?? Array.Empty<string>()).ToList();
         string directory = _set.SourceDirectory;
+        var dispatcher = Dispatcher.UIThread;
 
         return Task.Run(() =>
         {
@@ -354,7 +357,23 @@ public sealed class SetRiseSource : RiseSource
             }
             finally
             {
-                Dispatcher.UIThread.Post(() => Arrive(found, name));
+                lock (_bookLock)
+                {
+                    if (_disposed) found?.Dispose();
+                    else
+                    {
+                        _pendingBook = found;
+                        dispatcher.Post(() =>
+                        {
+                            lock (_bookLock)
+                            {
+                                if (_disposed) return; // Dispose owns the unpublished book.
+                                _pendingBook = null;
+                            }
+                            Arrive(found, name);
+                        });
+                    }
+                }
             }
         });
     }
@@ -393,8 +412,13 @@ public sealed class SetRiseSource : RiseSource
     /// <inheritdoc />
     public override void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        lock (_bookLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _pendingBook?.Dispose();
+            _pendingBook = null;
+        }
         foreach (var d in _detach) d();
         base.Dispose();
         foreach (var r in _rows.Values) r.Dispose();

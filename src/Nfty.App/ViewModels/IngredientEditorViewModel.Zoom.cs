@@ -5,20 +5,8 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>
-/// HOW THE CANVAS IS LOOKED AT: the zoom, and where it is panned to.
-/// </summary>
-/// <remarks>
-/// <para>None of this touches a pixel, a draft or the dirty flag — it is the same class of state the
-/// pixel grid is, and the grid's own rule applies to all of it: view state must never mark the
-/// editor dirty.</para>
-///
-/// <para><b>Zoom and pan are a modification of ONE function.</b> The view maps between canvas pixels
-/// and control coordinates in a single place (<c>Geometry</c>, over <c>CanvasMapping</c>, shared with the Rise page), and the pointer, the marquee overlay
-/// and the backdrop lattice are all mapped through it. Putting the zoom there means the thing you
-/// click is the thing you painted and the lattice stays in phase, at every magnification, without a
-/// second copy of the arithmetic anywhere.</para>
-/// </remarks>
+// Zoom and pan are view state. CanvasMapping is the one map shared by pointer input,
+// selection and backdrop, so every display layer follows the same magnification.
 public partial class IngredientEditorViewModel
 {
     /// <summary>The zoom that fits the whole canvas in the tile. There is nothing below it: zooming

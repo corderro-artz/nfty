@@ -98,8 +98,8 @@ public sealed partial class TwoDPaneViewModel : ObservableObject, IZoomPan
     /// <summary>Tells the pane the art and surface sizes, which 1:1 needs.</summary>
     /// <param name="artW">Art width in pixels.</param>
     /// <param name="artH">Art height in pixels.</param>
-    /// <param name="surfaceW">Surface width in device pixels.</param>
-    /// <param name="surfaceH">Surface height in device pixels.</param>
+    /// <param name="surfaceW">Surface width in logical control units.</param>
+    /// <param name="surfaceH">Surface height in logical control units.</param>
     public void SetSizes(double artW, double artH, double surfaceW, double surfaceH)
     {
         _artW = artW; _artH = artH; _surfaceW = surfaceW; _surfaceH = surfaceH;
@@ -114,7 +114,8 @@ public sealed partial class TwoDPaneViewModel : ObservableObject, IZoomPan
         PanY = 0;
     }
 
-    /// <summary>One art pixel per device pixel: the fitted scale, inverted.</summary>
+    /// <summary>One art pixel per logical control unit: the fitted scale, inverted and bounded by
+    /// the Fit floor. Art smaller than the fitted surface therefore remains fitted.</summary>
     [RelayCommand]
     private void OneToOne()
     {

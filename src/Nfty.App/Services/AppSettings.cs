@@ -32,13 +32,17 @@ public static class SettingsJson
         catch (JsonException) { return new JsonObject(); }
     }
 
-    /// <summary>Sets one key and writes the file, keeping every other key. A failed save is swallowed.</summary>
+    /// <summary>Replaces every case-insensitive alias of one key with its canonical spelling,
+    /// preserving all unrelated keys and values. A failed save is swallowed.</summary>
     /// <param name="store">The store.</param>
     /// <param name="key">The camelCase key.</param>
     /// <param name="value">Its value; null writes JSON null.</param>
     public static void Set(IStateStore store, string key, JsonNode? value)
     {
         var doc = Read(store);
+        foreach (var alias in doc.Select(p => p.Key)
+                     .Where(k => string.Equals(k, key, StringComparison.OrdinalIgnoreCase)).ToArray())
+            doc.Remove(alias);
         doc[key] = value;
         try { store.Write(FileName, doc.ToJsonString(StateJson.Options)); }
         catch (NotSupportedException) { /* convenience state: never surface */ }

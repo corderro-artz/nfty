@@ -9,15 +9,21 @@ namespace Nfty.App.ViewModels;
 /// manifest and write the .cbk.</summary>
 public partial class NewCookBookViewModel : WizardViewModelBase
 {
+    /// <summary>The display name used to derive the CookBook id.</summary>
     [ObservableProperty] private string _name = "";
+    /// <summary>The collection symbol written by the caller.</summary>
     [ObservableProperty] private string _symbol = "";
+    /// <summary>Canvas width in pixels; changing it respects the aspect lock.</summary>
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private int _width = CanvasAdvice.DefaultSide;
+    /// <summary>Canvas height in pixels; changing it respects the aspect lock.</summary>
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private int _height = CanvasAdvice.DefaultSide;
 
     /// <summary>Ink for the large-canvas warning: its line is always laid out, so it appearing
     /// moves nothing.</summary>
     public double LargeCanvasOpacity => CanvasAdvice.IsLarge(Width, Height) ? 1 : 0;
+    /// <summary>Keep the current canvas ratio while editing either dimension.</summary>
     [ObservableProperty] private bool _aspectLocked = true;
+    /// <summary>The collection description carried into the new manifest.</summary>
     [ObservableProperty] private string _description = "";
 
     /// <summary>How many assets the collection intends to mint. Optional — empty (or 0) means "not decided",
@@ -26,7 +32,7 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     /// Purely declarative: it never constrains a cook, which takes its count from the Cook dialog.</summary>
     [ObservableProperty] private int? _targetSupply;
 
-    /// <summary>Null when unset, so the manifest omits it and stays a valid schemaVersion-1 archive.</summary>
+    /// <summary>Null when unset, so the optional target-supply field is omitted. Supported archives use the v2 floor.</summary>
     public int? TargetSupplyOrNull => TargetSupply > 0 ? TargetSupply : null;
 
     private double _ratio = 1.0;
@@ -90,5 +96,5 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);
 
     [RelayCommand(CanExecute = nameof(CanCreate))]
-    private void Create() => Dialogs.Close(this);
+    private void Create() => Dialogs.Close(this, this);
 }

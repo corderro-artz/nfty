@@ -26,6 +26,8 @@ public partial class SetItemRow : ObservableObject, IDisposable
     private volatile bool _imageMissing;
     private bool _decodeStarted;
     private volatile bool _disposed;
+    private readonly object _thumbnailLock = new();
+    private Bitmap? _pendingThumbnail;
 
     /// <summary>The asset's PNG on disk. The grid shows a 128px thumbnail of it; the inspector and
     /// Save both need the file itself.</summary>
@@ -106,6 +108,7 @@ public partial class SetItemRow : ObservableObject, IDisposable
         _decodeStarted = true;
 
         var path = ImagePath;
+        var dispatcher = Dispatcher.UIThread;
         PendingDecode = Task.Run(async () =>
         {
             // One gate for the whole browser, so a screenful of tiles cannot start a screenful of
@@ -129,12 +132,22 @@ public partial class SetItemRow : ObservableObject, IDisposable
             // Back to the UI thread through the dispatcher rather than a captured
             // SynchronizationContext: a binding may read Thumbnail from a measure pass that has no
             // context to capture, and FromCurrentSynchronizationContext throws outright when there
-            // is none. Post always has somewhere to land.
-            Dispatcher.UIThread.Post(() =>
+            // is none. The captured dispatcher keeps this result with its owning UI lifetime;
+            // Dispose frees unpublished results even if that queue is never drained again.
+            lock (_thumbnailLock)
             {
-                if (_disposed) { bitmap.Dispose(); return; }   // torn down while it was decoding
-                _thumbnail = bitmap;
-                _imageMissing = missing;
+                if (_disposed) { bitmap.Dispose(); return; }
+                _pendingThumbnail = bitmap;
+            }
+            dispatcher.Post(() =>
+            {
+                lock (_thumbnailLock)
+                {
+                    if (_disposed) return; // Dispose already freed the unpublished bitmap.
+                    _pendingThumbnail = null;
+                    _thumbnail = bitmap;
+                    _imageMissing = missing;
+                }
                 OnPropertyChanged(nameof(Thumbnail));
                 OnPropertyChanged(nameof(IsLoading));
                 OnPropertyChanged(nameof(ImageMissing));
@@ -247,9 +260,14 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// row.</remarks>
     public void Dispose()
     {
-        _disposed = true;
-        _thumbnail?.Dispose();
-        _thumbnail = null;
+        lock (_thumbnailLock)
+        {
+            _disposed = true;
+            _pendingThumbnail?.Dispose();
+            _pendingThumbnail = null;
+            _thumbnail?.Dispose();
+            _thumbnail = null;
+        }
     }
 }
 
@@ -462,6 +480,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
 
         var named = (_bookCandidates?.Invoke() ?? Array.Empty<string>()).ToList();
         string directory = _set.SourceDirectory;
+        var dispatcher = Dispatcher.UIThread;
 
         BookSearch = Task.Run(() =>
         {
@@ -479,7 +498,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
             catch (UnsupportedSchemaVersionException) { return; }
 
             string name = System.IO.Path.GetFileName(path);
-            Dispatcher.UIThread.Post(() =>
+            dispatcher.Post(() =>
             {
                 if (_disposed) return;   // the browser was torn down while the search ran
                 _sourceOdds = odds;

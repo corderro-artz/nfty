@@ -15,9 +15,14 @@ public enum ExplorerNodeKind
     Ingredient,
 }
 
-/// <summary>One tree node. <see cref="Domain"/> carries the Core object this node stands for
-/// (LoadedCookBook / LoadedRecipe / LoadedIngredient). <see cref="LayerKind"/> is the ingredient's
-/// kind on Ingredient nodes (null otherwise), used to color the tree kind mark.</summary>
+/// <summary>A tree projection borrowing its domain graph; expansion is mutable presentation state.</summary>
+/// <param name="Id">The stable domain id, used to restore selection and expansion after a rebuild.</param>
+/// <param name="Name">The display name.</param>
+/// <param name="Kind">Which domain level this node represents.</param>
+/// <param name="Children">The next domain level in presentation order.</param>
+/// <param name="Domain">A LoadedCookBook, LoadedRecipe, or (LoadedRecipe, LoadedIngredient) pair.</param>
+/// <param name="LayerKind">The ingredient kind, or null for a non-ingredient node.</param>
+/// <param name="IsTwoDOnly">A listing projection recomputed from decoded partial-alpha pixels, never an authored setting.</param>
 public record ExplorerNode(string Id, string Name, ExplorerNodeKind Kind,
     IReadOnlyList<ExplorerNode> Children, object? Domain, LayerKind? LayerKind = null,
     bool IsTwoDOnly = false)

@@ -18,6 +18,12 @@ namespace Nfty.App.ViewModels;
 /// The Rise page: paint depth onto finished art and watch it become a model.
 /// </summary>
 /// <remarks>
+/// <para>Variant depth saves to its layer; an editable recipe targets one layer's variant at a time
+/// while the preview shows the combined character. Sources own the subjects and persistence rules.</para>
+/// <para>Depth changes update the surface on the UI thread, then build a model on the pool from owned
+/// art, face and depth snapshots. One running build and one replaceable waiting build keep results ordered.</para>
+/// <para>Canvas zoom, pan and grid changes do not alter pixels or dirty state. Zoom is clamped at its
+/// property so wheel, keyboard and command paths share the same limits.</para>
 /// <para><b>The standing preview.</b> A gesture's +1/-1 is APPLIED to the surface from press to release
 /// (undone and re-applied on each move, undone on cancel, replaced by the committed command on
 /// release) rather than applied, rendered and undone as the editor does: the cell-label overlay
@@ -703,7 +709,6 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         OnPropertyChanged(nameof(Facts));
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(DepthNote));
         FillAllCommand.NotifyCanExecuteChanged();
         OnDepthEdited();
         DepthChanged?.Invoke();
@@ -763,6 +768,7 @@ public sealed partial class RiseViewModel : ViewModelBase, IDisposable, IUnsaved
         _disposed = true;
         // A build still running reads only its own copies and is dropped when it lands; one waiting never starts.
         DropWaiting();
+        CompleteDisposedMesh();
         Source.Changed -= OnSourceChanged;
         DisposeExport();
         Source.Saved -= OnSourceSaved;

@@ -26,9 +26,22 @@ namespace Nfty.App.ViewModels;
 /// percentage there would be lying; a spinning one says "working, no idea how long", which is the
 /// truth. Anything that CAN count reports a fraction instead.</para>
 /// </remarks>
-public partial class BusyViewModel : ViewModelBase
+public partial class BusyViewModel : ViewModelBase, IUnsavedWork, ICancellableDialog
 {
     private readonly CancellationTokenSource? _cts;
+    private readonly TaskCompletionSource _finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    /// <inheritdoc />
+    public bool HasUnsavedWork => false;
+    /// <inheritdoc />
+    public bool IsBusy => !_finished.Task.IsCompleted;
+    /// <inheritdoc />
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsBusy);
+    /// <inheritdoc />
+    public async Task CancelAndWaitAsync()
+    {
+        if (CanCancel) Cancel();
+        await _finished.Task;
+    }
 
     /// <summary>What is being done, as a heading.</summary>
     public string Title { get; }
@@ -57,12 +70,6 @@ public partial class BusyViewModel : ViewModelBase
         _phaseText = phase;
     }
 
-    /// <summary>Stops the job.</summary>
-    /// <remarks>
-    /// It does NOT close the card. The job owns that: cancellation is a request, and a card that
-    /// vanished on the click would tell the user it had stopped before it had. The phase line says
-    /// so instead, and the work closes the card when it actually unwinds.
-    /// </remarks>
     /// <summary>
     /// Turns the card determinate once a job can COUNT: the bar fills and the phase line says
     /// "Reading 1,234 of 10,000 assets…". Until the first report the card stays indeterminate,
@@ -76,8 +83,10 @@ public partial class BusyViewModel : ViewModelBase
 
     private sealed class Reporter(BusyViewModel busy, string noun) : IProgress<Nfty.Core.Output.SetReadProgress>
     {
+        private readonly Avalonia.Threading.Dispatcher _dispatcher = Avalonia.Threading.Dispatcher.UIThread;
+
         public void Report(Nfty.Core.Output.SetReadProgress value) =>
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            _dispatcher.Post(() =>
             {
                 if (value.Total <= 0) return;
                 busy.IsIndeterminate = false;
@@ -87,6 +96,12 @@ public partial class BusyViewModel : ViewModelBase
             });
     }
 
+    /// <summary>Stops the job.</summary>
+    /// <remarks>
+    /// It does NOT close the card. The job owns that: cancellation is a request, and a card that
+    /// vanished on the click would tell the user it had stopped before it had. The phase line says
+    /// so instead, and the work closes the card when it actually unwinds.
+    /// </remarks>
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel()
     {
@@ -125,7 +140,8 @@ public partial class BusyViewModel : ViewModelBase
         }
         finally
         {
-            dialogs.Close(null);
+            busy._finished.TrySetResult();
+            dialogs.Close(busy, null);
         }
     }
 }

@@ -27,14 +27,14 @@ namespace Nfty.App.ViewModels;
 /// leaves the Menu that was there, not half of a new one. This card reads the book and never edits
 /// it, so it is available on a locked book.</para>
 /// </remarks>
-public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork
+public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork, ICancellableDialog
 {
     /// <inheritdoc />
     public bool HasUnsavedWork => false;
     /// <inheritdoc />
-    public bool IsBusy => IsRunning;
+    public bool IsBusy => IsRunning || _cts is not null;
     /// <inheritdoc />
-    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsRunning);
+    public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsBusy);
 
     private readonly LoadedCookBook _book;
     private readonly IFilePickerService _picker;
@@ -42,6 +42,15 @@ public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork
     private readonly IStatusService _status;
     private readonly string _unavailable;
     private CancellationTokenSource? _cts;
+
+    /// <inheritdoc />
+    public async Task CancelAndWaitAsync()
+    {
+        var run = ExportCommand.ExecutionTask;
+        _cts?.Cancel();
+        if (run is not null) await run;
+    }
+
 
     /// <summary>The atlas wording, one muted line.</summary>
     public const string AtlasNote = "One PNG holds every variant; smallest to ship.";
@@ -162,18 +171,23 @@ public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork
     {
         // A disabled button is a label: the gate is checked here too.
         if (!CanExport()) return;
-        _cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
+        _cts = cts;
+        CloseCommand.NotifyCanExecuteChanged();
         IsRunning = true; Progress = 0; Failure = ""; Phase = "Reading art…";
         string path = Path;
         try
         {
-            var progress = new Progress<MenuWriteProgress>(OnProgress);
+            var progress = new Progress<MenuWriteProgress>(p =>
+            {
+                if (ReferenceEquals(_cts, cts)) OnProgress(p);
+            });
             var options = new MenuWriteOptions { Art = Mode };
             await AtomicFile.ReplaceAsync(path,
-                tmp => Writer(_book, tmp, options, progress, _cts.Token));
+                tmp => Writer(_book, tmp, options, progress, cts.Token));
             Progress = 1;
             _status.Say($"Wrote {System.IO.Path.GetFileName(path)} ({SizeText.Of(new FileInfo(path).Length)}).");
-            _dialogs.Close(path);
+            _dialogs.Close(this, path);
         }
         catch (OperationCanceledException) { Phase = "Canceled"; }
         // The writer's own typed refusal: its Problem is what is wrong, without the command-line flag
@@ -186,6 +200,8 @@ public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork
         finally
         {
             IsRunning = false;
+            if (ReferenceEquals(_cts, cts)) _cts = null;
+            CloseCommand.NotifyCanExecuteChanged();
             // A bar left full beside a refusal reads as a finished run. Success closes the card, so
             // nothing legitimate is left on screen to protect.
             if (Failure.Length > 0 || Phase == "Canceled") Progress = 0;
@@ -208,6 +224,6 @@ public partial class MenuExportDialogViewModel : ViewModelBase, IUnsavedWork
     private bool CanCancel() => IsRunning;
 
     /// <summary>Closes the card.</summary>
-    [RelayCommand(CanExecute = nameof(CanClose))] private void Close() => _dialogs.Close(null);
-    private bool CanClose() => !IsRunning;
+    [RelayCommand(CanExecute = nameof(CanClose))] private void Close() { if (CanClose()) _dialogs.Close(this, null); }
+    private bool CanClose() => !IsBusy;
 }

@@ -23,7 +23,8 @@ public static class ModelSubjects
     /// asset risen from the CookBook found by hash, as the Rise page does; else none, and the subject
     /// is 2D only. A sealed Set can be viewed but its subject refuses export.
     /// </summary>
-    /// <param name="set">The Set; borrowed, the subject does not outlive it.</param>
+    /// <param name="set">The Set; borrowed until this asynchronous build completes. The returned
+    /// snapshot owns its images and may outlive the Set.</param>
     /// <param name="item">The asset.</param>
     /// <param name="bookCandidates">Paths of CookBooks the app can already name; read on the calling
     /// thread, as <see cref="SetRiseSource"/> requires.</param>

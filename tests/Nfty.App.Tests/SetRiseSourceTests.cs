@@ -163,6 +163,28 @@ public class SetRiseSourceTests
     }
 
     [AvaloniaFact]
+    public void Disposing_a_source_frees_a_queued_book_without_draining_the_dispatcher()
+    {
+        var setDir = CookedBesideBook(out _);
+        using var set = SetReader.Read(setDir);
+        LoadedCookBook? read = null;
+        using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge(),
+            p => read = CookBookArchive.Read(p));
+        // Keep the UI thread here: the read has finished, but its posted result cannot have landed.
+        Assert.True(System.Threading.SpinWait.SpinUntil(() => src.BookSearch.IsCompleted, TimeSpan.FromSeconds(5)));
+        Assert.True(src.BookSearch.IsCompletedSuccessfully);
+        Assert.NotNull(read);
+        var image = read.Recipes[0].Ingredients[0].VariantImages.Values.First();
+        _ = image[0, 0];
+
+        src.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => _ = image[0, 0]);
+        Dispatcher.UIThread.RunJobs(); // the stale delivery is harmless and does not dispose twice.
+        Assert.Null(src.BookName);
+    }
+
+    [AvaloniaFact]
     public async Task A_book_that_reads_as_corrupt_is_not_found_and_never_faults_the_search()
     {
         var setDir = CookedBesideBook(out _);

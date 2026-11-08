@@ -6,18 +6,6 @@ using Nfty.Core.Publish.Ipfs;
 
 namespace Nfty.App.ViewModels;
 
-/// <summary>
-/// The UPLOAD page: the marketplace drop's two steps done in one, through the provider chosen in
-/// Settings — the art pinned, the metadata written with its address and pinned, and the export
-/// written to the chosen folder with the same addresses (<see cref="MarketplaceUpload"/>).
-/// </summary>
-/// <remarks>
-/// <para><b>The footer's accent button follows the page.</b> On UPLOAD it reads "Upload" and runs
-/// the upload; everywhere else it reads "Export". One primary action per card, named for what it
-/// will do from where the reader is.</para>
-/// <para>A running upload is a running export to the close guard: <see cref="IsBusy"/> already
-/// reads <see cref="IsRunning"/>, which this sets.</para>
-/// </remarks>
 public partial class ExportDialogViewModel
 {
     private readonly IPublishingSettings? _publishing;
@@ -133,7 +121,8 @@ public partial class ExportDialogViewModel
             return;
         }
         _uploadCheckCts?.Cancel();
-        var cts = _uploadCheckCts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
+        _uploadCheckCts = cts;
         SetUploadStatus(ConnectionState.Checking, "checking…", "Asking " + _publishing.ProviderLabel + "…");
         try
         {
@@ -146,6 +135,10 @@ public partial class ExportDialogViewModel
         catch (Exception ex)
         {
             if (!cts.IsCancellationRequested) SetUploadStatus(ConnectionState.NotReachable, "not reachable", ErrorText.For(ex));
+        }
+        finally
+        {
+            if (ReferenceEquals(_uploadCheckCts, cts)) _uploadCheckCts = null;
         }
     }
 
@@ -162,28 +155,37 @@ public partial class ExportDialogViewModel
     [RelayCommand(CanExecute = nameof(CanUpload))]
     private async Task UploadAsync()
     {
-        if (_publishing is null) return;
-        var dir = await _picker.PickFolderAsync("Export the uploaded Set to folder");
-        if (dir is null) return;
-        PendingUpload = RunUploadAsync(dir);
-        await PendingUpload;
+        if (_publishing is null || _cts is not null || !CanUpload()) return;
+        using var cts = new CancellationTokenSource();
+        _cts = cts;
+        try
+        {
+            var dir = await _picker.PickFolderAsync("Export the uploaded Set to folder");
+            if (dir is null || cts.IsCancellationRequested) return;
+            PendingUpload = RunUploadAsync(dir, cts);
+            await PendingUpload;
+        }
+        finally
+        {
+            if (ReferenceEquals(_cts, cts)) _cts = null;
+        }
     }
 
-    private async Task RunUploadAsync(string dir)
+    private async Task RunUploadAsync(string dir, CancellationTokenSource cts)
     {
         IsRunning = true;
         Progress = 0;
         PhaseText = "Starting...";
-        _cts = new CancellationTokenSource();
         try
         {
             var reporter = new Progress<UploadProgress>(p =>
             {
+                if (!ReferenceEquals(_cts, cts) || !IsRunning) return;
                 Progress = p.Fraction;
                 PhaseText = p.Phase;
             });
             var result = await MarketplaceUpload.RunAsync(_setDirectory, dir, Options, _publishing!.CreateService(),
-                CookBookPath, reporter, _cts.Token, _threads?.Current);
+                CookBookPath, reporter, cts.Token, _threads?.Current);
 
             _written = result.Local.Path;
             OutputPath = result.Local.Path;
@@ -203,7 +205,7 @@ public partial class ExportDialogViewModel
         }
         catch (OperationCanceledException)
         {
-            PhaseText = "Canceled. Anything already uploaded stays pinned.";
+            PhaseText = "Canceled. Pre-existing content stays pinned.";
         }
         catch (Exception ex)
         {
@@ -212,8 +214,6 @@ public partial class ExportDialogViewModel
         finally
         {
             IsRunning = false;
-            _cts?.Dispose();
-            _cts = null;
         }
     }
 

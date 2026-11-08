@@ -138,6 +138,9 @@ public static class KeyGlyphs
     private const double IconGap = 2;
 
     /// <summary>The width a cap of <paramref name="part"/> draws at, for a cap <paramref name="height"/> tall.</summary>
+    /// <param name="part">The parsed cap or joining word.</param>
+    /// <param name="height">The cap height in logical pixels.</param>
+    /// <returns>The estimated logical width using the current icon and font metrics.</returns>
     public static double CapWidth(ChordPart part, double height)
     {
         if (part.IsJoiner) return part.Text.Length * MonoChar + 4;
@@ -152,6 +155,9 @@ public static class KeyGlyphs
     }
 
     /// <summary>The width <see cref="KeyChord"/> draws <paramref name="chord"/> at.</summary>
+    /// <param name="chord">The chord text, or null for no caps.</param>
+    /// <param name="height">Each cap's height in logical pixels.</param>
+    /// <returns>The estimated width including gaps, or zero for an empty chord.</returns>
     public static double EstimateWidth(string? chord, double height)
     {
         var parts = Parse(chord);
@@ -160,6 +166,8 @@ public static class KeyGlyphs
     }
 
     /// <summary>The chord as plain words, for an accessible name.</summary>
+    /// <param name="chord">The chord text, or null.</param>
+    /// <returns>Parsed labels separated by spaces, or an empty string.</returns>
     public static string Spoken(string? chord)
     {
         var sb = new StringBuilder();

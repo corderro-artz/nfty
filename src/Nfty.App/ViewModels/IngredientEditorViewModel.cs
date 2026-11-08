@@ -73,8 +73,8 @@ public partial class EditorVariant : ObservableObject
 
 /// <summary>Ingredient Editor: the canvas/colorize/preview screen reached from an Ingredient's
 /// detail pane. Wired to the real opened ingredient — the filmstrip is its actual variants with
-/// rendered thumbnails. Painting, undo/redo, and variant list mutation remain stubs; canvas/live
-/// preview bitmaps arrive in Task 7.</summary>
+/// rendered thumbnails and independent value-map/color histories. Borrows book graphs; owns display
+/// images and the current saved ingredient on the loose path. Saves clear only the exported revision.</summary>
 public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUnsavedWork, IZoomPan, Nfty.App.Viewer.ILiveViewerSource
 {
     private readonly INavigationService _nav;
@@ -96,6 +96,9 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     private readonly Func<bool>? _isEditing;
     private LoadedIngredient _ing;
     private IngredientDraft _draft;
+    private long _draftRevision;
+
+    private void MarkEdited() { _draftRevision++; IsDirty = true; }
 
     // One undo stack per variant per surface. The two are separate on purpose: undoing a color
     // stroke must not reach back into value-map edits made before the mode was switched, and they
@@ -173,7 +176,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     {
         if (book.Recipes.FirstOrDefault(r => r.Manifest.Id == _recipe.Manifest.Id) is not { } fresh) return;
         _recipe = fresh;
-        DisposeStackCaches();
+        InvalidateStack();
         BuildReferences();
         RebuildSurfaces();
     }
@@ -753,7 +756,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         if (string.IsNullOrWhiteSpace(value)) { SyncSelectedFields(); return; }   // reject → restore
         d.Name = value;
         SelectedVariant!.Name = value;      // observable → filmstrip updates in place
-        IsDirty = true;
+        MarkEdited();
     }
 
     partial void OnSelectedWeightChanged(double value)
@@ -763,7 +766,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         if (value <= 0) { SyncSelectedFields(); return; }                         // reject → restore
         d.Weight = value;
         SelectedVariant!.Weight = value;    // observable → filmstrip updates in place
-        IsDirty = true;
+        MarkEdited();
     }
 
     private void SyncSelectedFields()
@@ -853,7 +856,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     private void ColorizeEdited()
     {
         if (_loadingLayer || IsCustom) return;
-        IsDirty = true;
+        MarkEdited();
     }
     // The value ramp is V in color mode and the whole color in grayscale mode, so a change to it
     // moves the armed color either way.
@@ -1061,7 +1064,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
                 _colorHistory[target.Id] = new EditHistory<Rgba32>();   // old snapshots describe pixels that are gone
                 UndoCommand.NotifyCanExecuteChanged();
                 RedoCommand.NotifyCanExecuteChanged();
-                IsDirty = true;
+                MarkEdited();
                 RebuildSurfaces();
                 RefreshThumbnail(target.Id);
                 NotifySaveAvailability();
@@ -1101,7 +1104,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             }
             else if (profileNote is not null) await _dialogs.ShowErrorAsync("Color profile", profileNote);
             RedoCommand.NotifyCanExecuteChanged();
-            IsDirty = true;
+            MarkEdited();
             RebuildSurfaces();
             RefreshThumbnail(target.Id);
             NotifySaveAvailability();
@@ -1432,7 +1435,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     /// <param name="target">The variant that was edited.</param>
     private void AfterEdit(VariantDraft target)
     {
-        IsDirty = true;
+        MarkEdited();
         // The note reads the COLOR history, which a stroke in either mode can be the first entry in.
         OnPropertyChanged(nameof(SaveNoteText));
         RebuildSurfaces();
@@ -1493,6 +1496,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo()
     {
+        if (!CanUndo()) return;
         var d = ActiveDraft!;
         if (IsColorMode) _colorHistory[d.Id].Undo(d.EnsureColor());
         else _history[d.Id].Undo(d.Map);
@@ -1502,6 +1506,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     [RelayCommand(CanExecute = nameof(CanRedo))]
     private void Redo()
     {
+        if (!CanRedo()) return;
         var d = ActiveDraft!;
         if (IsColorMode) _colorHistory[d.Id].Redo(d.EnsureColor());
         else _history[d.Id].Redo(d.Map);
@@ -1510,6 +1515,8 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
 
     private void AfterHistoryMove(VariantDraft d)
     {
+        MarkEdited();
+        NotifySaveAvailability();
         RebuildSurfaces();
         RefreshThumbnail(d.Id);
         UndoCommand.NotifyCanExecuteChanged();
@@ -1558,7 +1565,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumbFor(vd));
         Variants.Add(ev);
         SelectedVariant = ev;
-        IsDirty = true;
+        MarkEdited();
         DeleteVariantCommand.NotifyCanExecuteChanged();
         NotifySaveAvailability();
     }
@@ -1578,7 +1585,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         var ev = new EditorVariant(vd.Id, vd.Name, vd.Weight, RenderThumbFor(vd));
         Variants.Add(ev);
         SelectedVariant = ev;
-        IsDirty = true;
+        MarkEdited();
         DeleteVariantCommand.NotifyCanExecuteChanged();
         NotifySaveAvailability();
     }
@@ -1600,7 +1607,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         Variants.Remove(target);
         target.Thumbnail.Dispose();
         SelectedVariant = Variants.Count == 0 ? null : Variants[Math.Max(0, idx - 1)];
-        IsDirty = true;
+        MarkEdited();
         DeleteVariantCommand.NotifyCanExecuteChanged();
         NotifySaveAvailability();
     }
@@ -1698,6 +1705,13 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             return;
         }
 
+        using var write = _looseSavePath is null ? _session.TryBeginWrite() : null;
+        if (_looseSavePath is null && write is null)
+        {
+            await _dialogs.ShowErrorAsync("Cannot save this layer", "Still saving the last change - try again in a moment.");
+            return;
+        }
+
         // Ask BEFORE anything is written: the answer decides whether this becomes a new ingredient
         // beside the original or replaces it, and the replacement is not recoverable.
         if (IsColorMode && !IsCustom && !await ConvertToCustomAsync()) return;
@@ -1712,6 +1726,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
             // The exporter picks each variant's raster from the draft's KIND — color for Custom,
             // value-map for everything else — so there is nothing to rebuild here.
             var (manifest, images) = IngredientDraftExporter.Export(_draft);
+            long revision = _draftRevision;
 
             // Only the surviving draft variants' depth maps: a deleted variant's key was already
             // dropped from _depths (DeleteVariant), but filtering here too means a stale key left by
@@ -1739,6 +1754,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
                 await SaveLooseAsync(loosePath, manifest, images, depths);
             else
                 await SaveIntoBookAsync(manifest, images, depths);
+            if (revision == _draftRevision) IsDirty = false;
         }
         catch (Exception ex)
         {
@@ -1751,28 +1767,23 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
     /// cookbook, session or Explorer to refresh.</summary>
     /// <param name="loosePath">The .igt the editor was opened on.</param>
     /// <param name="manifest">The manifest to write.</param>
-    /// <param name="images">The rasters to write; ours until this returns, freed here.</param>
+    /// <param name="images">The exported rasters; adopted by the loose editor after writing, freed on failure.</param>
     /// <param name="depths">The surviving variants' depth maps.</param>
     private async Task SaveLooseAsync(string loosePath, IngredientManifest manifest,
         IReadOnlyDictionary<string, Image<Rgba32>> images, Dictionary<string, DepthMap> depths)
     {
-        // What is on disk after this save, kept so Rise (which reads the saved layer) sees it.
-        var kept = images.ToDictionary(kv => kv.Key, kv => kv.Value.Clone(), StringComparer.Ordinal);
+        var saved = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths };
+        bool adopted = false;
         try
         {
             await AtomicFile.ReplaceAsync(loosePath,
                 tmp => IngredientArchive.WriteAsync(tmp, manifest, images, depths));
+            var replaced = _ing;
+            _ing = saved;
+            adopted = true;
+            replaced.Dispose();
         }
-        finally
-        {
-            foreach (var i in images.Values) i.Dispose();   // our copies - ours to free
-        }
-        var replacedLoose = _ing;
-        _ing = new LoadedIngredient { Manifest = manifest, VariantImages = kept, Depths = depths };
-        // The ingredient this save replaced: its images are orphaned now (Dispose is idempotent,
-        // so the wrapper book freeing them again later is harmless).
-        foreach (var img in replacedLoose.VariantImages.Values) img.Dispose();
-        IsDirty = false;
+        finally { if (!adopted) saved.Dispose(); }
     }
 
     /// <summary>Splices the exported ingredient over the live book's and persists (temp write, atomic
@@ -1788,24 +1799,31 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         if (IsReadOnly)
         {
             foreach (var i in images.Values) i.Dispose();
-            return;
+            throw new InvalidOperationException("Editing is locked. Unlock the book to save changes.");
         }
 
-        // We own the loaded images until Upsert adopts them.
+        // Upsert borrows; persistence transfers ownership only after the session adopts the graph.
         var newIng = new LoadedIngredient { Manifest = manifest, VariantImages = images, Depths = depths };
-        var book2 = CookBookEdits.UpsertIngredient(_session.Current!, _recipe.Manifest.Id, newIng);
-
-        // Only a save that REPLACED this ingredient orphans its images. Saving color art as a
-        // new ingredient leaves the original in the book - disposing its images there would
-        // blank the layer it was supposed to leave alone.
-        var replaced = string.Equals(_ing.Manifest.Id, manifest.Id, StringComparison.Ordinal) ? _ing : null;
-        var book3 = await CookBookPersistence.PersistAsync(_session, book2);
-        _ing = newIng;                                     // subsequent saves target the new ingredient
-        if (replaced is not null)
-            foreach (var img in replaced.VariantImages.Values) img.Dispose();   // free the orphaned images
-
-        IsDirty = false;
-        Saved?.Invoke(book3);
+        bool adopted = false;
+        try
+        {
+            var current = _session.Current!;
+            var replaced = current.Recipe(_recipe.Manifest.Id).Ingredients
+                .FirstOrDefault(i => string.Equals(i.Manifest.Id, manifest.Id, StringComparison.Ordinal));
+            var book2 = CookBookEdits.UpsertIngredient(current, _recipe.Manifest.Id, newIng);
+            var book3 = await CookBookPersistence.PersistAsync(_session, book2);
+            _ing = newIng;
+            adopted = true;
+            if (replaced is not null)
+            {
+                var retained = book3.Recipes.SelectMany(r => r.Ingredients)
+                    .SelectMany(i => i.VariantImages.Values).ToHashSet(ReferenceEqualityComparer.Instance);
+                foreach (var image in replaced.VariantImages.Values)
+                    if (!retained.Contains(image)) image.Dispose();
+            }
+            Saved?.Invoke(book3);
+        }
+        finally { if (!adopted) newIng.Dispose(); }
     }
 
     /// <summary>Whether Rise may open: it reads the SAVED picture, so the editor must have no unsaved
@@ -1965,6 +1983,7 @@ public partial class IngredientEditorViewModel : ViewModelBase, IDisposable, IUn
         foreach (var v in Variants) v.Thumbnail.Dispose();
         DisposeReferences();   // the two cached stacks + every Kitchen graph opened this session
         Canvas?.Dispose(); Preview?.Dispose();
-        _ownedBook?.Dispose();   // loose path only: free the synthetic wrapper book (→ the ingredient)
+        if (_ownedBook is not null) _ing.Dispose(); // the current saved snapshot may differ from the wrapper
+        _ownedBook?.Dispose();
     }
 }

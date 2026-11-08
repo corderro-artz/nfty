@@ -45,14 +45,7 @@ public sealed class GalleryRowChunkConverter : IMultiValueConverter
 
         if (_rows is not null && _forPerRow == perRow && ReferenceEquals(_forItems, items)) return _rows;
 
-        var rows = new List<GalleryRow>((items.Count + perRow - 1) / perRow);
-        for (var i = 0; i < items.Count; i += perRow)
-        {
-            var take = Math.Min(perRow, items.Count - i);
-            var tiles = new GalleryItem[take];
-            for (var j = 0; j < take; j++) tiles[j] = items[i + j];
-            rows.Add(new GalleryRow(tiles));
-        }
+        var rows = items.Chunk(perRow).Select(tiles => new GalleryRow(tiles)).ToList();
         _forItems = items;
         _forPerRow = perRow;
         _rows = rows;

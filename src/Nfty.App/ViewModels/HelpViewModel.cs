@@ -24,6 +24,10 @@ public enum HelpTab
 public sealed class HelpSection
 {
     /// <summary>Creates a section.</summary>
+    /// <param name="title">The already uppercased section label.</param>
+    /// <param name="dashed">Use a separator instead of the label.</param>
+    /// <param name="first">Omit the leading gap for the first section in a column.</param>
+    /// <param name="entries">Entries in their displayed order.</param>
     public HelpSection(string title, bool dashed, bool first, IReadOnlyList<HelpEntry> entries)
     {
         Title = title; Dashed = dashed; Entries = entries;
@@ -56,6 +60,7 @@ public sealed class HelpSection
 public sealed class HelpColumn
 {
     /// <summary>Creates a column.</summary>
+    /// <param name="sections">Sections in their displayed top-to-bottom order.</param>
     public HelpColumn(IReadOnlyList<HelpSection> sections) => Sections = sections;
 
     /// <summary>The sections, top to bottom.</summary>
@@ -224,5 +229,5 @@ public partial class HelpViewModel : ViewModelBase
     }
 
     [RelayCommand] private void ClearSearch() => Query = "";
-    [RelayCommand] private void Close() => _dialogs.Close(null);
+    [RelayCommand] private void Close() => _dialogs.Close(this, null);
 }

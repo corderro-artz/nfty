@@ -37,10 +37,8 @@ public partial class TableSort : ObservableObject
     /// <summary>Creates a sort, seated on the column a table opens in.</summary>
     /// <param name="defaultColumn">The column to sort by before anything is clicked. Clicking it
     /// twice returns to it ascending, so the opening view is always reachable again.</param>
-    /// <param name="changed">Raised whenever the order changes. Required at the DECLARATION rather
-    /// than left to the owner to remember, because the failure without it is silent: the list
-    /// property re-evaluates correctly whenever anything reads it, so every ViewModel test passes
-    /// and only the running app fails to repaint.</param>
+    /// <param name="changed">Optional notification for simple fixtures; live views supply it so their
+    /// projected list raises PropertyChanged and repaints when the sort changes.</param>
     public TableSort(string defaultColumn, Action? changed = null)
     {
         _default = defaultColumn;

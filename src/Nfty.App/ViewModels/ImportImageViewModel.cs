@@ -360,7 +360,7 @@ public partial class ImportImageViewModel : WizardViewModelBase, IDisposable
 
     /// <summary>Closes the form with itself as the result, which is what the caller builds from.</summary>
     [RelayCommand(CanExecute = nameof(CanCreate))]
-    private void Create() => Dialogs.Close(this);
+    private void Create() => Dialogs.Close(this, this);
 
     /// <summary>Frees the decoded picture and the preview.</summary>
     public void Dispose()

@@ -26,6 +26,9 @@ public class RecipeRiseWriteThroughTests
     {
         public Action? OnReplace;
         public int Replaces;
+        public bool IsWriting => inner.IsWriting;
+        public IDisposable? TryBeginWrite() => inner.TryBeginWrite();
+        public Task WaitForWriteAsync() => inner.WaitForWriteAsync();
         public LoadedCookBook? Current => inner.Current;
         public string? SourcePath => inner.SourcePath;
         public event Action? Changed { add => inner.Changed += value; remove => inner.Changed -= value; }

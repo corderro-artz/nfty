@@ -66,9 +66,8 @@
             <Border Classes="share" IsVisible="{Binding ShowShare}">
               <StackPanel Spacing="6">
                 <TextBlock Text="RESULTING MIX" Classes="share-h" />
-                <!-- Fixed-width track with converter-scaled segments, the same approach the CookBook
-                     detail's distribution bar uses: the recipe count is not known until runtime, so a
-                     Grid of star columns is not an option. -->
+                <!-- A fixed 270px track; segments use its arranged width and their normalized share,
+                     matching the CookBook distribution bar without another width constant. -->
                 <Border Classes="mixbar" Width="270" HorizontalAlignment="Left">
                   <ItemsControl ItemsSource="{Binding ShareRows}">
                     <ItemsControl.ItemsPanel>
@@ -76,8 +75,14 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:ShareRow">
-                        <Border Classes="seg-me" Classes.other="{Binding !IsCurrent}" Height="7"
-                                Width="{Binding Percent, Converter={x:Static conv:PercentToWidthConverter.ForBarWidth270}}" />
+                        <Border Classes="seg-me" Classes.other="{Binding !IsCurrent}" Height="7">
+                          <Border.Width>
+                            <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
+                              <Binding Path="Percent" />
+                              <Binding Path="$parent[ItemsControl].Bounds.Width" />
+                            </MultiBinding>
+                          </Border.Width>
+                        </Border>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>

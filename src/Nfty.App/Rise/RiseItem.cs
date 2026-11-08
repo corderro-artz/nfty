@@ -136,7 +136,7 @@ public sealed partial class RiseItem : ObservableObject, IDisposable
     /// <summary>Whether the chip warns: the picture has partial alpha and cannot rise.</summary>
     public bool IsChipWarning => Subject is { } s ? s.Depth.PartialCount > 0 : _skipped == SkipReason.PartialAlpha;
 
-    /// <summary>Whether there is a chip to show: the subject is loaded.</summary>
+    /// <summary>Whether a loaded subject, remembered chip or skipped result has a chip to show.</summary>
     public bool IsChipShown => Subject is not null || _skipped is not null || _forgottenChip is not null;
 
     /// <summary>Whether the picture can rise, or is not yet loaded and so not known to be unable.</summary>
