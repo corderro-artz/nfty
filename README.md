@@ -141,7 +141,7 @@ More in the [User Manual](https://www.vaporsoft.dev/nfty/docs/): [keyboard short
 | Downloads | Windows x64, Linux x64 | Four shapes for each; no prebuilt macOS download |
 | Source and libraries | .NET 10; Ticket also .NET Standard 2.1 | Core, CLI and Model tests run on Windows, Linux and macOS; native desktop release checks cover Windows and Linux |
 | Window | 1280×720 logical units or larger | The app opens at this minimum; OS display scaling affects the physical screen space needed |
-| Python | 3.10+ | Optional — the manual, the demo generator and the icon build are Python tools |
+| Python | 3.11+ | Optional — the manual, the demo generator and the icon build are Python tools |
 
 ### Dependencies
 
