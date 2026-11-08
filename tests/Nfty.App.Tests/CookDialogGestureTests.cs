@@ -61,8 +61,9 @@ public class CookDialogGestureTests
             var dead = view.GetVisualDescendants().OfType<Button>()
                 // "Shows" excludes the form's own controls: the card keeps the three states in one cell
                 // and inks only the current one: the others sit under the `hide` class, at opacity 0.
-                // Only that class is exempt, so a control accidentally at opacity 0 is still caught.
-                .Where(b => b.IsEffectivelyVisible && !b.IsEffectivelyEnabled
+                // The explicit absent class also reserves inactive footer actions without painting
+                // or hit-testing them. Unexplained opacity changes are still caught.
+                .Where(b => b.IsEffectivelyVisible && !b.Classes.Contains("absent") && !b.IsEffectivelyEnabled
                     && !b.GetSelfAndVisualAncestors().OfType<Avalonia.StyledElement>()
                         .Any(v => v.Classes.Contains("hide")))
                 .Select(b => b.Content as string ?? b.Name ?? "<unnamed>")

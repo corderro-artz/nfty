@@ -75,8 +75,8 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
 
     /// <summary>What the switch means, in the words a person minting would use.</summary>
     public string UniqueHint => Unlimited
-        ? "Every roll is kept, so assets can repeat — weights still decide how rare each one is."
-        : "Every asset is different. The run stops if the cookbook cannot fill the count.";
+        ? "Repeated DNA allowed; rules and retries still apply."
+        : "Unique DNA only; stops if the retry budget runs out.";
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyCanExecuteChangedFor(nameof(CancelCommand))] [NotifyCanExecuteChangedFor(nameof(CloseCommand))] [NotifyPropertyChangedFor(nameof(ShowForm))] [NotifyPropertyChangedFor(nameof(FootHint))] private bool _isRunning;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _phaseText = "";
@@ -153,11 +153,11 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
     /// <summary>Also write a 3D model of every asset into <c>models/</c>.</summary>
     /// <remarks>Disabled for a 2D-only book, but a disabled box is a label: <see cref="Cook"/>
     /// checks <see cref="BookIsTwoDOnly"/> again before it builds a modeler.</remarks>
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))] [NotifyPropertyChangedFor(nameof(ShowModelOptionsToggle))] private bool _includeModels;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))] [NotifyPropertyChangedFor(nameof(ShowModelOptionsToggle))] [NotifyPropertyChangedFor(nameof(ModelsNoteShown))] private bool _includeModels;
 
     /// <summary>Whether the three model choices are showing. Starts closed: the defaults are what
     /// nearly everyone wants, and the choices are session-only (not persisted).</summary>
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))] private bool _showModelOptions;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))] [NotifyPropertyChangedFor(nameof(ModelsNoteShown))] private bool _showModelOptions;
 
     /// <summary>Opens or closes the model choices.</summary>
     [RelayCommand] private void ToggleModelOptions() => ShowModelOptions = !ShowModelOptions;
@@ -197,7 +197,11 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
     /// False until the scan lands (<see cref="ScanLanded"/>): the scan reads every pixel of every
     /// variant, which is not work for the thread that is building the card. Computed once: the book
     /// is borrowed and not edited while this card is open.</summary>
-    [ObservableProperty] private bool _bookIsTwoDOnly;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowModelOptionsSection))]
+    [NotifyPropertyChangedFor(nameof(ShowModelOptionsToggle))]
+    [NotifyPropertyChangedFor(nameof(ModelsNoteShown))]
+    private bool _bookIsTwoDOnly;
 
     /// <summary>Why the box is off, or what it does. Reserved before the scan lands and not inked
     /// (<see cref="ModelsNoteShown"/>), so the row never moves when the answer arrives.</summary>
@@ -207,8 +211,9 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
     /// because whether a model can be made depends on it.</summary>
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(CookCommand))] [NotifyPropertyChangedFor(nameof(ModelsNoteShown))] private bool _scanLanded;
 
-    /// <summary>Whether the models note is inked: it fades in when the scan lands.</summary>
-    public bool ModelsNoteShown => ScanLanded;
+    /// <summary>Whether the models note is inked: after the scan, while model fields do not occupy
+    /// its reserved detail region. The checkbox tooltip retains the note while fields are open.</summary>
+    public bool ModelsNoteShown => ScanLanded && !ShowModelOptionsSection;
 
     /// <summary>The scan, from construction to its answer being applied. Never faults: a scan that
     /// throws lands as "no partial alpha" and the modeler refuses a bad book itself, with a message.</summary>
@@ -227,11 +232,11 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
     /// is something to say. The line is reserved either way.</summary>
     public bool ProvenanceShown => IsDone && ProvenanceWarning.Length > 0;
 
-    /// <summary>Whether the model choices are on show: a reveal, last in the form.</summary>
-    public bool ShowModelOptionsSection => IncludeModels && ShowModelOptions;
+    /// <summary>Whether the model fields occupy the fixed model-detail region.</summary>
+    public bool ShowModelOptionsSection => IncludeModels && ShowModelOptions && !BookIsTwoDOnly;
 
     /// <summary>Whether the disclosure toggle is on show.</summary>
-    public bool ShowModelOptionsToggle => IncludeModels;
+    public bool ShowModelOptionsToggle => IncludeModels && !BookIsTwoDOnly;
 
     /// <summary>Creates the cook dialog.</summary>
     /// <param name="book">The book to generate from.</param>
@@ -315,8 +320,8 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
     /// <summary>The footer's left-hand hint, which is a different sentence in each of the three
     /// states this one card passes through.</summary>
     public string FootHint => IsRunning
-        ? "Cancel stops after the current asset"
-        : IsDone ? "Open Set to browse and export it" : "Same book, same seed, same collection";
+        ? "Cancel to stop this cook."
+        : IsDone ? "Browse and export the Set." : "Same inputs, same Set.";
 
     private bool CanCook() => ScanLanded && !IsRunning && Count > 0;
 

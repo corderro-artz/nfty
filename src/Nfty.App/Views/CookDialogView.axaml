@@ -12,7 +12,7 @@
       <Setter Property="IsHitTestVisible" Value="False" />
       <Setter Property="IsTabStop" Value="False" />
     </Style>
-    <Style Selector="StackPanel.hide">
+    <Style Selector="StackPanel.hide, Grid.hide">
       <Setter Property="Opacity" Value="0" />
       <Setter Property="IsHitTestVisible" Value="False" />
     </Style>
@@ -30,7 +30,7 @@
   </UserControl.KeyBindings>
   <Border Classes="modal small">
     <Grid RowDefinitions="Auto,Auto">
-      <Border Grid.Row="0" Classes="modal-body tight">
+      <Border Grid.Row="0" Classes="modal-body tight" Padding="24,18,24,12">
         <StackPanel Spacing="11">
           <StackPanel Classes="plabel-row">
             <Ellipse Classes="kdot" />
@@ -43,7 +43,7 @@
                and the footer never jumps when Cook is pressed. The others are disabled as well as
                transparent, so they are neither hit-testable nor reachable by Tab. -->
           <Panel>
-          <StackPanel Spacing="11" Classes.hide="{Binding !ShowForm}" IsEnabled="{Binding ShowForm}">
+          <StackPanel Spacing="8" Classes.hide="{Binding !ShowForm}" IsEnabled="{Binding ShowForm}">
             <!-- Both fields carry a real label. The seed used to be labeled by PlaceholderText alone,
                  and the ViewModel pre-fills a random seed - so the one thing that named the field was
                  showing exactly when the field was empty, which it never is. The user met an unexplained
@@ -95,33 +95,29 @@
                            Text="{x:Static vm:CookDialogViewModel.RecipeLockedReason}" />
               </Grid>
             </Grid>
-            <!-- The engine and the CLI have always had "Allow repeats"; the dialog took the default and
-                 never offered it, so a person using only the app could not mint past the unique DNA space.
-                 They met "allows exactly 33 unique DNA, but 500 were requested" with no way past it
-                 but asking for fewer. The hint below changes with the box because the consequence
-                 is the whole point of the choice, and it is not guessable from the label. The two
-                 boxes share a row: the recipe choice needed a row of its own, and the card has to
-                 fit the real modal area with the model options open. -->
-            <StackPanel Spacing="4">
+            <!-- Packing and DNA policy share one option row. The consequence keeps one reserved
+                 line and aligns with checkbox text, rather than the checkbox's leading edge. -->
+            <StackPanel Spacing="2">
               <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <CheckBox Grid.Column="0" Content="Pack into a single .set" IsChecked="{Binding Pack}" />
                 <CheckBox Grid.Column="1" Content="Allow repeats" IsChecked="{Binding Unlimited}"
                           ToolTip.Tip="With repeats allowed, identity is the token number, as ERC-721 defines it. Weights still decide how common each variant is, so a rare variant stays rare and a layer with a low appearance chance is rarer still." />
               </Grid>
-              <TextBlock Text="{Binding UniqueHint}" Classes="m-sub" TextWrapping="Wrap"
-                         Margin="0" />
+              <TextBlock Text="{Binding UniqueHint}" Classes="m-sub" Height="16"
+                         TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                         ToolTip.Tip="{Binding UniqueHint}" Margin="24,0,0,0" />
             </StackPanel>
 
             <!-- The box row is always laid out. For a 2D-only book it is disabled, and the reason sits
                  OUTSIDE the box in its own text: a disabled control is dimmed to 0.38, and a reason
                  inside that dimming would fail the contrast floor exactly when it is the only thing
                  explaining why the box is off. -->
-            <StackPanel Spacing="4">
-              <!-- The disclosure button shares the box row (an Auto column), so opening the options
-                   adds only the options themselves: the card has to fit the real modal area EXPANDED. -->
+            <StackPanel Spacing="2">
+              <!-- The disclosure has a reserved slot. Its details replace the note below inside
+                   one fixed-height region, so neither the card nor its action targets move. -->
               <Grid ColumnDefinitions="*,Auto">
                 <CheckBox Grid.Column="0" Content="Include 3D models" IsChecked="{Binding IncludeModels}"
-                          IsEnabled="{Binding !BookIsTwoDOnly}" />
+                          IsEnabled="{Binding !BookIsTwoDOnly}" ToolTip.Tip="{Binding ModelsNote}" />
                 <Button Grid.Column="1" Classes="tbtn" Command="{Binding ToggleModelOptionsCommand}"
                         Classes.absent="{Binding !ShowModelOptionsToggle}"
                         Classes.on="{Binding ShowModelOptions}">
@@ -138,41 +134,40 @@
                   </StackPanel>
                 </Button>
               </Grid>
-              <!-- Laid out before the partial-alpha scan has answered and inked once it has: the answer
-                   arrives after the card is on screen, and it must move nothing. -->
-              <TextBlock x:Name="ModelsNoteText" Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
-                         Classes.absent="{Binding !ModelsNoteShown}" Margin="24,0,0,0" MinHeight="30" />
+              <Panel Height="48">
+                <!-- The scan answer and model fields occupy the same detail slot. A 2D-only reason
+                     stays outside its disabled checkbox; open fields keep the note on its tooltip. -->
+                <TextBlock x:Name="ModelsNoteText" Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
+                           Classes.absent="{Binding !ModelsNoteShown}" Margin="24,0,0,0" VerticalAlignment="Center" />
+                <Grid ColumnDefinitions="*,*,76" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4"
+                      Classes.hide="{Binding !ShowModelOptionsSection}" IsEnabled="{Binding ShowModelOptionsSection}"
+                      VerticalAlignment="Center">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="FORMAT" Classes="plabel" Margin="0" />
+                  <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding FormatChoices}"
+                            SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelFormat}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ModelFormatChoice">
+                        <TextBlock Text="{Binding Label}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Grid.Row="0" Grid.Column="1" Text="PIVOT" Classes="plabel" Margin="0" />
+                  <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PivotChoices}"
+                            SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelPivot}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ModelPivotChoice">
+                        <TextBlock Text="{Binding Label}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Grid.Row="0" Grid.Column="2" Text="VOXEL SIZE" Classes="plabel" Margin="0" />
+                  <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding VoxelSize}" Minimum="{Binding VoxelSizeMin, Mode=OneTime}" Maximum="{Binding VoxelSizeMax, Mode=OneTime}"
+                                 FormatString="0.###" Increment="0.1" MinWidth="0" Width="76" />
+                </Grid>
+              </Panel>
             </StackPanel>
-
-            <!-- A REVEAL, last in the form so only the footer moves when it opens (CLAUDE.md, the
-                 second exception to reserve-space). One row of three captioned fields, not three
-                 labeled rows: the expanded card has to fit the modal area. Session-only choices. -->
-            <Grid ColumnDefinitions="*,*,76" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4"
-                  IsVisible="{Binding ShowModelOptionsSection}">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="FORMAT" Classes="plabel" Margin="0" />
-              <ComboBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding FormatChoices}"
-                        SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelFormat}"
-                        HorizontalAlignment="Stretch">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ModelFormatChoice">
-                    <TextBlock Text="{Binding Label}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="PIVOT" Classes="plabel" Margin="0" />
-              <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PivotChoices}"
-                        SelectedValueBinding="{Binding Value}" SelectedValue="{Binding ModelPivot}"
-                        HorizontalAlignment="Stretch">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ModelPivotChoice">
-                    <TextBlock Text="{Binding Label}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <TextBlock Grid.Row="0" Grid.Column="2" Text="VOXEL SIZE" Classes="plabel" Margin="0" />
-              <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding VoxelSize}" Minimum="{Binding VoxelSizeMin, Mode=OneTime}" Maximum="{Binding VoxelSizeMax, Mode=OneTime}"
-                             FormatString="0.###" Increment="0.1" MinWidth="0" Width="76" />
-            </Grid>
           </StackPanel>
 
           <StackPanel Spacing="9" VerticalAlignment="Top" Classes.hide="{Binding !IsRunning}" IsEnabled="{Binding IsRunning}">
@@ -208,24 +203,24 @@
       </Border>
 
       <Border Grid.Row="1" Classes="modal-foot">
-        <Grid ColumnDefinitions="*,Auto">
+        <Grid ColumnDefinitions="*,70,96" ColumnSpacing="8">
           <TextBlock Grid.Column="0" Classes="keyhint" VerticalAlignment="Center"
-                     Text="{Binding FootHint}" />
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                     Text="{Binding FootHint}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FootHint}" />
+          <Panel Grid.Column="1">
             <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn"
-                    IsVisible="{Binding IsRunning}" />
+                    Classes.absent="{Binding !IsRunning}" HorizontalAlignment="Stretch" />
             <Button Content="Close" Command="{Binding CloseCommand}" Classes="tbtn"
-                    IsVisible="{Binding !IsRunning}" />
-            <!-- The accent slot is one control that changes with the state, never two: before the
-                 run it is Cook, after it the next thing you would do with what Cook made. Export
-                 lives on the Set browser, so without this the finished run's only exit was Close
-                 and a trip back to Landing to re-open the folder the app had just written. -->
+                    Classes.absent="{Binding IsRunning}" HorizontalAlignment="Stretch" />
+          </Panel>
+          <Panel Grid.Column="2">
+            <!-- Both accent actions share one reserved target. Before the run it is Cook; afterward
+                 Open Set leads directly to browsing/export. While running the slot keeps its space. -->
             <Button Content="Open Set" Command="{Binding OpenSetCommand}" Classes="accent"
-                    IsVisible="{Binding IsDone}"
+                    Classes.absent="{Binding !IsDone}" HorizontalAlignment="Stretch"
                     ToolTip.Tip="Browse the assets, and export - the art, either metadata set, the source CookBook, sealed or not." />
             <Button Command="{Binding CookCommand}" Classes="accent"
-                    IsVisible="{Binding ShowForm}"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconFlame}" /><TextBlock Text="Cook" /></StackPanel></Button>
-          </StackPanel>
+                    Classes.absent="{Binding !ShowForm}" HorizontalAlignment="Stretch"><StackPanel Orientation="Horizontal" Spacing="6"><Path Classes="ico sm" Data="{StaticResource IconFlame}" /><TextBlock Text="Cook" /></StackPanel></Button>
+          </Panel>
         </Grid>
       </Border>
     </Grid>
