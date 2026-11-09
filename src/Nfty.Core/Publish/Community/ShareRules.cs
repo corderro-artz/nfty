@@ -153,6 +153,19 @@ public static class ShareRules
     /// <summary>The repository holds things the gallery doesn't allow.</summary>
     public static string RepoExtras => "Your nfty-public holds things the gallery doesn't allow. Remove them to share.";
 
+    /// <summary>A submodule sits in nfty-public; nfty can't delete it.</summary>
+    public static string RepoSubmodule(string path) => $"'{path}' is a submodule; remove it on GitHub, then share again.";
+
+    /// <summary>Two releases carry one tag the repository lists.</summary>
+    public static string RepoDuplicateRelease(string tag) =>
+        $"Your nfty-public has two releases for \"{tag}\". Remove one on GitHub, then share again.";
+
+    /// <summary>The repository changed between the scan and the removal.</summary>
+    public static string RepoChanged => "Your nfty-public changed. Check it again.";
+
+    /// <summary>nfty-public.json was written by a newer nfty.</summary>
+    public static string RepoNewerNfty => "Your nfty-public was written by a newer nfty. Update nfty to share.";
+
     /// <summary>The repository history is past the limit.</summary>
     public static string HistoryTooLarge(long kb) =>
         $"Your nfty-public's history holds about {N((kb + 512) / 1024)} MB of deleted files. Delete the repository on GitHub and share again; nfty will make a fresh one.";

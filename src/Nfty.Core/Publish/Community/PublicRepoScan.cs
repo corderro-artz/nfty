@@ -36,7 +36,8 @@ public enum RepoExtraKind
 /// <param name="Name">The path, branch name, tag, or asset file name.</param>
 /// <param name="Size">Its size in bytes when known (a folder or Release: the sum of its files).</param>
 /// <param name="Id">The Release id (a Release) or asset id (an asset); null for the rest.</param>
-public sealed record RepoExtra(RepoExtraKind Kind, string Name, long? Size, long? Id);
+/// <param name="Removable">False for what nfty cannot delete through GitHub's API (a submodule); it is still listed.</param>
+public sealed record RepoExtra(RepoExtraKind Kind, string Name, long? Size, long? Id, bool Removable = true);
 
 /// <summary>The scan's answer.</summary>
 /// <param name="Extras">Everything not allowed, for display and for <see cref="PublicRepoScan.RemoveAsync"/>.</param>
@@ -69,17 +70,19 @@ public static partial class PublicRepoScan
         var extras = new List<RepoExtra>();
 
         // Tree: README.md and nfty-public.json at the root, nothing else. A folder is reported once by its top-level name.
-        var folders = new SortedDictionary<string, long?>(StringComparer.Ordinal);
+        var folders = new SortedDictionary<string, (long? Size, bool Removable)>(StringComparer.Ordinal);
         foreach (var item in snapshot.Tree)
         {
             if (item.Type == "blob" && (item.Path == ReadmeFile || item.Path == ManifestFile)) continue;
             int slash = item.Path.IndexOf('/', StringComparison.Ordinal);
             string top = slash < 0 ? item.Path : item.Path[..slash];
-            folders.TryGetValue(top, out var seen);
-            // Only blobs carry a size; a folder's size is the sum of its blobs'.
-            folders[top] = item.Type == "blob" && item.Size is { } s ? (seen ?? 0) + s : seen;
+            if (!folders.TryGetValue(top, out var seen)) seen = (null, true);
+            // Only blobs carry a size; a folder's size is the sum of its blobs'. A submodule (type commit,
+            // here or inside a folder) can't be deleted through the contents API.
+            folders[top] = (item.Type == "blob" && item.Size is { } s ? (seen.Size ?? 0) + s : seen.Size,
+                seen.Removable && item.Type is "blob" or "tree");
         }
-        foreach (var (name, size) in folders) extras.Add(new RepoExtra(RepoExtraKind.File, name, size, null));
+        foreach (var (name, v) in folders) extras.Add(new RepoExtra(RepoExtraKind.File, name, v.Size, null, v.Removable));
 
         foreach (var branch in snapshot.Branches.Distinct(StringComparer.Ordinal).OrderBy(b => b, StringComparer.Ordinal))
             if (branch != snapshot.Repo.DefaultBranch) extras.Add(new RepoExtra(RepoExtraKind.Branch, branch, null, null));
@@ -90,12 +93,15 @@ public static partial class PublicRepoScan
         var allowedTags = new HashSet<string>(listed, StringComparer.Ordinal);
         if (snapshot.PendingSupersededTag is { } pending) allowedTags.Add(pending);
 
+        // Two Releases on one allowed tag: which is the live share's can't be told, so neither is offered for removal.
+        var duplicated = snapshot.Releases.Where(r => allowedTags.Contains(r.Tag)).GroupBy(r => r.Tag, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(StringComparer.Ordinal);
         var keptTags = new HashSet<string>(StringComparer.Ordinal);
         var assetExtras = new List<RepoExtra>();
         var releaseExtras = new List<RepoExtra>();
         foreach (var release in snapshot.Releases)
         {
-            // A second Release on a tag already held by an allowed one is an extra, so the allowed one stays unique.
+            if (duplicated.Contains(release.Tag)) { keptTags.Add(release.Tag); continue; }
             if (!allowedTags.Contains(release.Tag) || !keptTags.Add(release.Tag))
             {
                 long? total = release.Assets.Count == 0 ? null : release.Assets.Sum(a => a.Size);
@@ -117,6 +123,7 @@ public static partial class PublicRepoScan
         string? blocker = snapshot.Manifest is null ? ShareRules.RepoNotOurs
             : snapshot.Repo.Private ? ShareRules.RepoPrivate
             : snapshot.Repo.SizeKb > ShareRules.MaxHistoryKb ? ShareRules.HistoryTooLarge(snapshot.Repo.SizeKb)
+            : duplicated.Count > 0 ? ShareRules.RepoDuplicateRelease(snapshot.Releases.Select(r => r.Tag).First(duplicated.Contains))
             : null;
         return new RepoScan(extras, blocker);
     }
@@ -124,7 +131,7 @@ public static partial class PublicRepoScan
     /// <summary>
     /// Reads everything the scan needs. Returns <see langword="null"/> when the repository does not exist (the first share
     /// creates it). A missing or damaged <c>nfty-public.json</c> is a null <see cref="RepoSnapshot.Manifest"/>; one written by a
-    /// newer nfty throws <see cref="UnsupportedSchemaVersionException"/> rather than being called foreign.
+    /// newer nfty throws a <see cref="CommunityException"/> saying so rather than being called foreign.
     /// </summary>
     /// <param name="client">The GitHub client.</param>
     /// <param name="login">The signed-in account, which owns the repository.</param>
@@ -145,9 +152,23 @@ public static partial class PublicRepoScan
         {
             try { manifest = PublicRepoManifest.Read(new MemoryStream(f.Content)); }
             catch (InvalidDataException) { manifest = null; }
+            catch (UnsupportedSchemaVersionException ex)
+            {
+                throw new CommunityException(ex.Found > ex.Supported ? ShareRules.RepoNewerNfty : ShareRules.RepoNotOurs);
+            }
         }
         return new RepoSnapshot(repo, tree, branches, releases, tags, manifest, pendingTag);
     }
+
+    private static bool Present(RepoSnapshot s, RepoExtra e) => e.Kind switch
+    {
+        RepoExtraKind.File => s.Tree.Any(t => t.Path == e.Name || t.Path.StartsWith(e.Name + "/", StringComparison.Ordinal)),
+        RepoExtraKind.Branch => s.Branches.Contains(e.Name),
+        RepoExtraKind.Release => s.Releases.Any(r => r.Id == e.Id),
+        RepoExtraKind.Asset => s.Releases.Any(r => r.Assets.Any(a => a.Id == e.Id)),
+        RepoExtraKind.Tag => s.Tags.Contains(e.Name),
+        _ => true,
+    };
 
     /// <summary>
     /// Deletes exactly <paramref name="extras"/>: assets, then Releases, then tags, then files (each blob at its own sha),
@@ -160,7 +181,8 @@ public static partial class PublicRepoScan
     /// <param name="extras">What to delete, as the scan listed it.</param>
     /// <param name="ct">Cancellation.</param>
     /// <param name="pendingTag">The superseded Release's tag while its replacing pull request is open (kept out of reach).</param>
-    /// <exception cref="ArgumentException">An item is not (or no longer is) an extra, or the repository is not nfty's.</exception>
+    /// <exception cref="ArgumentException">An item is README.md, nfty-public.json or the default branch.</exception>
+    /// <exception cref="CommunityException">The repository is not nfty's, changed since the scan, or an item can't be removed (a submodule).</exception>
     public static async Task RemoveAsync(GitHubShareClient client, string login, IReadOnlyList<RepoExtra> extras, CancellationToken ct, string? pendingTag = null)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -172,19 +194,29 @@ public static partial class PublicRepoScan
                 throw new ArgumentException("README.md and nfty-public.json are never removed.", nameof(extras));
 
         var snapshot = await FetchAsync(client, login, pendingTag, ct).ConfigureAwait(false)
-            ?? throw new ArgumentException("There is no nfty-public repository to remove from.", nameof(extras));
-        if (snapshot.Manifest is null)
-            throw new ArgumentException("This repository is not nfty's; nothing is removed from it.", nameof(extras));
+            ?? throw new CommunityException(ShareRules.RepoNotOurs);
+        if (snapshot.Manifest is null) throw new CommunityException(ShareRules.RepoNotOurs);
         foreach (var e in extras)
             if (e.Kind == RepoExtraKind.Branch && e.Name == snapshot.Repo.DefaultBranch)
                 throw new ArgumentException("The default branch is never removed.", nameof(extras));
 
+        // Every item is checked against a fresh scan BEFORE anything is deleted. Gone already: nothing to do. Still
+        // there but no longer an extra (or never removable): the whole removal stops.
         var fresh = Scan(snapshot).Extras;
+        var todo = new List<RepoExtra>();
         foreach (var e in extras)
-            if (!fresh.Any(f => f.Kind == e.Kind && f.Name == e.Name && f.Id == e.Id))
-                throw new ArgumentException($"{e.Kind} \"{e.Name}\" is not something to remove.", nameof(extras));
+        {
+            var match = fresh.FirstOrDefault(f => f.Kind == e.Kind && f.Name == e.Name && f.Id == e.Id);
+            if (match is null)
+            {
+                if (Present(snapshot, e)) throw new CommunityException(ShareRules.RepoChanged);
+                continue;
+            }
+            if (!match.Removable) throw new CommunityException(ShareRules.RepoSubmodule(match.Name));
+            todo.Add(match);
+        }
 
-        var wanted = extras.DistinctBy(e => (e.Kind, e.Name, e.Id)).ToList();
+        var wanted = todo.DistinctBy(e => (e.Kind, e.Name, e.Id)).ToList();
         string branch = snapshot.Repo.DefaultBranch;
 
         foreach (var e in wanted.Where(e => e.Kind == RepoExtraKind.Asset))
