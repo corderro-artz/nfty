@@ -164,6 +164,15 @@ public static class ShareRules
     public static string Offline(DateTime time) =>
         $"GitHub can't be reached. Showing the list from {time.ToString("HH:mm", CultureInfo.InvariantCulture)}.";
 
+    /// <summary>The user refused the GitHub sign-in.</summary>
+    public static string SignInCanceled => "GitHub sign-in was canceled.";
+
+    /// <summary>The sign-in code ran out before it was used.</summary>
+    public static string SignInExpired => "The sign-in code expired. Try again.";
+
+    /// <summary>GitHub answered the sign-in in a way nfty doesn't expect.</summary>
+    public static string SignInFailed => "GitHub sign-in failed. Try again.";
+
     /// <summary>The index is newer than this build understands.</summary>
     public static string IndexTooNew => "The community gallery needs a newer nfty. Update to see the latest list.";
 
