@@ -84,7 +84,7 @@ public partial class IngredientDetailView : UserControl
         if (!moved)
         {
             e.Pointer.Capture(null);
-            vm.SelectVariantCommand.Execute(row.Id);
+            vm.ToggleVariantCommand.Execute(row.Id);
             return;
         }
         var buttons = _rows.GetVisualDescendants().OfType<Button>()

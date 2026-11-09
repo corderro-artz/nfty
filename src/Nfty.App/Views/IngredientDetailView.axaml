@@ -249,7 +249,7 @@
                    and SelectVariantCommand was reachable from nothing. -->
               <Button Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Stretch"
-                      Command="{Binding $parent[ItemsControl].((vm:IngredientDetailViewModel)DataContext).SelectVariantCommand}"
+                      Command="{Binding $parent[ItemsControl].((vm:IngredientDetailViewModel)DataContext).ToggleVariantCommand}"
                       CommandParameter="{Binding Id}">
                 <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
                   <Grid ColumnDefinitions="40,*,71,93,79">

@@ -411,7 +411,15 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     public void Select(SetItemRow? row)
     {
         if (row is null) return;
-        SelectedItem = ReferenceEquals(SelectedItem, row) ? null : row;
+        SelectedItem = row;
+    }
+
+    [RelayCommand]
+    private void ToggleSelection(SetItemRow? row)
+    {
+        if (row is null) return;
+        if (ReferenceEquals(SelectedItem, row)) ClearSelection();
+        else Select(row);
     }
 
     [RelayCommand]

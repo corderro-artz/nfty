@@ -579,9 +579,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void SelectVariant(string id)
     {
-        if (_variants.FirstOrDefault(v => v.Id == id) is not { } row)
+        if (_variants.FirstOrDefault(v => v.Id == id) is not { } row || ReferenceEquals(row, Selected))
             return;
-        if (ReferenceEquals(row, Selected)) { ClearSelection(); return; }
 
         // Exactly two rows can change, so exactly two are touched - the same rule the Set browser's
         // selection follows, for the same reason.
@@ -593,6 +592,13 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         Hero = VariantImagery.Render(_bridge, _ing, id);
         old?.Dispose();
         OnPropertyChanged(nameof(DeleteVariantTip));
+    }
+
+    [RelayCommand]
+    private void ToggleVariant(string id)
+    {
+        if (Selected?.Id == id) ClearSelection();
+        else SelectVariant(id);
     }
 
     [RelayCommand]

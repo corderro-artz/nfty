@@ -56,6 +56,12 @@ public class VariantDeleteJourneyTests
             vm.ToggleLockCommand.Execute(null);
             Dispatcher.UIThread.RunJobs();
             Assert.True(button.IsEffectivelyEnabled);
+            pane.SelectVariantCommand.Execute("glow");
+            Assert.NotNull(pane.Selected);
+            pane.ToggleVariantCommand.Execute("glow");
+            Assert.Null(pane.Selected);
+            pane.ToggleVariantCommand.Execute("glow");
+            Assert.NotNull(pane.Selected);
             var at = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
             window.MouseDown(at, MouseButton.Left);
             window.MouseUp(at, MouseButton.Left);
