@@ -50,3 +50,25 @@ Draws every triangle of `mesh`, sampling `texture` nearest-neighbor, into `targe
 **Exceptions**
 
 - `ArgumentException` - `texture` is not the size of the art the mesh was risen from — the same rule `ModelWriter` applies.
+
+### Render(Mesh, Image&lt;Rgba32&gt;, Camera, RenderTarget, PreviewLighting) { #m-render-nfty-model-mesh-sixlabors-imagesharp-image-sixl-11b55d }
+
+```csharp
+public static int Render(Mesh mesh, Image<Rgba32> texture, Camera camera, RenderTarget target, PreviewLighting lighting);
+```
+
+Draws the same clipped, nearest-neighbor preview as the original overload, with a preview-only light intensity and color. [`PreviewLighting.Default`](Nfty.Model.Render.PreviewLighting.md#p-default) preserves the original pixels. Texture alpha, depth, projection and exported model data are unchanged.
+
+**Parameters**
+
+- `mesh` (`Mesh`) - The mesh to draw.
+- `texture` (`Image<Rgba32>`) - The face atlas the mesh was built against.
+- `camera` (`Camera`) - The view to draw it from.
+- `target` (`RenderTarget`) - The caller-cleared surface to draw into.
+- `lighting` (`PreviewLighting`) - Preview light intensity and RGB color.
+
+**Returns.** The number of source triangles surviving clipping and culling.
+
+**Exceptions**
+
+- `ArgumentException` - The texture size disagrees with the mesh.

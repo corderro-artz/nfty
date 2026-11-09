@@ -4,7 +4,7 @@
 
 Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.Core.
 
-31 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+32 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Model
 
@@ -43,6 +43,7 @@ Rise: pixel art to 3D. Voxel meshes, glTF writing and reading. Depends on Nfty.C
 | Type | Kind | Summary |
 |---|---|---|
 | [`Camera`](Nfty.Model.Render.Camera.md) | class | An immutable turntable-orbit camera: [`Camera.ViewProjection()`](Nfty.Model.Render.Camera.md#m-viewprojection-system-int32-system-int32) is the one function that owns the view and projection mapping together, and every other mapping (picking, zoom-anchoring) derives from it or its inverse rather than restating the matrices beside it. |
+| [`PreviewLighting`](Nfty.Model.Render.PreviewLighting.md) | record struct | Preview-only intensity and color for the rasterizer's existing camera-relative light. |
 | [`Raster`](Nfty.Model.Render.Raster.md) | class | The software rasterizer: transforms a [`Mesh`](Nfty.Model.Mesh.md) by a [`Camera`](Nfty.Model.Render.Camera.md)'s view-projection, clips against the near plane, culls back faces, resolves visibility with a z-buffer, samples the texture with nearest-neighbor filtering, and shades with flat, quantized, camera-relative lighting — the whole rendering pipeline the spec lists (see `docs/superpowers/specs/2026-09-22-model-preview-design.md`, "Rendering"). |
 | [`RenderTarget`](Nfty.Model.Render.RenderTarget.md) | class | A plain pixel-and-depth surface `Raster` writes into. |
 | [`Viewport`](Nfty.Model.Render.Viewport.md) | class | The one mapping between normalized device coordinates and pixels. |
