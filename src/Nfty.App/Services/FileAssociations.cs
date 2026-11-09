@@ -3,7 +3,7 @@ using Nfty.Core.Formats;
 
 namespace Nfty.App.Services;
 
-/// <summary>Which program a group of file types opens in, once registered.</summary>
+/// <summary>The mode a file type is registered for; Windows still chooses its effective default.</summary>
 public enum AssociationTarget
 {
     /// <summary>Not registered: nfty is not offered for these files.</summary>
@@ -16,11 +16,11 @@ public enum AssociationTarget
     Viewer,
 }
 
-/// <summary>The three groups the Settings card offers, one choice each.</summary>
+/// <summary>Catalog categories, also used by the older all-type registration presets.</summary>
 public enum AssociationGroup
 {
     /// <summary>nfty's own archives: <c>.cbk</c>, <c>.rcp</c>, <c>.igt</c>, <c>.set</c>, <c>.tin</c>,
-    /// <c>.ktn</c>, <c>.mnu</c>. No other program claims these extensions.</summary>
+    /// <c>.ktn</c>, <c>.mnu</c>. Their per-user class defaults are set only when absent or already owned by this type.</summary>
     NftyFiles,
 
     /// <summary>Pictures and 3D models: <c>.png</c>, <c>.jpg</c>, <c>.jpeg</c>, <c>.glb</c>, <c>.gltf</c>.
@@ -38,16 +38,23 @@ public enum AssociationGroup
 /// <param name="Extension">The extension, with its dot, lower case.</param>
 /// <param name="ProgId">The ProgID nfty registers it under; several extensions may share one.</param>
 /// <param name="FriendlyName">What Explorer calls the type.</param>
-/// <param name="Group">Which Settings choice governs it.</param>
-/// <param name="NftyOwned">True for an extension no other program claims, whose default nfty may
-/// set; false for a shared one, which Windows lets only the user make default.</param>
+/// <param name="Group">Its catalog category and legacy group preset.</param>
+/// <param name="NftyOwned">True for an archive whose empty or own per-user class default nfty may set; false for shared types.
+/// Windows effective defaults remain subject to the user's protected choice.</param>
 /// <param name="OpensInApp">True when the app shell opens it; false when only the viewer does (a
 /// Menu), so the app target still registers the viewer command for it.</param>
 public sealed record AssociatedType(string Extension, string ProgId, string FriendlyName,
-    AssociationGroup Group, bool NftyOwned, bool OpensInApp);
+    AssociationGroup Group, bool NftyOwned, bool OpensInApp)
+{
+    /// <summary>An independent handler for this extension. Earlier releases shared picture/model
+    /// handlers; keeping their names readable while giving new registrations their own command
+    /// prevents repairing one type from changing an unselected sibling's program.</summary>
+    public string RegistrationProgId => FileTypeCatalog.All.Count(t => t.ProgId == ProgId) > 1
+        ? ProgId + Extension : ProgId;
+}
 
 /// <summary>
-/// Every file type nfty registers for, and which group governs it. The inventory is the viewer's own
+/// Every file type nfty registers for, and its routing/category. The inventory is the viewer's own
 /// <see cref="Nfty.App.Viewer.ViewerOpener.Extensions"/> - every extension the viewer opens is here,
 /// which a test holds - plus the routing the Landing page's open-by-path does for the app.
 /// </summary>
@@ -87,17 +94,20 @@ public static class FileTypeCatalog
     public static bool AllowsApp(AssociationGroup group) => group == AssociationGroup.NftyFiles;
 }
 
-/// <summary>What each group should open in.</summary>
+/// <summary>A registration choice with legacy group presets and independent extension overrides.</summary>
 /// <param name="NftyFiles">nfty's own archives.</param>
 /// <param name="PicturesAndModels">Pictures and 3D models.</param>
 /// <param name="Metadata">Asset metadata JSON.</param>
 public sealed record AssociationChoice(AssociationTarget NftyFiles, AssociationTarget PicturesAndModels,
     AssociationTarget Metadata)
 {
+    private IReadOnlyDictionary<string, AssociationTarget> _extensions =
+        new Dictionary<string, AssociationTarget>(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Nothing registered.</summary>
     public static AssociationChoice None { get; } = new(AssociationTarget.Off, AssociationTarget.Off, AssociationTarget.Off);
 
-    /// <summary>What the card proposes before anything is registered: nfty's files in the app,
+    /// <summary>The legacy all-type suggested preset: nfty's files in the app,
     /// pictures and models in the viewer, JSON left alone (most JSON files are not asset metadata).</summary>
     public static AssociationChoice Suggested { get; } =
         new(AssociationTarget.App, AssociationTarget.Viewer, AssociationTarget.Off);
@@ -113,8 +123,48 @@ public sealed record AssociationChoice(AssociationTarget NftyFiles, AssociationT
     };
 
     /// <summary>Whether anything at all is chosen.</summary>
-    public bool Any => NftyFiles != AssociationTarget.Off || PicturesAndModels != AssociationTarget.Off
-                       || Metadata != AssociationTarget.Off;
+    public bool Any => FileTypeCatalog.All.Any(t => For(t) != AssociationTarget.Off);
+
+    /// <summary>One extension's actual target; files the shell cannot edit use the viewer.</summary>
+    /// <param name="type">The catalog entry.</param>
+    /// <returns>Its target.</returns>
+    public AssociationTarget For(AssociatedType type)
+    {
+        var target = _extensions.TryGetValue(type.Extension, out var chosen) ? chosen : For(type.Group);
+        return target == AssociationTarget.App && !type.OpensInApp ? AssociationTarget.Viewer : target;
+    }
+
+    /// <summary>A choice with only the named extensions changed.</summary>
+    /// <param name="extensions">Supported extensions, with their dots.</param>
+    /// <param name="target">The requested target; unsupported App routes become Viewer.</param>
+    /// <returns>The independent choice.</returns>
+    /// <exception cref="ArgumentException">An extension or target is unsupported.</exception>
+    public AssociationChoice With(IEnumerable<string> extensions, AssociationTarget target)
+    {
+        if (!Enum.IsDefined(target)) throw new ArgumentException("Unknown association target.", nameof(target));
+        var next = new Dictionary<string, AssociationTarget>(_extensions, StringComparer.OrdinalIgnoreCase);
+        foreach (string extension in extensions)
+        {
+            var type = FileTypeCatalog.All.FirstOrDefault(t => t.Extension.Equals(extension, StringComparison.OrdinalIgnoreCase))
+                ?? throw new ArgumentException("Unsupported file extension.", nameof(extensions));
+            next[type.Extension] = target;
+        }
+        return this with { _extensions = next };
+    }
+
+    /// <summary>Equality compares resolved per-extension choices, including older group presets.</summary>
+    /// <param name="other">The other choice.</param>
+    /// <returns>Whether all targets agree.</returns>
+    public bool Equals(AssociationChoice? other) => other is not null
+        && FileTypeCatalog.All.All(t => For(t) == other.For(t));
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var type in FileTypeCatalog.All) hash.Add(For(type));
+        return hash.ToHashCode();
+    }
 }
 
 /// <summary>How the registration on this machine reads.</summary>
@@ -127,15 +177,38 @@ public enum AssociationState
     Registered,
 
     /// <summary>Something is registered but incomplete, inconsistent, or pointing at another copy
-    /// (the app was moved); Apply repairs it, Remove clears it.</summary>
+    /// (the app was moved); Register repairs the selected types; Unregister removes their owned values.</summary>
     NeedsRepair,
 }
 
 /// <summary>The registration as read from the machine.</summary>
 /// <param name="State">Registered, not, or broken.</param>
-/// <param name="Current">What each group is registered to now (Off where nothing is).</param>
+/// <param name="Current">The per-extension registration (Off where nothing is).</param>
 /// <param name="Detail">One sentence saying what was found.</param>
-public sealed record AssociationStatus(AssociationState State, AssociationChoice Current, string Detail);
+public sealed record AssociationStatus(AssociationState State, AssociationChoice Current, string Detail)
+{
+    /// <summary>Independent registration and effective-default evidence for every supported type.</summary>
+    public IReadOnlyList<FileTypeRegistration> Types { get; init; } = [];
+}
+
+/// <summary>A Windows effective-default query result; failure is unknown, not a negative answer.</summary>
+/// <param name="IsKnown">Whether Windows answered the query.</param>
+/// <param name="ProgId">The chosen handler, or null when Windows reports no association.</param>
+public sealed record AssociationDefault(bool IsKnown, string? ProgId)
+{
+    /// <summary>The default could not be queried.</summary>
+    public static AssociationDefault Unknown { get; } = new(false, null);
+}
+
+/// <summary>One type's registration, distinct from what Windows currently opens it with.</summary>
+/// <param name="Type">The catalog entry.</param>
+/// <param name="State">Whether its registration is complete for this copy.</param>
+/// <param name="Target">The registered mode, or Off.</param>
+/// <param name="Default">Windows' query result.</param>
+/// <param name="DefaultTarget">App/Viewer only when the queried ProgID and command identify this copy.</param>
+/// <param name="Detail">The registration explanation.</param>
+public sealed record FileTypeRegistration(AssociatedType Type, AssociationState State,
+    AssociationTarget Target, AssociationDefault Default, AssociationTarget? DefaultTarget, string Detail);
 
 /// <summary>
 /// Registers nfty as a program that opens its file types. Windows only; elsewhere
@@ -151,8 +224,13 @@ public interface IFileAssociations
     AssociationStatus Inspect();
 
     /// <summary>Replaces whatever nfty registered with <paramref name="choice"/>, pointing at this copy.</summary>
-    /// <param name="choice">What each group opens in; a group set to Off is not registered.</param>
+    /// <param name="choice">The group preset and per-extension overrides; Off types are not registered.</param>
     void Apply(AssociationChoice choice);
+
+    /// <summary>Changes only selected supported extensions, preserving unselected registrations.</summary>
+    /// <param name="extensions">The selected extensions.</param>
+    /// <param name="target">App, Viewer, or Off to unregister the selection.</param>
+    void SetTargets(IReadOnlyCollection<string> extensions, AssociationTarget target);
 
     /// <summary>Removes exactly what nfty registered, and nothing else.</summary>
     void Remove();
@@ -173,6 +251,10 @@ public sealed class UnsupportedFileAssociations : IFileAssociations
 
     /// <inheritdoc />
     public void Apply(AssociationChoice choice) =>
+        throw new PlatformNotSupportedException("File associations are a Windows setting.");
+
+    /// <inheritdoc />
+    public void SetTargets(IReadOnlyCollection<string> extensions, AssociationTarget target) =>
         throw new PlatformNotSupportedException("File associations are a Windows setting.");
 
     /// <inheritdoc />
@@ -221,6 +303,11 @@ public interface IRegistryHive
     /// <param name="name">The value name; <c>""</c> for the default.</param>
     /// <returns>True when present.</returns>
     bool HasValue(string key, string name);
+
+    /// <summary>The value names at a key, including the empty default name.</summary>
+    /// <param name="key">The key path.</param>
+    /// <returns>The names, empty when the key is absent.</returns>
+    IReadOnlyList<string> ValueNames(string key);
 
     /// <summary>A string value, or null when the key or value is absent.</summary>
     /// <param name="key">The key path.</param>
@@ -288,6 +375,10 @@ public sealed class InMemoryRegistryHive : IRegistryHive
         _keys.TryGetValue(Norm(key), out var v) && v.ContainsKey(name);
 
     /// <inheritdoc />
+    public IReadOnlyList<string> ValueNames(string key) =>
+        _keys.TryGetValue(Norm(key), out var v) ? v.Keys.ToArray() : [];
+
+    /// <inheritdoc />
     public string? GetString(string key, string name) =>
         _keys.TryGetValue(Norm(key), out var v) && v.TryGetValue(name, out var o) ? o as string : null;
 
@@ -346,22 +437,29 @@ public sealed class InMemoryRegistryHive : IRegistryHive
 /// appears in Windows Default apps. For nfty's OWN extensions only, the extension's default value is
 /// set to nfty's ProgID - and only when it is empty or already nfty's: another program's default is
 /// never overwritten.</para>
-/// <para><b>What it cannot do:</b> make itself the default for <c>.png</c>, <c>.jpg</c>, <c>.json</c>
-/// or a model. Windows 10 and 11 keep that choice in a hashed <c>UserChoice</c> only the user can set,
-/// which is why the card has a Default apps button rather than pretending.</para>
+/// <para><b>What it cannot do:</b> override a protected effective default for any extension.
+/// Windows 10 and 11 keep that choice in a hashed <c>UserChoice</c> only the user can set.
+/// Writing a class default for an archive does not replace that choice; the card offers Default apps.</para>
 /// <para><b>Remove takes back exactly what Apply wrote.</b> Every key Apply CREATED and every value it
 /// set goes into a ledger (<c>Software\nfty\Associations</c>); Remove deletes a value only while it
-/// still holds what nfty wrote, and a key only once it is empty - so a key another program has since
-/// put something in survives. Apply always removes first, so changing a target or repairing a moved
-/// exe never leaves a stale command behind.</para>
+/// still holds what nfty wrote, and a key only once it is empty, so foreign values survive.
+/// SetTargets removes only the selected extensions' ledger entries and writes independent handlers;
+/// unselected legacy shared handlers and externally modified commands are preserved.
+/// Apply and Remove are the explicit all-type operations retained for older callers.</para>
 /// </remarks>
 public sealed class FileAssociationRegistrar : IFileAssociations
 {
     /// <summary>The argument that opens a file in the viewer alone.</summary>
     public const string ViewerSwitch = "--viewer";
 
-    /// <summary>The Default apps page for nfty, as Windows documents it for a per-user registration.</summary>
-    public const string DefaultAppsUri = "ms-settings:defaultapps?registeredAppUser=" + AssociationLayout.AppName;
+    /// <summary>The per-user Default apps deep link used on Windows 11 23H2 or newer.
+    /// Older versions conservatively open the general page, including patched older Windows 11.</summary>
+    public static string DefaultAppsUri => DefaultAppsUriFor(new Version(10, 0, 22631), AssociationLayout.AppName);
+
+    internal static string DefaultAppsUriFor(Version windowsVersion, string registeredAppName) =>
+        windowsVersion >= new Version(10, 0, 22631)
+            ? "ms-settings:defaultapps?registeredAppUser=" + Uri.EscapeDataString(registeredAppName)
+            : "ms-settings:defaultapps";
 
     private const string LedgerValue = "Written";
 
@@ -370,6 +468,8 @@ public sealed class FileAssociationRegistrar : IFileAssociations
     private readonly string _exe;
     private readonly Action _notify;
     private readonly Action<string> _launch;
+    private readonly Func<string, AssociationDefault> _defaultFor;
+    private readonly Version _windowsVersion;
 
     /// <summary>Creates the registrar.</summary>
     /// <param name="hive">The registry.</param>
@@ -377,8 +477,13 @@ public sealed class FileAssociationRegistrar : IFileAssociations
     /// <param name="exePath">The program the commands start: this copy of nfty.</param>
     /// <param name="notify">Tells the shell associations changed; nothing when null.</param>
     /// <param name="launch">Opens a URI; the shell's own handler when null.</param>
+    /// <param name="defaultFor">Reads the effective ProgID; unknown when omitted, keeping tests
+    /// and private registry roots independent of the real user's defaults.</param>
+    /// <param name="windowsVersion">Windows version for choosing a supported Settings link; the
+    /// current OS version when omitted. Tests may inject it without opening Windows Settings.</param>
     public FileAssociationRegistrar(IRegistryHive hive, AssociationLayout layout, string exePath,
-        Action? notify = null, Action<string>? launch = null)
+        Action? notify = null, Action<string>? launch = null, Func<string, AssociationDefault>? defaultFor = null,
+        Version? windowsVersion = null)
     {
         ArgumentNullException.ThrowIfNull(hive);
         ArgumentNullException.ThrowIfNull(layout);
@@ -388,6 +493,8 @@ public sealed class FileAssociationRegistrar : IFileAssociations
         _exe = exePath;
         _notify = notify ?? (() => { });
         _launch = launch ?? (uri => Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true })?.Dispose());
+        _defaultFor = defaultFor ?? (_ => AssociationDefault.Unknown);
+        _windowsVersion = windowsVersion ?? Environment.OSVersion.Version;
     }
 
     /// <inheritdoc />
@@ -414,60 +521,78 @@ public sealed class FileAssociationRegistrar : IFileAssociations
     public AssociationStatus Inspect()
     {
         bool anyLedger = _hive.GetMultiString(_layout.Ledger, LedgerValue).Count > 0;
-        var problems = new List<string>();
         string? otherExe = null;
-        var targets = new Dictionary<AssociationGroup, AssociationTarget>();
-
-        foreach (var group in Enum.GetValues<AssociationGroup>())
+        var current = AssociationChoice.None;
+        var types = new List<FileTypeRegistration>();
+        bool listed = _hive.GetString(_layout.RegisteredApplications, AssociationLayout.AppName) == _layout.Capabilities;
+        foreach (var type in FileTypeCatalog.All)
         {
-            // A Menu always runs the viewer command, so it cannot say whether its group is App or
-            // Viewer: the group reads as whatever its app-capable members say.
-            var readable = FileTypeCatalog.Of(group).Where(t => t.OpensInApp || !FileTypeCatalog.AllowsApp(group));
-            var decided = readable.Select(t => TargetOf(_hive.GetString(CommandKey(t.ProgId), ""))).ToHashSet();
-            if (decided.Count > 1) problems.Add($"{FileTypeCatalog.ExtensionsOf(group)} are only partly registered.");
-            targets[group] = decided.Count == 1 ? decided.Single()
-                : decided.Contains(AssociationTarget.App) ? AssociationTarget.App
-                : decided.Contains(AssociationTarget.Viewer) ? AssociationTarget.Viewer : AssociationTarget.Off;
-        }
-
-        var current = new AssociationChoice(targets[AssociationGroup.NftyFiles],
-            targets[AssociationGroup.PicturesAndModels], targets[AssociationGroup.Metadata]);
-
-        foreach (var group in Enum.GetValues<AssociationGroup>())
-        {
-            var target = current.For(group);
-            if (target == AssociationTarget.Off) continue;
-            foreach (var type in FileTypeCatalog.Of(group))
+            string? registeredId = RegisteredProgId(type);
+            string? command = registeredId is null ? null : _hive.GetString(CommandKey(registeredId), "");
+            var target = TargetOf(command);
+            var state = AssociationState.NotRegistered;
+            string detail = "Not registered for this extension.";
+            if (registeredId is not null)
             {
-                var command = _hive.GetString(CommandKey(type.ProgId), "");
-                if (command is null) { problems.Add($"{type.Extension} is not registered."); continue; }
-                if (!string.Equals(command, CommandFor(_exe, type, target), StringComparison.OrdinalIgnoreCase))
+                bool matches = command is not null && string.Equals(command,
+                    CommandFor(_exe, type, target), StringComparison.OrdinalIgnoreCase);
+                bool complete = matches && listed
+                    && _hive.HasValue(ExtKey(type.Extension) + @"\OpenWithProgids", registeredId)
+                    && _hive.GetString(_layout.Capabilities + @"\FileAssociations", type.Extension) == registeredId;
+                state = complete ? AssociationState.Registered : AssociationState.NeedsRepair;
+                detail = complete ? $"Registered for {type.Extension} in {(target == AssociationTarget.App ? "the app" : "the viewer")}."
+                    : !listed && matches
+                        ? $"{type.Extension} is offered in Open with, but the shared Default apps listing points elsewhere or is missing. Select All and Register to repair that listing."
+                        : $"{type.Extension} needs repair. Register it again to point it at this copy.";
+                if (command is not null && !matches)
                 {
                     var exe = ExeOf(command);
                     if (!string.Equals(exe, _exe, StringComparison.OrdinalIgnoreCase)) otherExe ??= exe;
-                    else problems.Add($"{type.Extension} opens differently from the rest of its group.");
                 }
-                if (!_hive.HasValue(ExtKey(type.Extension) + @"\OpenWithProgids", type.ProgId)
-                    || _hive.GetString(_layout.Capabilities + @"\FileAssociations", type.Extension) != type.ProgId)
-                    problems.Add($"{type.Extension} is missing part of its registration.");
+                current = current.With([type.Extension], target);
             }
+            var chosen = ReadDefault(type.Extension);
+            AssociationTarget? defaultTarget = null;
+            if (chosen.IsKnown && chosen.ProgId is { } id && IsTypeProgId(type, id))
+            {
+                string? defaultCommand = _hive.GetString(CommandKey(id), "");
+                var mode = TargetOf(defaultCommand);
+                if (mode != AssociationTarget.Off && string.Equals(defaultCommand,
+                        CommandFor(_exe, type, mode), StringComparison.OrdinalIgnoreCase)) defaultTarget = mode;
+            }
+            types.Add(new(type, state, target, chosen, defaultTarget, detail));
         }
-        if (current.Any && _hive.GetString(_layout.RegisteredApplications, AssociationLayout.AppName) is null)
-            problems.Add("nfty is not listed in Default apps.");
-
-        if (!current.Any)
-            return anyLedger
-                ? new(AssociationState.NeedsRepair, current, "Part of an earlier registration is left over. Remove clears it.")
-                : new(AssociationState.NotRegistered, current, "Nothing is registered. Choose what nfty opens, then Apply.");
+        AssociationStatus Status(AssociationState state, string detail) => new(state, current, detail) { Types = types };
+        if (types.All(t => t.State == AssociationState.NotRegistered))
+            return anyLedger ? Status(AssociationState.NeedsRepair, "Part of an earlier registration is left over. Unregister clears it.")
+                : Status(AssociationState.NotRegistered, "Nothing is registered. Select file types, then Register.");
         if (otherExe is not null)
-            return new(AssociationState.NeedsRepair, current,
-                $"Registered to another copy of nfty ({otherExe}). Repair points it at this one.");
-        if (problems.Count > 0)
-            return new(AssociationState.NeedsRepair, current, problems[0] + " Repair completes it.");
-        int count = Enum.GetValues<AssociationGroup>().Where(g => current.For(g) != AssociationTarget.Off)
-            .Sum(g => FileTypeCatalog.Of(g).Count());
-        return new(AssociationState.Registered, current,
-            $"{count} file {(count == 1 ? "type opens" : "types open")} with this copy of nfty.");
+            return Status(AssociationState.NeedsRepair,
+                $"Registered to another copy of nfty ({otherExe}). Select its file types and Register to point them at this one.");
+        if (types.FirstOrDefault(t => t.State == AssociationState.NeedsRepair) is { } broken)
+            return Status(AssociationState.NeedsRepair, broken.Detail);
+        int count = types.Count(t => t.State == AssociationState.Registered);
+        return Status(AssociationState.Registered, $"{count} file {(count == 1 ? "type is" : "types are")} registered with this copy of nfty.");
+    }
+
+    private static bool IsTypeProgId(AssociatedType type, string id) =>
+        id.Equals(type.ProgId, StringComparison.OrdinalIgnoreCase)
+        || id.Equals(type.RegistrationProgId, StringComparison.OrdinalIgnoreCase);
+
+    private AssociationDefault ReadDefault(string extension)
+    {
+        try { return _defaultFor(extension); }
+        catch (Exception ex) when (AssociationText.IsRefusal(ex)) { return AssociationDefault.Unknown; }
+    }
+
+    private string? RegisteredProgId(AssociatedType type)
+    {
+        string? capability = _hive.GetString(_layout.Capabilities + @"\FileAssociations", type.Extension);
+        if (capability is not null && IsTypeProgId(type, capability)) return capability;
+        foreach (string id in new[] { type.RegistrationProgId, type.ProgId }.Distinct(StringComparer.OrdinalIgnoreCase))
+            if (_hive.HasValue(ExtKey(type.Extension) + @"\OpenWithProgids", id)
+                || (type.NftyOwned && _hive.GetString(ExtKey(type.Extension), "") == id)) return id;
+        return null;
     }
 
     private static AssociationTarget TargetOf(string? command) =>
@@ -507,6 +632,111 @@ public sealed class FileAssociationRegistrar : IFileAssociations
         _notify();
     }
 
+    /// <inheritdoc />
+    public void SetTargets(IReadOnlyCollection<string> extensions, AssociationTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(extensions);
+        // Validate the complete request before the first mutation.
+        _ = AssociationChoice.None.With(extensions, target);
+        var selected = extensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (selected.Count == 0) return;
+        var types = FileTypeCatalog.All.Where(t => selected.Contains(t.Extension)).ToArray();
+        var others = FileTypeCatalog.All.Where(t => !selected.Contains(t.Extension)).ToArray();
+        bool UnselectedReference(AssociatedType type, string id)
+        {
+            if (_hive.HasValue(ExtKey(type.Extension) + @"\OpenWithProgids", id)
+                || string.Equals(_hive.GetString(_layout.Capabilities + @"\FileAssociations", type.Extension), id, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_hive.GetString(ExtKey(type.Extension), ""), id, StringComparison.OrdinalIgnoreCase)) return true;
+            // A protected effective default can outlive a damaged capability/OpenWith entry.
+            // Unknown evidence cannot authorize deleting a shared legacy handler either.
+            var effective = ReadDefault(type.Extension);
+            return !effective.IsKnown || string.Equals(effective.ProgId, id, StringComparison.OrdinalIgnoreCase);
+        }
+        var ownedIds = types.SelectMany(t => new[] { t.ProgId, t.RegistrationProgId })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(id => !others.Any(t => IsTypeProgId(t, id) && UnselectedReference(t, id)))
+            .ToArray();
+        var ledger = _hive.GetMultiString(_layout.Ledger, LedgerValue).ToList();
+        bool TypeKey(string key) => types.Any(t => Under(key, ExtKey(t.Extension)))
+            || ownedIds.Any(id => Under(key, ProgIdKey(id)));
+        bool TypeValue(string key, string name) => TypeKey(key)
+            || (key.Equals(_layout.Capabilities + @"\FileAssociations", StringComparison.OrdinalIgnoreCase)
+                && selected.Contains(name));
+        try
+        {
+            RemoveEntries(ledger, TypeValue, TypeKey);
+            bool othersRemain = others.Any(t => RegisteredProgId(t) is not null)
+                || _hive.ValueNames(_layout.Capabilities + @"\FileAssociations").Any(n => !selected.Contains(n));
+            if (target != AssociationTarget.Off)
+            {
+                // Shared metadata may describe an unselected registration from another copy.
+                // Fill missing fields, but never silently reclaim its existing values.
+                void Shared(string key, string name, string value)
+                {
+                    if (!othersRemain || !_hive.HasValue(key, name)) Write(key, name, value, ledger);
+                }
+                Shared(_layout.Capabilities, "ApplicationName", "nfty");
+                Shared(_layout.Capabilities, "ApplicationDescription",
+                    "Pixel-art collections: CookBooks, Sets, and the viewer for pictures and 3D models.");
+                Shared(_layout.Capabilities, "ApplicationIcon", $"\"{_exe}\",0");
+                Shared(_layout.RegisteredApplications, AssociationLayout.AppName, _layout.Capabilities);
+                foreach (var type in types)
+                {
+                    var mode = target == AssociationTarget.App && !type.OpensInApp ? AssociationTarget.Viewer : target;
+                    WriteType(type, mode, type.RegistrationProgId, ledger);
+                }
+            }
+            else if (!FileTypeCatalog.All.Any(t => RegisteredProgId(t) is not null)
+                     && _hive.ValueNames(_layout.Capabilities + @"\FileAssociations").Count == 0)
+            {
+                RemoveEntries(ledger,
+                    (key, name) => Under(key, _layout.Capabilities)
+                        || (key.Equals(_layout.RegisteredApplications, StringComparison.OrdinalIgnoreCase)
+                            && name.Equals(AssociationLayout.AppName, StringComparison.OrdinalIgnoreCase)),
+                    key => Under(key, _layout.Capabilities));
+            }
+        }
+        finally { SaveLedger(ledger); }
+        _notify();
+    }
+
+    private static bool Under(string key, string parent) => key.Equals(parent, StringComparison.OrdinalIgnoreCase)
+        || key.StartsWith(parent + "\\", StringComparison.OrdinalIgnoreCase);
+
+    private void RemoveEntries(List<string> ledger, Func<string, string, bool> valueInScope, Func<string, bool> keyInScope)
+    {
+        foreach (string entry in ledger.ToArray())
+        {
+            var fields = entry.Split('\t');
+            if (fields.Length != 4 || fields[0] != "V" || !valueInScope(fields[1], fields[2])) continue;
+            if (_hive.GetString(fields[1], fields[2]) == fields[3]) _hive.DeleteValue(fields[1], fields[2]);
+            ledger.Remove(entry); // A later foreign value is preserved, and ownership is relinquished.
+        }
+        foreach (string entry in ledger.AsEnumerable().Reverse().ToArray())
+        {
+            var fields = entry.Split('\t');
+            if (fields.Length != 2 || fields[0] != "K" || !keyInScope(fields[1])) continue;
+            _hive.DeleteKeyIfEmpty(fields[1]);
+            ledger.Remove(entry);
+        }
+    }
+
+    private void SaveLedger(List<string> ledger)
+    {
+        if (ledger.Any(e => e.StartsWith("V\t", StringComparison.Ordinal)))
+            _hive.SetMultiString(_layout.Ledger, LedgerValue, ledger.Distinct(StringComparer.Ordinal).ToArray());
+        else
+        {
+            _hive.DeleteValue(_layout.Ledger, LedgerValue);
+            _hive.DeleteKeyIfEmpty(_layout.Ledger);
+            foreach (string entry in ledger.AsEnumerable().Reverse())
+            {
+                var fields = entry.Split('\t');
+                if (fields.Length == 2 && fields[0] == "K") _hive.DeleteKeyIfEmpty(fields[1]);
+            }
+        }
+    }
+
     private void WriteAll(AssociationChoice choice, List<string> ledger)
     {
         if (choice.Any)
@@ -520,7 +750,7 @@ public sealed class FileAssociationRegistrar : IFileAssociations
         var progIdsWritten = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var type in FileTypeCatalog.All)
         {
-            var target = choice.For(type.Group);
+            var target = choice.For(type);
             if (target == AssociationTarget.Off) continue;
             if (target == AssociationTarget.App && !FileTypeCatalog.AllowsApp(type.Group)) target = AssociationTarget.Viewer;
             if (progIdsWritten.Add(type.ProgId))
@@ -537,9 +767,25 @@ public sealed class FileAssociationRegistrar : IFileAssociations
                 // nfty's own extension: the default goes to nfty's ProgID, but only over nothing or
                 // over nfty's own. Another program that claimed .set keeps it.
                 var existing = _hive.GetString(ExtKey(type.Extension), "");
-                if (string.IsNullOrEmpty(existing) || existing.StartsWith("nfty.", StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrEmpty(existing) || IsTypeProgId(type, existing))
                     Write(ExtKey(type.Extension), "", type.ProgId, ledger);
             }
+        }
+    }
+
+    private void WriteType(AssociatedType type, AssociationTarget target, string progId, List<string> ledger)
+    {
+        Write(ProgIdKey(progId), "", type.FriendlyName, ledger);
+        Write(ProgIdKey(progId), "FriendlyTypeName", type.FriendlyName, ledger);
+        Write(ProgIdKey(progId) + @"\DefaultIcon", "", $"\"{_exe}\",0", ledger);
+        Write(CommandKey(progId), "", CommandFor(_exe, type, target), ledger);
+        Write(ExtKey(type.Extension) + @"\OpenWithProgids", progId, "", ledger);
+        Write(_layout.Capabilities + @"\FileAssociations", type.Extension, progId, ledger);
+        if (type.NftyOwned)
+        {
+            string? existing = _hive.GetString(ExtKey(type.Extension), "");
+            if (string.IsNullOrEmpty(existing) || IsTypeProgId(type, existing))
+                Write(ExtKey(type.Extension), "", progId, ledger);
         }
     }
 
@@ -551,7 +797,7 @@ public sealed class FileAssociationRegistrar : IFileAssociations
     }
 
     /// <inheritdoc />
-    public void OpenDefaultApps() => _launch(DefaultAppsUri);
+    public void OpenDefaultApps() => _launch(DefaultAppsUriFor(_windowsVersion, AssociationLayout.AppName));
 
     private void Write(string key, string name, string value, List<string> ledger)
     {
@@ -566,6 +812,13 @@ public sealed class FileAssociationRegistrar : IFileAssociations
             }
         }
         _hive.SetString(key, name, value);
+        ledger.RemoveAll(e =>
+        {
+            var fields = e.Split('\t');
+            return fields.Length == 4 && fields[0] == "V"
+                && fields[1].Equals(key, StringComparison.OrdinalIgnoreCase)
+                && fields[2].Equals(name, StringComparison.OrdinalIgnoreCase);
+        });
         ledger.Add($"V\t{key}\t{name}\t{value}");
     }
 
@@ -597,21 +850,21 @@ public static class AssociationText
 {
     /// <summary>The reason line when the registration could not be read.</summary>
     public const string CannotRead =
-        "Windows would not let nfty read its file associations. Repair writes them again; Remove clears them.";
+        "Windows would not let nfty read its file associations. Select types and Register to repair them, or Unregister to remove owned values.";
 
     /// <summary>The error card's title when Apply fails.</summary>
     public const string ApplyFailedTitle = "Could not register nfty";
 
     /// <summary>The error card's sentence when Apply fails.</summary>
     public const string ApplyFailed =
-        "Windows refused to let nfty write its file associations for this user. Whatever was written is shown on the card and Remove takes it back. Close other programs that change file types, then try again.";
+        "Windows refused to let nfty write its file associations for this user. Whatever was written is shown on the card; Unregister takes back the selected owned values. Close other programs that change file types, then try again.";
 
     /// <summary>The error card's title when Remove fails.</summary>
     public const string RemoveFailedTitle = "Could not remove nfty's registration";
 
     /// <summary>The error card's sentence when Remove fails.</summary>
     public const string RemoveFailed =
-        "Windows refused to let nfty remove its file associations. What is left is shown on the card; press Remove again, or remove nfty in Windows Settings under Apps, Default apps.";
+        "Windows refused to let nfty remove its file associations. What is left is shown on the card; press Unregister again, or remove nfty in Windows Settings under Apps, Default apps.";
 
     /// <summary>The error card's title when the Default apps page cannot be opened.</summary>
     public const string DefaultAppsFailedTitle = "Could not open Default apps";
@@ -641,7 +894,7 @@ public static class FileAssociations
         var exe = exePath ?? Environment.ProcessPath;
         if (OperatingSystem.IsWindows() && !string.IsNullOrEmpty(exe))
             return new FileAssociationRegistrar(new WindowsRegistryHive(), AssociationLayout.Windows, exe,
-                WindowsRegistryHive.NotifyAssociationsChanged);
+                WindowsRegistryHive.NotifyAssociationsChanged, defaultFor: WindowsRegistryHive.QueryDefault);
         return new UnsupportedFileAssociations();
     }
 }

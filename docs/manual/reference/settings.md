@@ -52,6 +52,7 @@ name `nfty/pinata` (Windows Credential Manager, the macOS keychain, or the Secre
 
 ## Windows registry
 
-nfty writes to the registry only when you press **Apply** on the Settings card's SYSTEM tab, and only
-under `HKEY_CURRENT_USER`. Every key and value is listed in
+File registration writes happen only when you press **Register** or **Unregister** on the Settings
+card's SYSTEM tab, and only under `HKEY_CURRENT_USER`. Opening the page or pressing **Refresh** reads
+registration and effective-default status without changing either. Every key and value is listed in
 [What gets registered](../app/file-associations.md#what-gets-registered).

@@ -1,7 +1,7 @@
 # Settings
 
 The Settings card holds the app's own preferences, none of which change what a CookBook cooks. Open it
-with the **gear** at the right end of the status bar. It has four tabs, and a fifth, **SYSTEM**, on
+with the **sliders button** at the right end of the status bar. It has four tabs, and a fifth, **SYSTEM**, on
 Windows.
 
 ![The Settings card's Publishing page](../images/settings-light.png#only-light)
@@ -49,5 +49,7 @@ What each file in that folder holds is in [Settings files](../reference/settings
 
 ## SYSTEM (Windows only)
 
-Which files Windows opens with nfty, for your Windows user. It has its own page:
-[Open files with nfty on Windows](file-associations.md).
+Select individual extensions or **All**, choose **App** or **Viewer**, then **Register** or
+**Unregister** that selection for your Windows user. Each row distinguishes registration from the
+effective Windows default. **Default apps…** opens Windows' choice flow; **Refresh** reads the result.
+See [Open files with nfty on Windows](file-associations.md).

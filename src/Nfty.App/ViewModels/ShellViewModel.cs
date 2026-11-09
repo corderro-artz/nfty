@@ -243,7 +243,13 @@ public partial class ShellViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasKitchen));
             };
         _nav.Changed += () => CurrentPage = _nav.Current;
-        _dialogs.Changed += () => ActiveDialog = _dialogs.Active;
+        _dialogs.Changed += () =>
+        {
+            ActiveDialog = _dialogs.Active;
+            // An owner can close beneath a child while Active stays the same instance.
+            OnPropertyChanged(nameof(IsSettingsOpen));
+            OnPropertyChanged(nameof(IsHelpOpen));
+        };
         // Two channels on purpose: Report is for buttons that genuinely do nothing yet, Say is for
         // real guidance. Routing guidance through Report told users a working feature was unbuilt.
         status.Said += m => StatusMessage = m;
@@ -300,6 +306,12 @@ public partial class ShellViewModel : ViewModelBase
 
     /// <summary>Whether a modal is open.</summary>
     public bool HasDialog => ActiveDialog is not null;
+
+    /// <summary>Whether Settings is open, including beneath a child error card.</summary>
+    public bool IsSettingsOpen => _dialogs.OpenDialogs.Any(d => d is SettingsDialogViewModel);
+
+    /// <summary>Whether the help sheet is open, including beneath a child card.</summary>
+    public bool IsHelpOpen => _dialogs.OpenDialogs.Any(d => d is HelpViewModel);
 
     partial void OnActiveDialogChanged(ViewModelBase? value)
     {

@@ -31,7 +31,7 @@ public class FileAssociationTests
 
     private static FileAssociationRegistrar Registrar(IRegistryHive hive, string exe = Exe, List<string>? launched = null,
         Action? notify = null) =>
-        new(hive, Layout, exe, notify, uri => launched?.Add(uri));
+        new(hive, Layout, exe, notify, uri => launched?.Add(uri), windowsVersion: new Version(10, 0, 22631));
 
     private static readonly AssociationChoice Everything =
         new(AssociationTarget.App, AssociationTarget.Viewer, AssociationTarget.Viewer);
@@ -187,55 +187,43 @@ public class FileAssociationTests
     }
 
     [Fact]
-    public void Nothing_registered_proposes_a_start_and_apply_registers_it()
+    public void Nothing_registered_requires_an_explicit_selection_then_registers_and_removes_it()
     {
         var hive = Machine();
         var vm = Card(Registrar(hive));
-
-        Assert.Equal("not registered", vm.AssociationSummary);
-        Assert.Equal(AssociationChoice.Suggested, vm.Choice);
-        Assert.True(vm.ApplyAssociationsCommand.CanExecute(null));
-        Assert.False(vm.RemoveAssociationsCommand.CanExecute(null));
-
-        vm.ApplyAssociationsCommand.Execute(null);
-
-        Assert.Equal("registered", vm.AssociationSummary);
-        Assert.True(vm.IsAssociated);
+        Assert.Equal(AssociationChoice.None, vm.Choice);
         Assert.False(vm.ApplyAssociationsCommand.CanExecute(null));
+        Assert.False(vm.RemoveAssociationsCommand.CanExecute(null));
+        vm.AssociationTypes.Single(t => t.Extension == ".cbk").IsSelected = true;
+        vm.ApplyAssociationsCommand.Execute(null);
+        Assert.Contains("1 registered", vm.AssociationSummary, StringComparison.Ordinal);
+        Assert.True(vm.AssociationTypes.Single(t => t.Extension == ".cbk").IsRegistered);
         Assert.Equal(AssociationState.Registered, Registrar(hive).Inspect().State);
-
-        vm.UseMetadataTargetCommand.Execute(AssociationTarget.Viewer);
-        Assert.Equal("not applied", vm.AssociationSummary);
-        Assert.True(vm.IsAssociationIdle);
-        Assert.True(vm.ApplyAssociationsCommand.CanExecute(null));
-
         vm.RemoveAssociationsCommand.Execute(null);
-        Assert.Equal("not registered", vm.AssociationSummary);
         Assert.Equal(AssociationState.NotRegistered, Registrar(hive).Inspect().State);
     }
 
     [Fact]
-    public void A_card_opened_over_a_registration_shows_it_and_offers_repair_when_stale()
+    public void A_card_opened_over_a_registration_selects_it_and_register_repairs_stale_types()
     {
         var hive = Machine();
         var choice = new AssociationChoice(AssociationTarget.Viewer, AssociationTarget.Off, AssociationTarget.Viewer);
         Registrar(hive, @"D:\old\nfty.exe").Apply(choice);
-
         var vm = Card(Registrar(hive));
-
         Assert.Equal(choice, vm.Choice);
-        Assert.Equal("needs repair", vm.AssociationSummary);
-        Assert.Equal("Repair", vm.ApplyLabel);
+        Assert.Equal(8, vm.AssociationTypes.Count(t => t.IsSelected && t.NeedsRepair));
         vm.ApplyAssociationsCommand.Execute(null);
-        Assert.Equal("registered", vm.AssociationSummary);
+        Assert.Equal(8, vm.AssociationTypes.Count(t => t.IsRegistered));
     }
 
     [Fact]
-    public void Pictures_cannot_be_sent_to_the_app()
+    public void Pictures_use_the_viewer_even_when_app_is_requested()
     {
         var vm = Card(Registrar(Machine()));
-        vm.UsePicturesTargetCommand.Execute(AssociationTarget.App);
-        Assert.Equal(AssociationTarget.Viewer, vm.PicturesTarget);
+        vm.AssociationTypes.Single(t => t.Extension == ".png").IsSelected = true;
+        vm.UseAssociationTargetCommand.Execute(AssociationTarget.App);
+        vm.ApplyAssociationsCommand.Execute(null);
+        Assert.Equal(AssociationTarget.Viewer, vm.Choice.For(FileTypeCatalog.All.Single(t => t.Extension == ".png")));
     }
 
     // ------------------------------------------------------------------ failures, in product words
@@ -250,6 +238,7 @@ public class FileAssociationTests
         private void Write() { if (writes && _writes++ >= writesBeforeRefusal) throw new UnauthorizedAccessException(RawText); }
         public bool KeyExists(string key) { Read(); return inner.KeyExists(key); }
         public bool HasValue(string key, string name) { Read(); return inner.HasValue(key, name); }
+        public IReadOnlyList<string> ValueNames(string key) { Read(); return inner.ValueNames(key); }
         public string? GetString(string key, string name) { Read(); return inner.GetString(key, name); }
         public void CreateKey(string key) { Write(); inner.CreateKey(key); }
         public void SetString(string key, string name, string value) { Write(); inner.SetString(key, name, value); }
@@ -278,7 +267,7 @@ public class FileAssociationTests
     public void A_registration_windows_will_not_let_nfty_read_says_so_in_the_reason_line()
     {
         var (vm, dialogs) = CardOver(Registrar(new RefusingHive(Machine(), reads: true, writes: false)));
-        Assert.Equal("needs repair", vm.AssociationSummary);
+        Assert.All(vm.AssociationTypes, t => Assert.True(t.NeedsRepair));
         Assert.Equal(AssociationText.CannotRead, vm.AssociationDetail);
         Assert.Null(dialogs.Active);
     }
@@ -290,10 +279,11 @@ public class FileAssociationTests
         var before = inner.Dump();
         var (vm, dialogs) = CardOver(Registrar(new RefusingHive(inner, reads: false, writes: true, writesBeforeRefusal: 9)));
 
+        vm.AllTypesSelected = true;
         vm.ApplyAssociationsCommand.Execute(null);
 
         AssertProductError(dialogs, AssociationText.ApplyFailedTitle, AssociationText.ApplyFailed);
-        Assert.Equal("needs repair", vm.AssociationSummary);
+        Assert.Contains("earlier registration", vm.AssociationDetail, StringComparison.Ordinal);
         // The part that landed was recorded: a registrar Windows no longer refuses takes it all back.
         Registrar(inner).Remove();
         Assert.Equal(before, inner.Dump());
@@ -329,7 +319,7 @@ public class FileAssociationTests
         var hive = Machine();
         Registrar(hive, @"D:\old\nfty.exe").Apply(Everything);
         var (vm, dialogs) = CardOver(Registrar(hive));
-        Assert.Equal(@"Registered to another copy of nfty (D:\old\nfty.exe). Repair points it at this one.", vm.AssociationDetail);
+        Assert.Equal(@"Registered to another copy of nfty (D:\old\nfty.exe). Select its file types and Register to point them at this one.", vm.AssociationDetail);
         Assert.Null(dialogs.Active);
     }
 
@@ -378,7 +368,7 @@ public class FileAssociationTests
             {
                 var buttons = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(view)
                     .OfType<Avalonia.Controls.Button>()
-                    .Where(b => b.Content is "Remove" or "Default apps…" || b.Name == "ApplyAssociations")
+                    .Where(b => b.Content is "Unregister" or "Default apps…" || b.Name == "ApplyAssociations")
                     .Select(b => $"{b.Content}@{b.TranslatePoint(default, view)!.Value.X:0.#}");
                 lefts.Add(string.Join(" ", buttons.Select(s => s.Replace("Repair", "Apply", StringComparison.Ordinal))));
             }
