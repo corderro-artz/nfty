@@ -73,6 +73,8 @@ public static class ShareRules
     public const string ReasonExpandsTooFar = "it expands too far";
     /// <summary>Reason: an entry name escapes the archive.</summary>
     public const string ReasonNameLeaves = "a file name leaves the archive";
+    /// <summary>Reason: two entries share one name.</summary>
+    public const string ReasonDuplicateName = "a file name appears twice";
     /// <summary>Reason: a link entry.</summary>
     public const string ReasonHoldsLink = "it holds a link";
 

@@ -1,5 +1,9 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
+using Nfty.Core.Formats;
+using Nfty.Core.Imaging;
 using Nfty.Core.Output;
 
 namespace Nfty.Core.Publish.Community;
@@ -37,10 +41,162 @@ public static partial class ShareCheck
             using var zip = ZipFile.OpenRead(setPath);
             return Inspect(zip);
         }
-        catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException
+                                      or NotSupportedException or InvalidOperationException)
         {
             return [ShareRules.NotASet];
         }
+    }
+
+    /// <summary>
+    /// Judges a packed Set for the gallery: the archive first, then the Set inside it.
+    /// </summary>
+    /// <param name="setPath">A packed <c>.set</c> file.</param>
+    /// <param name="ct">Stops the check; the only thing that throws.</param>
+    /// <returns>The facts the gallery lists, or the problems that keep the Set out (facts then carry defaults). Bad input never throws: every failure becomes a sentence from <see cref="ShareRules"/>.</returns>
+    public static async Task<ShareFacts> CheckAsync(string setPath, CancellationToken ct = default)
+    {
+        // Sealed FIRST. A .tin is a zip holding seal.json, which the archive check would call a stray
+        // file (or, for something that is no zip at all, "not a Set"); the sentence has to say sealed.
+        if (IsSealed(setPath)) return Refuse(ShareRules.Sealed);
+
+        var archive = CheckArchive(setPath);
+        if (archive.Count > 0) return Refuse([.. archive]);
+
+        try
+        {
+            using (var zip = ZipFile.OpenRead(setPath))
+                if (CheckActualBytes(zip) is { } tooFar) return Refuse(tooFar);
+
+            using var set = await SetReader.ReadAsync(setPath, ct).ConfigureAwait(false);
+            return Judge(setPath, set, ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception)
+        {
+            // CorruptSetException, damaged JSON, a file vanishing mid-read: the reader's words are for
+            // the author at a terminal, not for a gallery card, so they all say one thing.
+            return Refuse(ShareRules.NotASet);
+        }
+    }
+
+    private static ShareFacts Refuse(params string[] problems) =>
+        new(problems, 0, 0, 0, false, false, null, "", "", "");
+
+    private static ShareFacts Judge(string setPath, LoadedSet set, CancellationToken ct)
+    {
+        var manifest = set.Manifest;
+        if (manifest.Files is not null) return Refuse(ShareRules.RenamedExport);
+
+        var items = set.Items;
+        if (items.Count == 0) return Refuse(ShareRules.NotASet);
+        if (manifest.Count != items.Count || ImageFileCount(set.SourceDirectory) != items.Count)
+            return Refuse(ShareRules.CountMismatch);
+        if (items.Count > ShareRules.MaxAssets) return Refuse(ShareRules.TooManyAssets(items.Count));
+
+        var ordered = items.OrderBy(i => i.Number).ToList();
+        var problems = new List<string>();
+
+        if (!TryIdentify(ordered[0].ImagePath, out int width, out int height))
+            return Refuse(ShareRules.ImageUnreadable(Path.GetFileName(ordered[0].ImagePath)));
+        if (width > ShareRules.MaxCanvas || height > ShareRules.MaxCanvas)
+            return Refuse(ShareRules.CanvasTooLarge(width, height));
+
+        foreach (var item in ordered.Skip(1))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (problems.Count >= MaxStrayReports) break;
+            string name = Path.GetFileName(item.ImagePath);
+            if (!TryIdentify(item.ImagePath, out int w, out int h)) problems.Add(ShareRules.ImageUnreadable(name));
+            else if (w != width || h != height) problems.Add(ShareRules.ImageWrongSize(name));
+        }
+        if (problems.Count > 0) return Refuse([.. problems]);
+
+        bool book = false;
+        using (var zip = ZipFile.OpenRead(setPath))
+        {
+            var cbk = zip.Entries.FirstOrDefault(e => !e.FullName.Contains('/')
+                && e.FullName.EndsWith(".cbk", StringComparison.OrdinalIgnoreCase));
+            if (cbk is not null)
+            {
+                book = true;
+                string sha;
+                using (var s = cbk.Open()) sha = Convert.ToHexStringLower(SHA256.HashData(s));
+                // A Set records its book's hash and nothing else, so a book it did not record - or
+                // one recorded as nothing - is somebody else's file riding along in the gallery.
+                if (!string.Equals(sha, manifest.CookbookSha256, StringComparison.OrdinalIgnoreCase))
+                    return Refuse(ShareRules.ForeignBook);
+            }
+        }
+
+        string fingerprint = Convert.ToHexStringLower(SHA256.HashData(
+            Encoding.UTF8.GetBytes(string.Join('\n', ordered.Select(i => i.Dna)))));
+        string fileSha;
+        using (var fs = File.OpenRead(setPath)) fileSha = Convert.ToHexStringLower(SHA256.HashData(fs));
+
+        return new ShareFacts([], ordered.Count, width, height, manifest.Models is not null, book,
+            manifest.CookbookSha256, manifest.Name, fingerprint, fileSha);
+    }
+
+    private static int ImageFileCount(string dir)
+    {
+        string images = Path.Combine(dir, SetLayout.ImagesDir);
+        return Directory.Exists(images) ? Directory.EnumerateFiles(images, "*", SearchOption.AllDirectories).Count() : 0;
+    }
+
+    private static bool TryIdentify(string path, out int width, out int height)
+    {
+        width = height = 0;
+        try
+        {
+            var info = ImageFormats.Identify(path);
+            width = info.Width;
+            height = info.Height;
+            return width > 0 && height > 0;
+        }
+        catch (Exception) { return false; }
+    }
+
+    private static bool IsSealed(string path)
+    {
+        if (Archives.TryKindOf(path, out var kind) && kind == ArchiveKind.Sealed) return true;
+        try
+        {
+            if (!File.Exists(path)) return false;
+            using var zip = ZipFile.OpenRead(path);
+            return zip.Entries.Any(e => string.Equals(e.FullName, Publish.Seal.ManifestEntry, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (Exception) { return false; }
+    }
+
+    /// <summary>
+    /// Counts the bytes each entry REALLY inflates to. The central directory's sizes are the file's own
+    /// claim, and the reader that follows extracts with no limit of its own, so a lying archive is
+    /// stopped here: reading stops the moment one entry passes its declared length or the total passes
+    /// <paramref name="maxTotal"/>, never inflating further.
+    /// </summary>
+    /// <param name="zip">The opened archive.</param>
+    /// <param name="maxTotal">The real decompressed total allowed.</param>
+    /// <returns>The refusal sentence, or null when every entry is as small as it said.</returns>
+    internal static string? CheckActualBytes(ZipArchive zip, long maxTotal = ShareRules.MaxUncompressedBytes)
+    {
+        long total = 0;
+        var buffer = new byte[81920];
+        foreach (var e in zip.Entries)
+        {
+            if (IsDirectory(e.FullName)) continue;
+            long declared = e.Length, entry = 0;
+            using var s = e.Open();
+            int n;
+            while ((n = s.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                entry += n;
+                total += n;
+                if (entry > declared || total > maxTotal)
+                    return ShareRules.UnsafeArchive(ShareRules.ReasonExpandsTooFar);
+            }
+        }
+        return null;
     }
 
     private static IReadOnlyList<string> Inspect(ZipArchive zip)
@@ -49,14 +205,18 @@ public static partial class ShareCheck
         if (entries.Count > ShareRules.MaxZipEntries)
             return [ShareRules.UnsafeArchive(ShareRules.ReasonTooManyFiles)];
 
+        var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (var e in entries)
         {
+            if (!names.Add(e.FullName)) return [ShareRules.UnsafeArchive(ShareRules.ReasonDuplicateName)];
             if (LeavesArchive(e.FullName)) return [ShareRules.UnsafeArchive(ShareRules.ReasonNameLeaves)];
             if (IsLink(e)) return [ShareRules.UnsafeArchive(ShareRules.ReasonHoldsLink)];
         }
 
         var sizes = entries.Where(e => !IsDirectory(e.FullName)).Select(e => (e.CompressedLength, e.Length));
         if (CheckSizes(sizes) is { } tooFar) return [tooFar];
+
+        if (!names.Contains(SetLayout.ManifestFile)) return [ShareRules.NotASet];
 
         var problems = new List<string>();
         bool book = false;
@@ -102,9 +262,11 @@ public static partial class ShareCheck
 
     private static bool IsDirectory(string name) => name.EndsWith('/');
 
+    // Also refuses ':' anywhere (drive letters, NTFS streams) and an empty or '.' segment, which two
+    // readers can resolve differently ("images//x", "images/./x").
     private static bool LeavesArchive(string name) =>
-        name.StartsWith('/') || name.Contains('\\') || DriveLetter().IsMatch(name)
-        || name.Split('/').Any(s => s == "..");
+        name.StartsWith('/') || name.Contains('\\') || name.Contains(':') || DriveLetter().IsMatch(name)
+        || (IsDirectory(name) ? name[..^1] : name).Split('/').Any(s => s is "" or "." or "..");
 
     // The Unix file type sits in the high 16 bits of the external attributes; 0xA000 is a symlink.
     private static bool IsLink(ZipArchiveEntry e) => ((e.ExternalAttributes >> 16) & 0xF000) == 0xA000;
