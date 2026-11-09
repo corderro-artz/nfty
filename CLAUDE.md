@@ -1,19 +1,31 @@
 # CLAUDE.md
 
-Guidance for Claude Code (claude.ai/code) in this repo.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
 
 ```bash
 dotnet build nfty.sln                       # build everything
 dotnet test nfty.sln                        # run all tests
-dotnet test tests/Nfty.Core.Tests           # one test project (also: tests/Nfty.Cli.Tests, tests/Nfty.Ticket.Tests, tests/Nfty.Model.Tests)
+dotnet test tests/Nfty.Core.Tests           # one test project (also: Nfty.Cli.Tests, Nfty.Ticket.Tests, Nfty.Ticket.NetStandard.Tests, Nfty.Model.Tests, Nfty.App.Tests)
 dotnet test --filter FullyQualifiedName~DnaTests           # one test class
 dotnet test --filter FullyQualifiedName~DnaTests.Same_selection_same_dna   # one test method
 dotnet run --project src/Nfty.Cli -- <command> [args]      # run the CLI
+dotnet run --project src/Nfty.Desktop                      # run the GUI
 ```
 
-Targets **.NET 10**; tests **xunit.v3** across all five test projects, named `Snake_case_sentences` (`Same_selection_same_dna`) — what `--filter` must match. No separate lint step; build is one: `Directory.Build.props` sets `TreatWarningsAsErrors` + `GenerateDocumentationFile`, so warning or undocumented public member fails build. Package versions live in `Directory.Packages.props`, never csproj. ImageSharp pinned **3.1.11** on purpose (3.2.0+/4.x need license key for Release builds) — do not upgrade. Its six advisories are made UNREACHABLE, then suppressed in `Directory.Build.props`: every decode in `src/` goes through `Nfty.Core.Imaging.ImageFormats` (PNG + JPEG decoders only, `SkipMetadata`, ICC profile nulled; anything else = `UnknownImageFormatException` in product words), never raw `Image.Load`/`Identify`/`DetectFormat` — `ImageFormatsTests` sweeps `src/` and fails on one. `SkipMetadata` does NOT skip PNG `iCCP` in 3.1.11 (stored, parsed lazily), hence the null. Only sheet-grid paths keep metadata (`keepMetadata`, PNG text chunk). On upgrade delete the six `NuGetAuditSuppress` lines. `sixlabors.lic` gitignored, account-specific; never commit.
+Generators + checks (generated output is committed; CI runs the checks):
+
+```bash
+NFTY_CAPTURE=1 NFTY_CAPTURE_DIR=<dir> dotnet test tests/Nfty.App.Tests --filter FullyQualifiedName~VisualCapture   # render GUI frames, then LOOK at them
+dotnet test tests/Nfty.App.Tests --filter FullyQualifiedName~SetBrowserPerfTests -l "console;verbosity=detailed"   # perf tables (also RisePagePerfTests)
+python tools/api-docs/build.py              # regenerate docs/manual/reference/api/ (--check: drift, --lint: XML docs)
+python -m mkdocs build --strict             # user manual; broken link/anchor/snippet fails (pip install -r docs/requirements.txt)
+python tools/icons/build.py                 # assets/icons/*.svg -> Themes/Icons.axaml
+python tools/demo/build-demo.py --check     # demo .cbk drift check, no write (pip install -r tools/demo/requirements.txt)
+```
+
+Targets **.NET 10**; tests **xunit.v3** across all six test projects, named `Snake_case_sentences` (`Same_selection_same_dna`) — what `--filter` must match. No separate lint step; build is one: `Directory.Build.props` sets `TreatWarningsAsErrors` + `GenerateDocumentationFile`, so warning or undocumented public member fails build. Package versions live in `Directory.Packages.props`, never csproj. ImageSharp pinned **3.1.11** on purpose (3.2.0+/4.x need license key for Release builds) — do not upgrade. Its six advisories are made UNREACHABLE, then suppressed in `Directory.Build.props`: every decode in `src/` goes through `Nfty.Core.Imaging.ImageFormats` (PNG + JPEG decoders only, `SkipMetadata`, ICC profile nulled; anything else = `UnknownImageFormatException` in product words), never raw `Image.Load`/`Identify`/`DetectFormat` — `ImageFormatsTests` sweeps `src/` and fails on one. `SkipMetadata` does NOT skip PNG `iCCP` in 3.1.11 (stored, parsed lazily), hence the null. Only sheet-grid paths keep metadata (`keepMetadata`, PNG text chunk). On upgrade delete the six `NuGetAuditSuppress` lines. `sixlabors.lic` gitignored, account-specific; never commit.
 
 ## Big picture
 
@@ -138,7 +150,7 @@ Visual-polish work merged into `main`. **`docs/superpowers/specs/2026-08-02-gui-
 - **Token brushes only in Views.** No raw hex outside `Themes/Tokens.axaml`; new color in **both** dictionaries. Avalonia hex `#AARRGGBB` — mockup CSS `#RRGGBBAA`, alpha moves front. **Gradient must be whole brush per theme dictionary**, never `LinearGradientBrush`/`RadialGradientBrush` built in `Style` `Setter` with `DynamicResource` stops: brush constructed once + shared, stops never re-resolve on theme change. Shipped CookBook identity card painting light gradient in dark mode; invisible in light mode, markup, any single-theme test. `ThemedGradientTests` guards.
 - **Geometry fixed: reserve space, toggle ink.** Control appearing/disappearing must not move, resize or reflow anything around — table same width locked/unlocked, row same height active/inactive, every window size. `Opacity`/`IsHitTestVisible`, **never** `IsVisible`, on anything occupying layout; fixed column definitions, not `Auto`, where content can vanish. Prove by pixel-diffing two captured frames, not eye. Known exception: always-present grip column gives locked Layers table 26px gutter `explorer.html` doesn't draw — accepted, locked set has no reorder affordance.
 - **Pointer-drag gesture = pointer capture, not `DragDrop.DoDragDropAsync`.** Latter needs platform drag *source*, `Avalonia.Headless` registers none — `IPlatformDragSource` absent from assembly, call under harness never returns. Also makes gesture uncapturable + untestable. **Drag always ships with keyboard path** (`Alt+Up`/`Alt+Down` over `LayerDepth.MoveBy`); pointer-only reorder = incomplete feature. `ObservableCollection.Move` makes `ItemsControl` **drop + recreate** moved container, so focus restored at `DispatcherPriority.Loaded`, behind layout pass — without it second keystroke silently swallowed.
-- **Avalonia 12.1.1**, .NET 10. `Grid.ColumnSpacing`/`RowSpacing` + control-level `LetterSpacing` exist — use them, not per-child margins or TextBlock-inside-Button. All four test projects on **xunit.v3**; `Avalonia.Diagnostics` now `AvaloniaUI.DiagnosticsSupport`; text shaper opt-in via `Avalonia.HarfBuzz`.
+- **Avalonia 12.1.1**, .NET 10. `Grid.ColumnSpacing`/`RowSpacing` + control-level `LetterSpacing` exist — use them, not per-child margins or TextBlock-inside-Button. All six test projects on **xunit.v3**; `Avalonia.Diagnostics` now `AvaloniaUI.DiagnosticsSupport`; text shaper opt-in via `Avalonia.HarfBuzz`.
 - **Icons** = `StreamGeometry` in `Themes/Icons.axaml`, authored in 24-unit box. `Path.ico` maps box onto icon box like `<svg viewBox>` (`Stretch="None"` + `scale(size/24)`), every glyph shares one scale. Never set `Width`/`Height` on `Path.ico` inline — use `xs`/`sm`/`ti`/`lg` classes with matching transform.
 - **`assets/icons/*.svg` = drawings; `Icons.axaml` generated** by `python tools/icons/build.py`. Edit SVG, run, commit both. `IconSourceTests` fails build if two disagree either direction: without it obvious fix for wonky glyph = nudge path in axaml — file app reads, edit works, SVG quietly stops being drawing while looking like it is. How every unchecked "source of truth" dies. Avalonia can't render SVG without library; adding one for 45 static glyphs poor trade, so generated copy stays committed. `assets/icons/README.md` carries glyph rules.
 - **`.cbk` adding layer no longer costs quantize re-tune.** Tax was single cap above, gone; demo Bands stay 30/40 because coarser steps read fine at 32px, not because forced.
