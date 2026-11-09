@@ -1,5 +1,10 @@
 # Active continuation — post-audit usability
 
+2.4.10 is published from main 5bd61f3 with matching nine-job CI 42610209945 green and all eight
+asset hashes verified. Settings source 76a7b89 is merged locally for candidate 2.4.11; full Windows
+5,419/Linux App 2,112 passes and zero-warning builds are verified. Viewer CPU/lighting/footer
+work remains isolated for final combined verification and subsequent 2.4.12 publication.
+
 Previous 2.4.9 closeout is fully verified, including final main CI 42532337662. See
 12-usability-followups.md for the newly authorized Cook, settings and preview batches. Three
 workers are active in isolated worktrees; release only verified batches from M:/Repositories/nfty
