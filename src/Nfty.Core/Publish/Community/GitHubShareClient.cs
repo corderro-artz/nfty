@@ -288,9 +288,25 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
             if (!response.IsSuccessStatusCode && response.StatusCode != tolerate) throw Refusal(response);
             return new Reply(response.StatusCode, await ReadCappedAsync(response.Content, maxBody, ct).ConfigureAwait(false));
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException) { throw new CommunityException(ShareRules.Unreachable); }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or UploadSourceException)
+        {
+            // The caller's cancel is always a cancel, whatever shape it surfaced in.
+            ct.ThrowIfCancellationRequested();
+            // HttpClient wraps what a request body throws, so look through the chain for the caller's own file failing.
+            throw new CommunityException(CausedBy<UploadSourceException>(ex) ? ShareRules.UploadSourceFailed : ShareRules.Unreachable);
+        }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new CommunityException(ShareRules.TimedOut); }
     }
+
+    private static bool CausedBy<T>(Exception? ex) where T : Exception
+    {
+        for (int depth = 0; ex is not null && depth < 16; ex = ex.InnerException, depth++)
+            if (ex is T) return true;
+        return false;
+    }
+
+    // Reading the CALLER's stream failed (not GitHub): kept apart so it is never reported as a network problem.
+    private sealed class UploadSourceException(Exception inner) : Exception("The upload's source file could not be read.", inner);
 
     // HttpClient.Timeout stops at the headers (ResponseHeadersRead), so the body gets its own deadline, and a size cap
     // that is checked as bytes arrive: an endless or enormous answer is refused after `max` bytes, not buffered.
@@ -299,16 +315,24 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
         if (content.Headers.ContentLength is { } declared && declared > max) throw new CommunityException(ShareRules.GitHubTooMuch);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(bodyTimeout ?? DefaultBodyTimeout);
-        using var source = await content.ReadAsStreamAsync(deadline.Token).ConfigureAwait(false);
-        using var all = new MemoryStream();
-        var chunk = new byte[16 * 1024];
-        int n;
-        while ((n = await source.ReadAsync(chunk, deadline.Token).ConfigureAwait(false)) > 0)
+        try
         {
-            if (all.Length + n > max) throw new CommunityException(ShareRules.GitHubTooMuch);
-            all.Write(chunk, 0, n);
+            using var source = await content.ReadAsStreamAsync(deadline.Token).ConfigureAwait(false);
+            using var all = new MemoryStream();
+            var chunk = new byte[16 * 1024];
+            int n;
+            while ((n = await source.ReadAsync(chunk, deadline.Token).ConfigureAwait(false)) > 0)
+            {
+                if (all.Length + n > max) throw new CommunityException(ShareRules.GitHubTooMuch);
+                all.Write(chunk, 0, n);
+            }
+            return all.ToArray();
         }
-        return all.ToArray();
+        // Our own deadline firing can surface as an IOException from the transport; it is still a timeout.
+        catch (IOException) when (deadline.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            throw new CommunityException(ShareRules.TimedOut);
+        }
     }
 
     // The token is for GitHub's own API and uploads hosts, nothing else (not the Pages list, not a raw or download host).
@@ -431,19 +455,25 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
         {
             int want = (int)Math.Min(buffer.Length, length - _sent);
             if (want == 0) return 0;
-            return Account(inner.Read(buffer[..want]));
+            int read;
+            try { read = inner.Read(buffer[..want]); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { throw new UploadSourceException(ex); }
+            return Account(read);
         }
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             int want = (int)Math.Min(buffer.Length, length - _sent);
             if (want == 0) return 0;
-            return Account(await inner.ReadAsync(buffer[..want], cancellationToken).ConfigureAwait(false));
+            int read;
+            try { read = await inner.ReadAsync(buffer[..want], cancellationToken).ConfigureAwait(false); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { throw new UploadSourceException(ex); }
+            return Account(read);
         }
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
             ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
         private int Account(int read)
         {
-            if (read == 0) throw new EndOfStreamException("The file ended before its stated length.");
+            if (read == 0) throw new UploadSourceException(new EndOfStreamException("The file ended before its stated length."));
             _sent += read;
             progress?.Report(_sent);
             return read;

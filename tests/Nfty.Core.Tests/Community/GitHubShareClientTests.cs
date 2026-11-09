@@ -210,8 +210,9 @@ public class GitHubShareClientTests
     {
         var fake = new FakeGitHub().On(HttpMethod.Post, "/repos/me/r/releases/11/assets", HttpStatusCode.Created, "{}");
         var release = new GitHubRelease(11, "t", [], "me", "r");
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        var ex = await Assert.ThrowsAsync<CommunityException>(() =>
             Client(fake).UploadAssetAsync(release, "a.set", new MemoryStream(new byte[10]), 20, null, default));
+        Assert.Equal(ShareRules.UploadSourceFailed, ex.Message);
     }
 
     [Fact]
@@ -451,6 +452,66 @@ public class GitHubShareClientTests
         var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ => Streamed(new Drops()));
         var ex = await Assert.ThrowsAsync<CommunityException>(() => Client(fake).GetViewerAsync(default));
         Assert.Equal(ShareRules.Unreachable, ex.Message);
+    }
+
+    private sealed class Throws(Func<CancellationToken, Exception> make) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override int Read(byte[] buffer, int offset, int count) => throw make(default);
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            await Task.Delay(Timeout.Infinite, ct).ContinueWith(_ => { }, CancellationToken.None);
+            throw make(ct);
+        }
+        public override void Flush() { }
+        public override long Seek(long o, SeekOrigin s) => throw new NotSupportedException();
+        public override void SetLength(long v) => throw new NotSupportedException();
+        public override void Write(byte[] b, int o, int c) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task A_cancel_that_surfaces_as_an_IOException_stays_a_cancel()
+    {
+        using var cts = new CancellationTokenSource(100);
+        var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ => Streamed(new Throws(_ => new IOException("aborted"))));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Client(fake, bodyTimeout: TimeSpan.FromSeconds(30)).GetViewerAsync(cts.Token));
+    }
+
+    [Fact]
+    public async Task A_body_deadline_that_surfaces_as_an_IOException_is_the_timeout_sentence()
+    {
+        var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ => Streamed(new Throws(_ => new IOException("aborted"))));
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => Client(fake, bodyTimeout: TimeSpan.FromMilliseconds(100)).GetViewerAsync(default));
+        Assert.Equal(ShareRules.TimedOut, ex.Message);
+    }
+
+    [Fact]
+    public async Task A_failure_reading_the_callers_file_is_not_blamed_on_GitHub()
+    {
+        var fake = new FakeGitHub().On(HttpMethod.Post, "/repos/me/r/releases/11/assets", HttpStatusCode.Created, "{}");
+        var release = new GitHubRelease(11, "t", [], "me", "r");
+        var ex = await Assert.ThrowsAsync<CommunityException>(() =>
+            Client(fake).UploadAssetAsync(release, "a.set", new Boom(), 20, null, default));
+        Assert.Equal(ShareRules.UploadSourceFailed, ex.Message);
+    }
+
+    private sealed class Boom : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override int Read(byte[] buffer, int offset, int count) => throw new IOException("disk gone");
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default) => throw new IOException("disk gone");
+        public override void Flush() { }
+        public override long Seek(long o, SeekOrigin s) => throw new NotSupportedException();
+        public override void SetLength(long v) => throw new NotSupportedException();
+        public override void Write(byte[] b, int o, int c) => throw new NotSupportedException();
     }
 
     private static HttpResponseMessage Streamed(Stream body) => new(HttpStatusCode.OK) { Content = new StreamContent(body) };

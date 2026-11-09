@@ -177,6 +177,9 @@ public static class ShareRules
     /// <summary>GitHub sent a bigger answer than any real one.</summary>
     public static string GitHubTooMuch => "GitHub sent more than expected.";
 
+    /// <summary>The file being uploaded could not be read.</summary>
+    public static string UploadSourceFailed => "The file couldn't be read while uploading.";
+
     /// <summary>GitHub did not answer in time.</summary>
     public static string TimedOut => "GitHub didn't answer in time. Try again.";
 
