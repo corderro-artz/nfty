@@ -361,4 +361,12 @@ public class ShareCheckSetTests : IDisposable
         };
         Assert.Equal([ShareRules.FileChanged], (await ShareCheck.CheckAsync(path, default, hooks)).Problems);
     }
+
+    [Fact]
+    public async Task A_file_swapped_between_the_archive_check_and_the_hash_is_refused()
+    {
+        string path = Packed(2);
+        var hooks = new ShareCheck.Hooks { AfterArchiveCheck = () => File.AppendAllText(path, "x") };
+        Assert.Equal([ShareRules.FileChanged], (await ShareCheck.CheckAsync(path, default, hooks)).Problems);
+    }
 }

@@ -64,6 +64,8 @@ public static partial class ShareCheck
         public Action? OnChunk { get; init; }
         /// <summary>Runs after every check, just before the file is looked at once more.</summary>
         public Action? AfterChecks { get; init; }
+        /// <summary>Runs after the archive check, before the file is hashed.</summary>
+        public Action? AfterArchiveCheck { get; init; }
     }
 
     internal static Task<ShareFacts> CheckAsync(string setPath, CancellationToken ct, Hooks? hooks) =>
@@ -73,23 +75,27 @@ public static partial class ShareCheck
 
     private static async Task<ShareFacts> CheckCoreAsync(string setPath, CancellationToken ct, Hooks? hooks)
     {
+        // The stamp comes before EVERY read, so the name and link checks, the hash and the facts all
+        // describe one file or the whole check is refused.
+        var before = TryStamp(setPath);
+
         // Sealed FIRST. A .tin is a zip holding seal.json, which the archive check would call a stray
         // file (or, for something that is no zip at all, "not a Set"); the sentence has to say sealed.
         if (IsSealed(setPath)) return Refuse(ShareRules.Sealed);
 
         var archive = CheckArchive(setPath);
         if (archive.Count > 0) return Refuse([.. archive]);
+        hooks?.AfterArchiveCheck?.Invoke();
 
         try
         {
-            // The file's hash is taken FIRST, with its length and last-write time either side, so the
-            // hash is of bytes that were there before any check read them; the stamp is looked at once
-            // more before facts go out, so a file swapped mid-check is refused, not vouched for.
-            var before = Stamp(setPath);
+            if (before is null) return Refuse(ShareRules.FileChanged);
+            // Hashed before the deeper reads, and the stamp is looked at again here and before facts
+            // go out, so a file swapped mid-check is refused, not vouched for.
             string fileSha;
             using (var fs = File.OpenRead(setPath))
                 fileSha = Convert.ToHexStringLower(await SHA256.HashDataAsync(fs, ct).ConfigureAwait(false));
-            if (Stamp(setPath) != before) return Refuse(ShareRules.FileChanged);
+            if (TryStamp(setPath) != before) return Refuse(ShareRules.FileChanged);
 
             using (var zip = ZipFile.OpenRead(setPath))
                 if (CheckActualBytes(zip, ShareRules.MaxUncompressedBytes, ct, hooks?.OnChunk) is { } tooFar)
@@ -98,7 +104,7 @@ public static partial class ShareCheck
             using var set = await SetReader.ReadAsync(setPath, ct).ConfigureAwait(false);
             var facts = Judge(setPath, set, fileSha, ct);
             hooks?.AfterChecks?.Invoke();
-            return Stamp(setPath) != before ? Refuse(ShareRules.FileChanged) : facts;
+            return TryStamp(setPath) != before ? Refuse(ShareRules.FileChanged) : facts;
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception)
@@ -109,10 +115,14 @@ public static partial class ShareCheck
         }
     }
 
-    private static (long Length, DateTime Written) Stamp(string path)
+    private static (long Length, DateTime Written)? TryStamp(string path)
     {
-        var info = new FileInfo(path);
-        return (info.Length, info.LastWriteTimeUtc);
+        try
+        {
+            var info = new FileInfo(path);
+            return (info.Length, info.LastWriteTimeUtc);
+        }
+        catch (Exception) { return null; }
     }
 
     private static ShareFacts Refuse(params string[] problems) =>
