@@ -12,7 +12,7 @@ Everything here is a summary. Where this file and `CLAUDE.md` disagree, `CLAUDE.
 
 ```bash
 dotnet build nfty.sln     # must stay at 0 warnings — TreatWarningsAsErrors is on
-dotnet test nfty.sln      # all five test projects
+dotnet test nfty.sln      # all six test projects
 ```
 
 ## The things that will bite you
