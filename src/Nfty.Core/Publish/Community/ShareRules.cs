@@ -161,4 +161,7 @@ public static class ShareRules
 
     /// <summary>The index is newer than this build understands.</summary>
     public static string IndexTooNew => "The community gallery needs a newer nfty. Update to see the latest list.";
+
+    /// <summary>The entry's dates disagree with its history.</summary>
+    public static string DatesMismatch => "The share's dates don't match its history.";
 }
