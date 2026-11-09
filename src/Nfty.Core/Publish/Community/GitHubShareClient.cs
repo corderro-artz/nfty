@@ -151,6 +151,10 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     public async Task DeleteReleaseAsync(string owner, string repo, long id, CancellationToken ct) =>
         await SendAsync(HttpMethod.Delete, Api("repos", owner, repo, "releases", id.ToString(CultureInfo.InvariantCulture)), null, ct).ConfigureAwait(false);
 
+    /// <summary>Deletes one file attached to a release.</summary>
+    public async Task DeleteAssetAsync(string owner, string repo, long assetId, CancellationToken ct) =>
+        await SendAsync(HttpMethod.Delete, Api("repos", owner, repo, "releases", "assets", assetId.ToString(CultureInfo.InvariantCulture)), null, ct).ConfigureAwait(false);
+
     /// <summary>Tag names.</summary>
     public Task<IReadOnlyList<string>> ListTagsAsync(string owner, string repo, CancellationToken ct) =>
         PagedAsync(Join("repos", owner, repo, "tags"), e => Str(e, "name"), ct);

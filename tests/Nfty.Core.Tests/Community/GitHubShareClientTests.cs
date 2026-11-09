@@ -83,6 +83,14 @@ public class GitHubShareClientTests
     }
 
     [Fact]
+    public async Task Delete_asset_removes_one_release_file_by_id()
+    {
+        var fake = new FakeGitHub().On(HttpMethod.Delete, "/repos/me/r/releases/assets/12", HttpStatusCode.NoContent, "");
+        await Client(fake).DeleteAssetAsync("me", "r", 12, default);
+        fake.AssertAllConsumed();
+    }
+
+    [Fact]
     public async Task Get_file_decodes_content_and_sha_and_answers_null_on_404()
     {
         var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("hello world, long enough to wrap"));
