@@ -254,15 +254,42 @@ public class ShareCheckArchiveTests : IDisposable
         Assert.True(patched >= 1);
         File.WriteAllBytes(path, bytes);
 
-        // The runtime's reader stops at the declared length, so this passes and no byte past the
-        // claim is ever read. Pinned as the premise the per-entry guard rests on: if a runtime ever
-        // inflates past the claim, CheckActualBytes refuses it and this test stays green, but the
-        // read below would show more than 1000 bytes.
+        // The runtime's reader stops at the declared length, so a lying central directory never makes
+        // it hand back more than the claim and this passes with nothing refused. It pins that premise
+        // only: if a runtime ever inflated past the claim, the read below would exceed 1000 bytes and
+        // this test would FAIL - the per-entry branch itself is exercised directly by
+        // Reading_past_the_declared_length_is_refused.
         using var zip = ZipFile.OpenRead(path);
         Assert.Null(ShareCheck.CheckActualBytes(zip));
         using var s = zip.GetEntry("images/1.png")!.Open();
         using var sink = new MemoryStream();
         s.CopyTo(sink);
         Assert.True(sink.Length <= 1000);
+    }
+
+    [Fact]
+    public void Reading_past_the_declared_length_is_refused()
+    {
+        long total = 0;
+        using var over = new MemoryStream(new byte[500]);
+        Assert.Equal(Unsafe(ShareRules.ReasonExpandsTooFar),
+            ShareCheck.CountEntry(over, 100, ref total, ShareRules.MaxUncompressedBytes, default, null));
+
+        total = 0;
+        using var exact = new MemoryStream(new byte[500]);
+        Assert.Null(ShareCheck.CountEntry(exact, 500, ref total, ShareRules.MaxUncompressedBytes, default, null));
+        Assert.Equal(500, total);
+    }
+
+    [Fact]
+    public void Cancelling_during_the_inflate_stops_it()
+    {
+        string path = Zip(z => { Put(z, "set.json", "{}"u8.ToArray()); Put(z, "images/1.png", new byte[1 << 20]); });
+        using var cts = new CancellationTokenSource();
+        int chunks = 0;
+        using var zip = ZipFile.OpenRead(path);
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            ShareCheck.CheckActualBytes(zip, ShareRules.MaxUncompressedBytes, cts.Token, () => { chunks++; cts.Cancel(); }));
+        Assert.Equal(1, chunks);
     }
 }

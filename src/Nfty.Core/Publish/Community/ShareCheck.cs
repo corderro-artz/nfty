@@ -54,7 +54,24 @@ public static partial class ShareCheck
     /// <param name="setPath">A packed <c>.set</c> file.</param>
     /// <param name="ct">Stops the check; the only thing that throws.</param>
     /// <returns>The facts the gallery lists, or the problems that keep the Set out (facts then carry defaults). Bad input never throws: every failure becomes a sentence from <see cref="ShareRules"/>.</returns>
-    public static async Task<ShareFacts> CheckAsync(string setPath, CancellationToken ct = default)
+    public static Task<ShareFacts> CheckAsync(string setPath, CancellationToken ct = default) =>
+        CheckAsync(setPath, ct, null);
+
+    /// <summary>Test seams: what a check does at the points a test needs to reach.</summary>
+    internal sealed class Hooks
+    {
+        /// <summary>Runs after every chunk the real-byte count reads.</summary>
+        public Action? OnChunk { get; init; }
+        /// <summary>Runs after every check, just before the file is looked at once more.</summary>
+        public Action? AfterChecks { get; init; }
+    }
+
+    internal static Task<ShareFacts> CheckAsync(string setPath, CancellationToken ct, Hooks? hooks) =>
+        // The archive checks read the file synchronously (up to 1 GiB of inflating), so the whole
+        // thing runs on the pool: a UI caller gets its thread back before the first byte is read.
+        Task.Run(() => CheckCoreAsync(setPath, ct, hooks), ct);
+
+    private static async Task<ShareFacts> CheckCoreAsync(string setPath, CancellationToken ct, Hooks? hooks)
     {
         // Sealed FIRST. A .tin is a zip holding seal.json, which the archive check would call a stray
         // file (or, for something that is no zip at all, "not a Set"); the sentence has to say sealed.
@@ -65,11 +82,23 @@ public static partial class ShareCheck
 
         try
         {
+            // The file's hash is taken FIRST, with its length and last-write time either side, so the
+            // hash is of bytes that were there before any check read them; the stamp is looked at once
+            // more before facts go out, so a file swapped mid-check is refused, not vouched for.
+            var before = Stamp(setPath);
+            string fileSha;
+            using (var fs = File.OpenRead(setPath))
+                fileSha = Convert.ToHexStringLower(await SHA256.HashDataAsync(fs, ct).ConfigureAwait(false));
+            if (Stamp(setPath) != before) return Refuse(ShareRules.FileChanged);
+
             using (var zip = ZipFile.OpenRead(setPath))
-                if (CheckActualBytes(zip) is { } tooFar) return Refuse(tooFar);
+                if (CheckActualBytes(zip, ShareRules.MaxUncompressedBytes, ct, hooks?.OnChunk) is { } tooFar)
+                    return Refuse(tooFar);
 
             using var set = await SetReader.ReadAsync(setPath, ct).ConfigureAwait(false);
-            return Judge(setPath, set, ct);
+            var facts = Judge(setPath, set, fileSha, ct);
+            hooks?.AfterChecks?.Invoke();
+            return Stamp(setPath) != before ? Refuse(ShareRules.FileChanged) : facts;
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception)
@@ -80,10 +109,16 @@ public static partial class ShareCheck
         }
     }
 
+    private static (long Length, DateTime Written) Stamp(string path)
+    {
+        var info = new FileInfo(path);
+        return (info.Length, info.LastWriteTimeUtc);
+    }
+
     private static ShareFacts Refuse(params string[] problems) =>
         new(problems, 0, 0, 0, false, false, null, "", "", "");
 
-    private static ShareFacts Judge(string setPath, LoadedSet set, CancellationToken ct)
+    private static ShareFacts Judge(string setPath, LoadedSet set, string fileSha, CancellationToken ct)
     {
         var manifest = set.Manifest;
         if (manifest.Files is not null) return Refuse(ShareRules.RenamedExport);
@@ -131,8 +166,6 @@ public static partial class ShareCheck
 
         string fingerprint = Convert.ToHexStringLower(SHA256.HashData(
             Encoding.UTF8.GetBytes(string.Join('\n', ordered.Select(i => i.Dna)))));
-        string fileSha;
-        using (var fs = File.OpenRead(setPath)) fileSha = Convert.ToHexStringLower(SHA256.HashData(fs));
 
         return new ShareFacts([], ordered.Count, width, height, manifest.Models is not null, book,
             manifest.CookbookSha256, manifest.Name, fingerprint, fileSha);
@@ -177,24 +210,37 @@ public static partial class ShareCheck
     /// </summary>
     /// <param name="zip">The opened archive.</param>
     /// <param name="maxTotal">The real decompressed total allowed.</param>
+    /// <param name="ct">Checked after every chunk, so a stop never waits out a gigabyte.</param>
+    /// <param name="onChunk">Test seam, called after each chunk.</param>
     /// <returns>The refusal sentence, or null when every entry is as small as it said.</returns>
-    internal static string? CheckActualBytes(ZipArchive zip, long maxTotal = ShareRules.MaxUncompressedBytes)
+    internal static string? CheckActualBytes(ZipArchive zip, long maxTotal = ShareRules.MaxUncompressedBytes,
+        CancellationToken ct = default, Action? onChunk = null)
     {
         long total = 0;
-        var buffer = new byte[81920];
         foreach (var e in zip.Entries)
         {
             if (IsDirectory(e.FullName)) continue;
-            long declared = e.Length, entry = 0;
             using var s = e.Open();
-            int n;
-            while ((n = s.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                entry += n;
-                total += n;
-                if (entry > declared || total > maxTotal)
-                    return ShareRules.UnsafeArchive(ShareRules.ReasonExpandsTooFar);
-            }
+            if (CountEntry(s, e.Length, ref total, maxTotal, ct, onChunk) is { } refusal) return refusal;
+        }
+        return null;
+    }
+
+    /// <summary>Reads one entry's stream, stopping at the first byte past its declared length or the total.</summary>
+    internal static string? CountEntry(Stream s, long declared, ref long total, long maxTotal,
+        CancellationToken ct, Action? onChunk)
+    {
+        var buffer = new byte[81920];
+        long entry = 0;
+        int n;
+        while ((n = s.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            onChunk?.Invoke();
+            ct.ThrowIfCancellationRequested();
+            entry += n;
+            total += n;
+            if (entry > declared || total > maxTotal)
+                return ShareRules.UnsafeArchive(ShareRules.ReasonExpandsTooFar);
         }
         return null;
     }

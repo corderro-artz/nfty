@@ -319,4 +319,46 @@ public class ShareCheckSetTests : IDisposable
         cts.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => ShareCheck.CheckAsync(path, cts.Token));
     }
+
+    [Fact]
+    public async Task The_call_returns_before_the_inflate_and_a_cancel_stops_it_midway()
+    {
+        string path = Packed(2);
+        using var cts = new CancellationTokenSource();
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var hooks = new ShareCheck.Hooks
+        {
+            OnChunk = () => { entered.Set(); release.Wait(TimeSpan.FromSeconds(10)); },
+        };
+
+        // If the checks ran on this thread the call would sit in the hook for ten seconds and hand
+        // back a finished task; running on the pool it returns while the inflate is still blocked.
+        var task = ShareCheck.CheckAsync(path, cts.Token, hooks);
+        Assert.False(task.IsCompleted);
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(10)));
+
+        cts.Cancel();
+        release.Set();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
+    }
+
+    [Fact]
+    public async Task A_file_that_changes_during_the_check_is_refused()
+    {
+        string path = Packed(2);
+        var hooks = new ShareCheck.Hooks { AfterChecks = () => File.AppendAllText(path, "x") };
+        Assert.Equal([ShareRules.FileChanged], (await ShareCheck.CheckAsync(path, default, hooks)).Problems);
+    }
+
+    [Fact]
+    public async Task A_file_touched_during_the_check_is_refused()
+    {
+        string path = Packed(2);
+        var hooks = new ShareCheck.Hooks
+        {
+            AfterChecks = () => File.SetLastWriteTimeUtc(path, File.GetLastWriteTimeUtc(path).AddMinutes(5)),
+        };
+        Assert.Equal([ShareRules.FileChanged], (await ShareCheck.CheckAsync(path, default, hooks)).Problems);
+    }
 }

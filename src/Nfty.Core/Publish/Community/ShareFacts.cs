@@ -1,6 +1,6 @@
 namespace Nfty.Core.Publish.Community;
 
-/// <summary>What <see cref="ShareCheck.CheckAsync"/> learned about a packed Set.</summary>
+/// <summary>What <see cref="ShareCheck.CheckAsync(string, CancellationToken)"/> learned about a packed Set.</summary>
 /// <param name="Problems">What keeps the Set out of the gallery, in <see cref="ShareRules"/>' words; empty when it may be shared. When not empty every other member is a default.</param>
 /// <param name="Assets">How many assets the Set holds.</param>
 /// <param name="Width">Canvas width in pixels.</param>

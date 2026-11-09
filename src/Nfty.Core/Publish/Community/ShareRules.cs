@@ -78,6 +78,9 @@ public static class ShareRules
     /// <summary>Reason: a link entry.</summary>
     public const string ReasonHoldsLink = "it holds a link";
 
+    /// <summary>The file was modified while it was being checked.</summary>
+    public static string FileChanged => "The file changed while it was being checked.";
+
     /// <summary>An entry no Set holds.</summary>
     public static string UnexpectedFile(string path) => $"'{path}' isn't part of a Set.";
 
