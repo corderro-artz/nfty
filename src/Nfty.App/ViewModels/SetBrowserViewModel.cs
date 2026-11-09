@@ -419,7 +419,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     {
         if (row is null) return;
         if (ReferenceEquals(SelectedItem, row)) ClearSelection();
-        else Select(row);
+        else SelectCommand.Execute(row);
     }
 
     [RelayCommand]
