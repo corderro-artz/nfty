@@ -174,6 +174,9 @@ public static class ShareRules
     /// <summary>GitHub can't be reached.</summary>
     public static string Unreachable => "GitHub can't be reached. Check your connection and try again.";
 
+    /// <summary>GitHub sent a bigger answer than any real one.</summary>
+    public static string GitHubTooMuch => "GitHub sent more than expected.";
+
     /// <summary>GitHub did not answer in time.</summary>
     public static string TimedOut => "GitHub didn't answer in time. Try again.";
 

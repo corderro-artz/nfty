@@ -10,8 +10,8 @@ public class GitHubShareClientTests
     private const string Token = "tok-SECRET-123";
     private static readonly CommunityEndpoints Ends = CommunityEndpoints.Default;
 
-    private static GitHubShareClient Client(FakeGitHub fake, TimeProvider? time = null) =>
-        new(fake.Client(), Token, Ends, time);
+    private static GitHubShareClient Client(FakeGitHub fake, TimeProvider? time = null, TimeSpan? bodyTimeout = null) =>
+        new(fake.Client(), Token, Ends, time, bodyTimeout);
 
     private static JsonElement Body(FakeGitHub.Recorded r) => JsonDocument.Parse(r.Body).RootElement;
 
@@ -284,7 +284,7 @@ public class GitHubShareClientTests
         var reset = now.AddMinutes(7).AddSeconds(10).ToUnixTimeSeconds().ToString();
         var fake = new FakeGitHub().On(HttpMethod.Get, "/user", HttpStatusCode.Forbidden, "{}",
             new Dictionary<string, string> { ["x-ratelimit-remaining"] = "0", ["x-ratelimit-reset"] = reset });
-        var ex = await Assert.ThrowsAsync<CommunityException>(() => Client(fake, new FixedTime(now)).GetViewerAsync(default));
+        var ex = await Assert.ThrowsAnyAsync<CommunityException>(() => Client(fake, new FixedTime(now)).GetViewerAsync(default));
         Assert.Equal("GitHub is limiting requests. Try again in 8 minutes.", ex.Message);
     }
 
@@ -379,5 +379,169 @@ public class GitHubShareClientTests
         Assert.Equal("ref=h3", raw.Url.Query.TrimStart('?'));
         Assert.Contains("application/vnd.github.raw+json", raw.Headers["Accept"]);
         fake.AssertAllConsumed();
+    }
+
+    private sealed class Endless : Stream
+    {
+        public long Total;
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => Total; set => throw new NotSupportedException(); }
+        public override int Read(byte[] buffer, int offset, int count) { Total += count; Array.Fill(buffer, (byte)'a', offset, count); return count; }
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            Total += buffer.Length;
+            buffer.Span.Fill((byte)'a');
+            return new(buffer.Length);
+        }
+        public override void Flush() { }
+        public override long Seek(long o, SeekOrigin s) => throw new NotSupportedException();
+        public override void SetLength(long v) => throw new NotSupportedException();
+        public override void Write(byte[] b, int o, int c) => throw new NotSupportedException();
+    }
+
+    private sealed class Stalls : Stream
+    {
+        private bool _first = true;
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            if (_first) { _first = false; buffer.Span[0] = (byte)'{'; return 1; }
+            await Task.Delay(Timeout.Infinite, ct);
+            return 0;
+        }
+        public override void Flush() { }
+        public override long Seek(long o, SeekOrigin s) => throw new NotSupportedException();
+        public override void SetLength(long v) => throw new NotSupportedException();
+        public override void Write(byte[] b, int o, int c) => throw new NotSupportedException();
+    }
+
+    private static HttpResponseMessage Streamed(Stream body) => new(HttpStatusCode.OK) { Content = new StreamContent(body) };
+
+    [Fact]
+    public async Task An_oversized_reply_is_refused_without_reading_it_all()
+    {
+        var endless = new Endless();
+        var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ => Streamed(endless));
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => Client(fake).GetViewerAsync(default));
+        Assert.Equal(ShareRules.GitHubTooMuch, ex.Message);
+        Assert.True(endless.Total < 2 * 1024 * 1024, $"read {endless.Total} bytes");
+    }
+
+    [Fact]
+    public async Task A_declared_oversize_is_refused_before_any_read()
+    {
+        var endless = new Endless();
+        var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ =>
+        {
+            var r = Streamed(endless);
+            r.Content.Headers.ContentLength = 50_000_000;
+            return r;
+        });
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => Client(fake).GetViewerAsync(default));
+        Assert.Equal(ShareRules.GitHubTooMuch, ex.Message);
+        Assert.Equal(0, endless.Total);
+    }
+
+    [Fact]
+    public async Task A_body_that_stalls_after_the_headers_times_out_with_the_sentence()
+    {
+        var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ => Streamed(new Stalls()));
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => Client(fake, bodyTimeout: TimeSpan.FromMilliseconds(150)).GetViewerAsync(default));
+        Assert.Equal(ShareRules.TimedOut, ex.Message);
+    }
+
+    [Fact]
+    public async Task A_caller_cancel_during_a_stalled_body_stays_a_cancel()
+    {
+        var fake = new FakeGitHub().On(HttpMethod.Get, "/user", _ => Streamed(new Stalls()));
+        using var cts = new CancellationTokenSource(150);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Client(fake, bodyTimeout: TimeSpan.FromSeconds(30)).GetViewerAsync(cts.Token));
+    }
+
+    private const string Gallery = "/repos/nfty-art/nfty-gallery";
+
+    private static string PullsJson(int n) =>
+        "[" + string.Join(",", Enumerable.Range(1, n).Select(i => "{\"number\":" + i + ",\"head\":{\"sha\":\"h" + i + "\",\"repo\":{\"full_name\":\"me/nfty-gallery\"}}}")) + "]";
+
+    [Fact]
+    public async Task A_pull_with_many_entry_files_has_only_three_read()
+    {
+        var files = string.Join(",", Enumerable.Range(1, 50).Select(i => "{\"filename\":\"entries/7/f" + i + ".json\",\"status\":\"added\",\"changes\":30}"));
+        var fake = new FakeGitHub()
+            .Ok(HttpMethod.Get, Gallery + "/pulls", PullsJson(1))
+            .Ok(HttpMethod.Get, Gallery + "/pulls/1/files", "[" + files + "]");
+        for (int i = 1; i <= 3; i++)
+            fake.OnBytes(HttpMethod.Get, $"/repos/me/nfty-gallery/contents/entries/7/f{i}.json", HttpStatusCode.OK, Encoding.UTF8.GetBytes(EntryJson("s" + i)));
+
+        var entries = await Client(fake).ListOpenPullEntriesAsync(default);
+
+        Assert.Equal(3, entries.Count);
+        Assert.Equal(5, fake.Requests.Count);
+        fake.AssertAllConsumed();
+    }
+
+    [Fact]
+    public async Task Only_one_page_of_pulls_is_scanned()
+    {
+        var fake = new FakeGitHub().Ok(HttpMethod.Get, Gallery + "/pulls", PullsJson(100));
+        for (int i = 1; i <= 100; i++) fake.Ok(HttpMethod.Get, $"{Gallery}/pulls/{i}/files", "[]");
+        await Client(fake).ListOpenPullEntriesAsync(default);
+        Assert.Single(fake.To(Gallery + "/pulls"));
+        fake.AssertAllConsumed();
+    }
+
+    [Fact]
+    public async Task A_huge_entry_file_is_skipped_unread()
+    {
+        var fake = new FakeGitHub()
+            .Ok(HttpMethod.Get, Gallery + "/pulls", PullsJson(1))
+            .Ok(HttpMethod.Get, Gallery + "/pulls/1/files",
+                "[{\"filename\":\"entries/7/big.json\",\"status\":\"added\",\"changes\":90000},{\"filename\":\"entries/7/ok.json\",\"status\":\"added\",\"changes\":30}]")
+            .OnBytes(HttpMethod.Get, "/repos/me/nfty-gallery/contents/entries/7/ok.json", HttpStatusCode.OK, Encoding.UTF8.GetBytes(EntryJson("ok")));
+        var entries = await Client(fake).ListOpenPullEntriesAsync(default);
+        Assert.Equal("ok", Assert.Single(entries).Slug);
+        fake.AssertAllConsumed();
+    }
+
+    private static FakeGitHub TwoFilePull() => new FakeGitHub()
+        .Ok(HttpMethod.Get, Gallery + "/pulls", PullsJson(1))
+        .Ok(HttpMethod.Get, Gallery + "/pulls/1/files",
+            "[{\"filename\":\"entries/7/a.json\",\"status\":\"added\"},{\"filename\":\"entries/7/b.json\",\"status\":\"added\"}]");
+
+    [Fact]
+    public async Task A_500_on_one_entry_still_returns_the_others()
+    {
+        var fake = TwoFilePull()
+            .On(HttpMethod.Get, "/repos/me/nfty-gallery/contents/entries/7/a.json", HttpStatusCode.InternalServerError, "{}")
+            .OnBytes(HttpMethod.Get, "/repos/me/nfty-gallery/contents/entries/7/b.json", HttpStatusCode.OK, Encoding.UTF8.GetBytes(EntryJson("b")));
+        var entries = await Client(fake).ListOpenPullEntriesAsync(default);
+        Assert.Equal("b", Assert.Single(entries).Slug);
+    }
+
+    [Fact]
+    public async Task A_401_on_an_entry_still_aborts_with_reconnect()
+    {
+        var fake = TwoFilePull()
+            .On(HttpMethod.Get, "/repos/me/nfty-gallery/contents/entries/7/a.json", HttpStatusCode.Unauthorized, "{}");
+        var ex = await Assert.ThrowsAsync<GitHubAuthException>(() => Client(fake).ListOpenPullEntriesAsync(default));
+        Assert.Equal(ShareRules.Reconnect, ex.Message);
+    }
+
+    [Fact]
+    public async Task A_rate_limit_on_an_entry_still_aborts()
+    {
+        var fake = TwoFilePull()
+            .On(HttpMethod.Get, "/repos/me/nfty-gallery/contents/entries/7/a.json", HttpStatusCode.Forbidden, "{}",
+                new Dictionary<string, string> { ["x-ratelimit-remaining"] = "0", ["x-ratelimit-reset"] = "9999999999" });
+        var ex = await Assert.ThrowsAnyAsync<CommunityException>(() => Client(fake).ListOpenPullEntriesAsync(default));
+        Assert.StartsWith("GitHub is limiting requests", ex.Message);
     }
 }

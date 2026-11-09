@@ -18,8 +18,16 @@ namespace Nfty.Core.Publish.Community;
 /// <param name="token">The person's GitHub access token.</param>
 /// <param name="endpoints">Where the gallery and GitHub live.</param>
 /// <param name="time">The clock a rate-limit wait is measured against; tests inject one.</param>
-public sealed class GitHubShareClient(HttpClient http, string token, CommunityEndpoints endpoints, TimeProvider? time = null)
+/// <param name="bodyTimeout">How long a response body may take once its headers arrived (default 30 seconds).</param>
+public sealed class GitHubShareClient(HttpClient http, string token, CommunityEndpoints endpoints, TimeProvider? time = null, TimeSpan? bodyTimeout = null)
 {
+    private const long ApiBodyCap = 1024 * 1024;
+    private const long IndexBodyCap = 16 * 1024 * 1024;
+    private const long EntryBodyCap = 64 * 1024;
+    private const int EntryChangesCap = 400;
+    private const int PullsScanned = 1; // pages of 100: only the newest hundred pull requests are looked at
+    private const int EntryFilesPerPull = 3; // the share limit
+    private static readonly TimeSpan DefaultBodyTimeout = TimeSpan.FromSeconds(30);
     private const int PerPage = 100;
     private const int MaxPages = 10;
     private const int UploadBuffer = 64 * 1024;
@@ -195,7 +203,7 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// <exception cref="UnsupportedSchemaVersionException">The list is newer or older than this build reads.</exception>
     public async Task<CommunityIndex> GetIndexAsync(CancellationToken ct)
     {
-        var reply = await SendAsync(HttpMethod.Get, endpoints.IndexUrl, null, ct).ConfigureAwait(false);
+        var reply = await SendAsync(HttpMethod.Get, endpoints.IndexUrl, null, ct, maxBody: IndexBodyCap).ConfigureAwait(false);
         using var stream = new MemoryStream(reply.Body);
         return CommunityIndex.Read(stream);
     }
@@ -212,7 +220,7 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
             Number = e.GetProperty("number").GetInt32(),
             Sha = Str(e.GetProperty("head"), "sha"),
             HeadRepo = e.GetProperty("head").TryGetProperty("repo", out var r) && r.ValueKind == JsonValueKind.Object ? Str(r, "full_name") : null,
-        }, ct, "state=open").ConfigureAwait(false);
+        }, ct, "state=open", PullsScanned).ConfigureAwait(false);
 
         var entries = new List<CommunityEntry>();
         foreach (var pull in pulls)
@@ -220,15 +228,27 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
             if (pull.HeadRepo is null) continue;
             var (headOwner, headName) = SplitFullName(pull.HeadRepo);
             var files = await PagedAsync(Join("repos", galleryOwner, galleryName, "pulls", Num(pull.Number), "files"),
-                e => (Name: Str(e, "filename"), Status: Str(e, "status")), ct).ConfigureAwait(false);
-            foreach (var (name, status) in files)
+                e => (Name: Str(e, "filename"), Status: Str(e, "status"),
+                    Changes: e.TryGetProperty("changes", out var c) && c.ValueKind == JsonValueKind.Number ? c.GetInt64() : 0),
+                ct, maxPages: 1).ConfigureAwait(false);
+            // Anyone can open a pull request, so what is read from one is bounded: a few files, none of them huge.
+            var wanted = files
+                .Where(f => f.Status is "added" or "modified" && f.Changes <= EntryChangesCap
+                    && f.Name.StartsWith("entries/", StringComparison.Ordinal) && f.Name.EndsWith(".json", StringComparison.Ordinal))
+                .Take(EntryFilesPerPull);
+            foreach (var file in wanted)
             {
-                if (status is not ("added" or "modified")) continue;
-                if (!name.StartsWith("entries/", StringComparison.Ordinal) || !name.EndsWith(".json", StringComparison.Ordinal)) continue;
-                var url = Api(Join("repos", headOwner, headName, "contents") + "/" + FilePath(name) + "?ref=" + Uri.EscapeDataString(pull.Sha));
-                var reply = await SendAsync(HttpMethod.Get, url, null, ct, HttpStatusCode.NotFound, accept: "application/vnd.github.raw+json").ConfigureAwait(false);
-                if (reply.Status == HttpStatusCode.NotFound) continue;
-                if (TryReadEntry(reply.Body) is { } entry) entries.Add(entry);
+                try
+                {
+                    var url = Api(Join("repos", headOwner, headName, "contents") + "/" + FilePath(file.Name) + "?ref=" + Uri.EscapeDataString(pull.Sha));
+                    var reply = await SendAsync(HttpMethod.Get, url, null, ct, HttpStatusCode.NotFound,
+                        accept: "application/vnd.github.raw+json", maxBody: EntryBodyCap).ConfigureAwait(false);
+                    if (reply.Status != HttpStatusCode.NotFound && TryReadEntry(reply.Body) is { } entry) entries.Add(entry);
+                }
+                // A file that can't be fetched is skipped like one that doesn't parse. A refused token
+                // (GitHubAuthException) and a rate limit end the scan: nothing after them would answer either.
+                catch (CommunityException ex) when (ex is not RateLimitedException) { }
+                catch (ArgumentException) { }
             }
         }
         return entries;
@@ -252,7 +272,7 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     private sealed record Reply(HttpStatusCode Status, byte[] Body);
 
     private async Task<Reply> SendAsync(HttpMethod method, Uri url, HttpContent? content, CancellationToken ct,
-        HttpStatusCode? tolerate = null, string accept = "application/vnd.github+json")
+        HttpStatusCode? tolerate = null, string accept = "application/vnd.github+json", long maxBody = ApiBodyCap)
     {
         using var request = new HttpRequestMessage(method, url) { Content = content };
         request.Headers.UserAgent.ParseAdd("nfty");
@@ -265,12 +285,30 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
         try
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-            var body = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
-            if (response.IsSuccessStatusCode || response.StatusCode == tolerate) return new Reply(response.StatusCode, body);
-            throw Refusal(response);
+            if (!response.IsSuccessStatusCode && response.StatusCode != tolerate) throw Refusal(response);
+            return new Reply(response.StatusCode, await ReadCappedAsync(response.Content, maxBody, ct).ConfigureAwait(false));
         }
         catch (HttpRequestException) { throw new CommunityException(ShareRules.Unreachable); }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new CommunityException(ShareRules.TimedOut); }
+    }
+
+    // HttpClient.Timeout stops at the headers (ResponseHeadersRead), so the body gets its own deadline, and a size cap
+    // that is checked as bytes arrive: an endless or enormous answer is refused after `max` bytes, not buffered.
+    private async Task<byte[]> ReadCappedAsync(HttpContent content, long max, CancellationToken ct)
+    {
+        if (content.Headers.ContentLength is { } declared && declared > max) throw new CommunityException(ShareRules.GitHubTooMuch);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        deadline.CancelAfter(bodyTimeout ?? DefaultBodyTimeout);
+        using var source = await content.ReadAsStreamAsync(deadline.Token).ConfigureAwait(false);
+        using var all = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int n;
+        while ((n = await source.ReadAsync(chunk, deadline.Token).ConfigureAwait(false)) > 0)
+        {
+            if (all.Length + n > max) throw new CommunityException(ShareRules.GitHubTooMuch);
+            all.Write(chunk, 0, n);
+        }
+        return all.ToArray();
     }
 
     // The token is for GitHub's own API and uploads hosts, nothing else (not the Pages list, not a raw or download host).
@@ -286,7 +324,7 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
         bool limited = response.StatusCode == (HttpStatusCode)429
             || (response.StatusCode == HttpStatusCode.Forbidden && Header(response, "x-ratelimit-remaining") == "0");
         return limited
-            ? new CommunityException(ShareRules.RateLimited(MinutesToWait(response)))
+            ? new RateLimitedException(ShareRules.RateLimited(MinutesToWait(response)))
             : new CommunityException(ShareRules.GitHubRefused);
     }
 
@@ -348,10 +386,10 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
         }
     }
 
-    private async Task<IReadOnlyList<T>> PagedAsync<T>(string path, Func<JsonElement, T> map, CancellationToken ct, string? query = null)
+    private async Task<IReadOnlyList<T>> PagedAsync<T>(string path, Func<JsonElement, T> map, CancellationToken ct, string? query = null, int maxPages = MaxPages)
     {
         var all = new List<T>();
-        for (int page = 1; page <= MaxPages; page++)
+        for (int page = 1; page <= maxPages; page++)
         {
             var url = Api(path + "?" + (query is null ? "" : query + "&") + $"per_page={PerPage}&page={page}");
             var reply = await SendAsync(HttpMethod.Get, url, null, ct).ConfigureAwait(false);

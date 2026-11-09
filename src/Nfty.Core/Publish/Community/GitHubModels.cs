@@ -2,7 +2,10 @@ namespace Nfty.Core.Publish.Community;
 
 /// <summary>A share or gallery step that failed; the message is always a <see cref="ShareRules"/> sentence, safe to show.</summary>
 /// <param name="message">The sentence.</param>
-public sealed class CommunityException(string message) : Exception(message);
+public class CommunityException(string message) : Exception(message);
+
+/// <summary>GitHub is limiting requests; a batch that reads many files stops on this instead of skipping on.</summary>
+internal sealed class RateLimitedException(string message) : CommunityException(message);
 
 /// <summary>Where the community gallery lives. Only the API and uploads hosts ever receive the person's token.</summary>
 /// <param name="GalleryRepo">The gallery repository, <c>owner/name</c>.</param>
