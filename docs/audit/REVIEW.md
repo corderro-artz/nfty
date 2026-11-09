@@ -2,13 +2,20 @@
 
 Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
 
-Current status: **Complete.** All nine two-pass audits and approved fixes are committed on main.
+Current audit status: **Complete.** All nine two-pass audits and approved fixes are committed on main.
 Audited [2.4.8](https://github.com/corderro-artz/nfty/releases/tag/v2.4.8) and the separately requested
 [2.4.9 Cook cleanup](https://github.com/corderro-artz/nfty/releases/tag/v2.4.9) are published with eight
 verified assets each. [Full after-action report](AFTER-ACTION.md) lists every fix, simplification,
 XML correction, result and limitation. [Final integration](10-final-verification.md).
 
-## Final task checklist
+## Active post-audit work
+
+The user authorized additional Cook safety/naming, settings/association and model preview/lighting
+work after the completed 2.4.9 closeout. [Current batch tracker](12-usability-followups.md) records
+progress, ownership and acceptance. Three agents are authorized; each verified batch receives its
+own main commit, version tag, push and release, beginning with 2.4.10.
+
+## Completed audit task checklist
 
 - [x] Complete both passes across Ticket, Core, Model, CLI, App, Desktop, both samples and tooling.
 - [x] Implement approved correctness, ownership, math, XML and bounded simplification fixes.
@@ -26,9 +33,9 @@ XML correction, result and limitation. [Final integration](10-final-verification
 - [x] Preserve/SHA-256 verify 25,780 evidence files; delete the merged audit branch.
 
 Codex blocks checkout-folder removal: “The task’s primary checkout cannot be removed.” The retained
-folder is detached; active development is `M:/Repositories/nfty` on main. No review/fix/release task
-is awaiting approval. Intentional optional work remains in BACKLOG.md. Maximum two subagents was
-respected. Latest continuation details: [handoff](HANDOFF.md).
+folder is detached; active development is `M:/Repositories/nfty` on main. The original audit/release scope is complete. New authorized work is listed above; intentional
+optional work remains in BACKLOG.md. The two-agent limit applied to the completed audit; the user
+subsequently authorized three for these follow-ups. Latest continuation details: [handoff](HANDOFF.md).
 
 The original stale-main review was rebased onto `5dece661785a75990576f4016eb796558ba75fd4`; readiness
 checks were repeated. Earlier checkpoint stop/no-push notes below are historical records, not the

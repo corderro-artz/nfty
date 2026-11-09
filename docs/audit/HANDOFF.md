@@ -1,3 +1,11 @@
+# Active continuation — post-audit usability
+
+Previous 2.4.9 closeout is fully verified, including final main CI 42532337662. See
+12-usability-followups.md for the newly authorized Cook, settings and preview batches. Three
+workers are active in isolated worktrees; release only verified batches from M:/Repositories/nfty
+main, with successive versions starting 2.4.10. Root serializes .NET work and owns merges/releases.
+Do not mistake the completed audit checklist below for completion of the new requests.
+
 # Completed audit handoff — 2026-11-08
 
 Active development: `M:/Repositories/nfty`, branch main. All nine two-pass reviews and approved
