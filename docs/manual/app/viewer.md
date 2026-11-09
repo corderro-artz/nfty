@@ -46,7 +46,11 @@ The badge beside the title says which:
 | **INFO** rail | Facts about the subject, in tabs (item, traits, links, file). ++i++ extends it across the window; ++esc++ folds it. |
 | **EXPORT** | **Still** saves the 3D frame as a PNG with a clear background. **1x / 2x / 4x / 8x** saves the art at that scale; **Copy** puts it on the clipboard. **glb / gltf / inline** writes the model. |
 
-Camera, edges and turntable are only how you look; none of them reaches an exported model. ++ctrl+w++
+**Light** in the 3D footer controls sets the preview's intensity (0–100) and color (`#RRGGBB`). **Reset**
+restores 100% white light while keeping your camera, edges and turntable. Saved **Still** PNGs
+include the chosen lighting; exported models keep their original textures.
+
+Camera, lighting, edges and turntable are only how you look; none of them reaches an exported model. ++ctrl+w++
 closes the viewer window; ++esc++ closes a dialog open inside it.
 
 ## Sealed files

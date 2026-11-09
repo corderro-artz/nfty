@@ -72,10 +72,10 @@ public sealed partial class ModelPreviewView : UserControl
     private DispatcherTimer? _turntable;
     private long _lastTurn;
 
-    /// <summary>At most one repaint per this long while a gesture is running (about 30 per second): a
-    /// 512px frame costs more than a dispatcher turn at 60 Hz, so an orbit or pan paints at the pace
-    /// it can sustain instead of queueing. Idle changes (a mesh swap, a resize) are never held.</summary>
-    internal static readonly TimeSpan RepaintBudget = TimeSpan.FromMilliseconds(33);
+    /// <summary>At most one repaint per this long while a gesture is running (about 60 per second).
+    /// Measured small and typical frames fit this budget; heavier frames keep coalescing and paint
+    /// at their actual pace. Idle changes (a mesh swap, a resize) are never held.</summary>
+    internal static readonly TimeSpan RepaintBudget = TimeSpan.FromSeconds(1d / 60d);
 
     /// <summary>The clock the budget reads, in <see cref="Stopwatch"/> ticks. A seam so a test can
     /// freeze time and make "inside the budget" deterministic.</summary>
@@ -98,7 +98,7 @@ public sealed partial class ModelPreviewView : UserControl
     private bool Interacting => HostInteracting || _dragOrigin is not null;
 
     /// <summary>True while a repaint has been requested (a camera, mesh, texture or bounds change)
-    /// but not yet drawn. The handle step 7's 30-per-second budget hangs on, and the one tests use:
+    /// but not yet drawn. The handle the repaint budget hangs on, and the one tests use:
     /// <c>Dispatcher.RunJobs</c> is a drain, not a wait, so a test flushes with
     /// <see cref="RepaintNow"/> or asserts this flag directly (the <c>PendingReorder</c> precedent).</summary>
     internal bool RepaintPending { get; private set; }
@@ -193,7 +193,7 @@ public sealed partial class ModelPreviewView : UserControl
         }
         if (_turntable is not null) return;
         _lastTurn = Clock();
-        _turntable = new DispatcherTimer(TimeSpan.FromMilliseconds(33), DispatcherPriority.Render, (_, _) => TurnOnce());
+        _turntable = new DispatcherTimer(RepaintBudget, DispatcherPriority.Render, (_, _) => TurnOnce());
         _turntable.Start();
     }
 
@@ -338,7 +338,7 @@ public sealed partial class ModelPreviewView : UserControl
 
     /// <summary>Requests a repaint and posts at most ONE pending job for it; further triggers while
     /// one is pending post nothing. Camera moves during a drag therefore cost one rasterization per
-    /// dispatcher turn at Render priority, not one per property change. The job is the 30-per-second
+    /// dispatcher turn at Render priority, not one per property change. The job is the 60-per-second
     /// budget's hook for step 7.</summary>
     private void MarkDirty()
     {
@@ -422,7 +422,7 @@ public sealed partial class ModelPreviewView : UserControl
         if (_target is null || _target.Width != width || _target.Height != height)
             _target = new RenderTarget(width, height);
         _target.Clear(new Rgba32(0, 0, 0, 0)); // the WriteableBitmap composites over the control's own themed Background
-        Raster.Render(mesh, texture, vm.CameraState, _target);
+        Raster.Render(mesh, texture, vm.CameraState, _target, vm.Lighting);
         if (vm.Wireframe) Raster.DrawEdges(mesh, vm.CameraState, _target);
 
         var size = new PixelSize(width, height);

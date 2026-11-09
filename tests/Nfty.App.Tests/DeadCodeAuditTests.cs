@@ -78,6 +78,9 @@ public class DeadCodeAuditTests
             {
                 var attrs = m.Groups[1].Value;
                 if (attrs.Contains("Command") || attrs.Contains("Click=")) continue;
+                // Button itself opens a declarative flyout. The Light control exercises this
+                // path with actual keyboard activation, rather than an inert click handler.
+                if (attrs.Contains("Flyout=") || Regex.IsMatch(markup[(m.Index + m.Length)..], @"^\s*<Button\.Flyout(?:\s|>)")) continue;
                 if (bubbles) continue;
 
                 int line = markup.Take(m.Index).Count(c => c == '\n') + 1;

@@ -1,6 +1,9 @@
 using System.Numerics;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Nfty.Model.Render;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Nfty.App.ViewModels;
 
@@ -42,6 +45,59 @@ public sealed partial class ModelPreviewViewModel : ObservableObject
 
     private Vector3 _boundsMin;
     private Vector3 _boundsMax;
+    private Rgba32 _lastLightColor = new(255, 255, 255);
+
+    /// <summary>Preview-only light intensity, clamped from zero through 100.</summary>
+    [ObservableProperty]
+    private int _lightValue = 100;
+
+    /// <summary>The preview light's color as #RRGGBB. Partial or invalid input keeps the last valid light.</summary>
+    [ObservableProperty]
+    private string _lightColor = "#FFFFFF";
+
+    /// <summary>Whether the color field contains a complete #RRGGBB value.</summary>
+    public bool IsLightColorValid => TryLightColor(LightColor, out _);
+
+    /// <summary>The accepted light color for the swatch; incomplete typing does not change its ink.</summary>
+    public string LightColorSwatch => string.Create(CultureInfo.InvariantCulture,
+        $"#{_lastLightColor.R:X2}{_lastLightColor.G:X2}{_lastLightColor.B:X2}");
+
+    /// <summary>The current preview light. It never enters model export or authored data.</summary>
+    public PreviewLighting Lighting => new(LightValue, _lastLightColor);
+
+    partial void OnLightValueChanged(int value)
+    {
+        int clamped = Math.Clamp(value, 0, 100);
+        if (value != clamped) { LightValue = clamped; return; }
+        OnPropertyChanged(nameof(Lighting));
+    }
+
+    partial void OnLightColorChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsLightColorValid));
+        if (!TryLightColor(value, out var color)) return;
+        _lastLightColor = color;
+        OnPropertyChanged(nameof(LightColorSwatch));
+        OnPropertyChanged(nameof(Lighting));
+    }
+
+    private static bool TryLightColor(string? value, out Rgba32 color)
+    {
+        color = default;
+        if (value is not { Length: 7 } || value[0] != '#'
+            || !uint.TryParse(value.AsSpan(1), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out uint rgb))
+            return false;
+        color = new Rgba32((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+        return true;
+    }
+
+    /// <summary>Restores full-strength white light without changing the camera, edges or turntable.</summary>
+    [RelayCommand]
+    private void ResetLighting()
+    {
+        LightValue = 100;
+        LightColor = "#FFFFFF";
+    }
 
     [ObservableProperty]
     private Camera _cameraState;

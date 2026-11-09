@@ -467,6 +467,7 @@
                 <Button Classes="zchip" Classes.on="{Binding IsZoomed}"
                         Command="{Binding ZoomToFitCommand}"
                         Content="{Binding ZoomText}" ToolTip.Tip="{Binding ZoomTip}" />
+                <views:PreviewLightingView DataContext="{Binding Preview}" />
               </StackPanel>
               <TextBlock Grid.Column="1" Classes="readtxt" Text="{Binding ReadoutText}" TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Column="2" Classes="readtxt" Text="{Binding DimensionsText}" />

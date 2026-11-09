@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Nfty.App.Converters"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.PreviewLightingView"
+             x:DataType="vm:ModelPreviewViewModel"
+             Height="{DynamicResource FieldHeightSm}">
+  <UserControl.Resources>
+    <ControlTheme x:Key="LightFlyoutTheme" TargetType="FlyoutPresenter"
+                  BasedOn="{StaticResource {x:Type FlyoutPresenter}}">
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+      <Setter Property="Padding" Value="12" />
+    </ControlTheme>
+  </UserControl.Resources>
+  <!-- Shared by the Rise and viewer footers. The flyout overlays without changing host geometry. -->
+  <!-- The minimum viewer measures 754.33 DIP of strip width before arranging at 755. Existing
+       groups plus this slot's gap use 716: the default 55-wide tray would create another row and
+       hide an info fact. Only this new trigger gives up horizontal padding, measuring 37 with
+       its complete label and leaving rounding room; existing controls keep their geometry. -->
+  <Border Classes="seg bar" Padding="1,2">
+      <Button x:Name="LightButton" Classes="seg-b bar" Content="Light" Padding="0,2"
+              AutomationProperties.Name="Preview lighting"
+              ToolTip.Tip="Preview lighting: intensity and color. Exported models keep their original textures.">
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft" FlyoutPresenterTheme="{StaticResource LightFlyoutTheme}">
+            <StackPanel x:Name="LightControls" Width="240" Spacing="10">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Classes="plabel" Text="PREVIEW LIGHT" VerticalAlignment="Center" />
+                <Button Grid.Column="1" x:Name="ResetLightButton" Classes="seg-b bar" Content="Reset"
+                        Command="{Binding ResetLightingCommand}" ToolTip.Tip="Restore 100% white light. Keep the camera and edges." />
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <TextBlock Text="Value" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" x:Name="LightValueSlider" Minimum="0" Maximum="100"
+                        Value="{Binding LightValue}" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Margin="0,-5,0,5" VerticalAlignment="Center" ToolTip.Tip="Light intensity, from 0 to 100%." />
+                <NumericUpDown Grid.Column="2" Classes="nin" Width="66" Minimum="0" Maximum="100"
+                               Value="{Binding LightValue}" FormatString="0" Increment="1" />
+              </Grid>
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <TextBlock Text="Color" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" x:Name="LightColorBox" Classes="nin" Text="{Binding LightColor}"
+                         MaxLength="7" ToolTip.Tip="Light color as #RRGGBB; incomplete input keeps the last valid light." />
+                <Border Grid.Column="2" Width="26" Height="26" CornerRadius="{DynamicResource RadiusXs}"
+                        BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+                        Background="{Binding LightColorSwatch, Converter={x:Static conv:HexBrushConverter.Instance}}" />
+              </Grid>
+              <TextBlock Text="View only · saved stills include the light" FontSize="10"
+                         Foreground="{DynamicResource FgMutedBrush}" />
+            </StackPanel>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+  </Border>
+</UserControl>

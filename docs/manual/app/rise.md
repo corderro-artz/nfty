@@ -73,6 +73,10 @@ often it crosses. Clear pixels are never touched.
 ++minus++ / ++0++ zoom and fit, and the arrow keys pan while zoomed. In the 3D tile, drag orbits,
 right- or middle-drag pans, the wheel zooms and double-click resets.
 
+**Light** in the bar under the canvas sets the 3D preview's intensity (0–100) and color (`#RRGGBB`). **Reset**
+restores 100% white light without moving the camera. These controls change only the preview;
+saved depth and exported models keep their original data and textures.
+
 ## The DEPTH tab
 
 | Section | Does |

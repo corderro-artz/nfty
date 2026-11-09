@@ -52,6 +52,20 @@ public static class Raster
     /// <exception cref="ArgumentException"><paramref name="texture"/> is not the size of the art the
     /// mesh was risen from — the same rule <c>ModelWriter</c> applies.</exception>
     public static int Render(Mesh mesh, Image<Rgba32> texture, Camera camera, RenderTarget target)
+        => Render(mesh, texture, camera, target, PreviewLighting.Default);
+
+    /// <summary>Draws the same clipped, nearest-neighbor preview as the original overload, with a
+    /// preview-only light intensity and color. <see cref="PreviewLighting.Default"/> preserves the
+    /// original pixels. Texture alpha, depth, projection and exported model data are unchanged.</summary>
+    /// <param name="mesh">The mesh to draw.</param>
+    /// <param name="texture">The face atlas the mesh was built against.</param>
+    /// <param name="camera">The view to draw it from.</param>
+    /// <param name="target">The caller-cleared surface to draw into.</param>
+    /// <param name="lighting">Preview light intensity and RGB color.</param>
+    /// <returns>The number of source triangles surviving clipping and culling.</returns>
+    /// <exception cref="ArgumentException">The texture size disagrees with the mesh.</exception>
+    public static int Render(Mesh mesh, Image<Rgba32> texture, Camera camera, RenderTarget target,
+        PreviewLighting lighting)
     {
         ArgumentNullException.ThrowIfNull(mesh);
         ArgumentNullException.ThrowIfNull(texture);
@@ -66,6 +80,7 @@ public static class Raster
 
         var viewProjection = camera.ViewProjection(target.Width, target.Height);
         var lightDirection = camera.LightDirection;
+        var lightChannels = lighting.Channels;
         var positions = mesh.PositionData;
         var normals = mesh.NormalData;
         var uvs = mesh.TexCoordData;
@@ -127,10 +142,12 @@ public static class Raster
                     count = ClipToNearPlane(a, b, c, polygon);
                 }
 
-                var line0 = AxisLine.For(positions, i0, i1, viewProjection, target);
-                var line1 = AxisLine.For(positions, i1, i2, viewProjection, target);
-                var line2 = AxisLine.For(positions, i2, i0, viewProjection, target);
-                var sampleBounds = TextureBounds.For(a.U, a.V, b.U, b.V, c.U, c.V, texture.Width, texture.Height);
+                // Derive coverage lines and texel bounds only when a projected fan piece survives
+                // culling. Dense voxel meshes have many hidden faces; none needs this setup. The
+                // equations and inputs stay exactly the same, including for clipped triangles.
+                AxisLine line0 = default, line1 = default, line2 = default;
+                TextureBounds sampleBounds = default;
+                bool prepared = false;
 
                 AxisLine Line(ClipVertex from, ClipVertex to) => (from.Edges & to.Edges) switch
                 {
@@ -144,7 +161,7 @@ public static class Raster
                 // (Mesh.cs: a vertex is shared only within its own quad), so any vertex's normal is the
                 // face normal — no cross-product needed, and flat shading falls out for free.
                 var faceNormal = new Vector3(normals[i0 * 3], normals[(i0 * 3) + 1], normals[(i0 * 3) + 2]);
-                float brightness = Brightness(Vector3.Dot(faceNormal, lightDirection));
+                var brightness = lightChannels * Brightness(Vector3.Dot(faceNormal, lightDirection));
 
                 // The clipped polygon is convex and keeps the triangle's winding: fan it, cull each
                 // piece exactly as an unclipped triangle would be.
@@ -166,6 +183,15 @@ public static class Raster
                     if (signedArea >= 0f)
                         continue; // back-facing or degenerate
 
+                    if (!prepared)
+                    {
+                        line0 = AxisLine.For(positions, i0, i1, viewProjection, target);
+                        line1 = AxisLine.For(positions, i1, i2, viewProjection, target);
+                        line2 = AxisLine.For(positions, i2, i0, viewProjection, target);
+                        sampleBounds = TextureBounds.For(a.U, a.V, b.U, b.V, c.U, c.V, texture.Width, texture.Height);
+                        prepared = true;
+                    }
+
                     FillTriangle(s0, s1, s2, brightness, texels, texture.Width, texture.Height, target,
                         Line(polygon[0], polygon[k]), Line(polygon[k], polygon[k + 1]), Line(polygon[k + 1], polygon[0]), sampleBounds);
                     any = true;
@@ -182,7 +208,8 @@ public static class Raster
         }
     }
 
-    /// <summary>Draws the outline of every visible quad over what <see cref="Render"/> already put in
+    /// <summary>Draws the outline of every visible quad over what
+    /// <see cref="Render(Mesh, Image{Rgba32}, Camera, RenderTarget)"/> already put in
     /// <paramref name="target"/>, one pixel wide: the wireframe display. A risen mesh is made of quads
     /// (four vertices, six indices each), so the outlines are the greedy faces' and walls' own edges,
     /// not the triangle diagonals. An outline is drawn only where it lies on the surface the z-buffer
@@ -315,12 +342,12 @@ public static class Raster
     internal static void FillTriangle(
         ScreenVertex v0, ScreenVertex v1, ScreenVertex v2,
         float brightness, ReadOnlySpan<Rgba32> texels, int textureWidth, int textureHeight, RenderTarget target)
-        => FillTriangle(v0, v1, v2, brightness, texels, textureWidth, textureHeight, target, default, default, default,
+        => FillTriangle(v0, v1, v2, new Vector3(brightness), texels, textureWidth, textureHeight, target, default, default, default,
             TextureBounds.For(v0.U, v0.V, v1.U, v1.V, v2.U, v2.V, textureWidth, textureHeight));
 
     private static void FillTriangle(
         ScreenVertex v0, ScreenVertex v1, ScreenVertex v2,
-        float brightness, ReadOnlySpan<Rgba32> texels, int textureWidth, int textureHeight, RenderTarget target,
+        Vector3 brightness, ReadOnlySpan<Rgba32> texels, int textureWidth, int textureHeight, RenderTarget target,
         AxisLine line01, AxisLine line12, AxisLine line20, TextureBounds sampleBounds)
     {
         // Orient so the edge functions below are positive inside; swapping two vertices swaps their
@@ -398,9 +425,9 @@ public static class Raster
 
                 depthBuffer[pixel] = depth;
                 color[pixel] = new Rgba32(
-                    (byte)(texel.R * brightness),
-                    (byte)(texel.G * brightness),
-                    (byte)(texel.B * brightness),
+                    (byte)(texel.R * brightness.X),
+                    (byte)(texel.G * brightness.Y),
+                    (byte)(texel.B * brightness.Z),
                     texel.A);
             }
         }

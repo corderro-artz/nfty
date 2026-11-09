@@ -457,6 +457,11 @@
             </StackPanel>
           </Border>
         </StackPanel>
+        <!-- Its own wrap slot keeps the existing 3D group's width and the minimum footer height.
+             It still follows that group and shares its availability. -->
+        <Border IsEnabled="{Binding CanShowThreeD}">
+          <views:PreviewLightingView DataContext="{Binding Preview}" />
+        </Border>
       </ctl:StripPanel>
     </Border>
 
