@@ -81,6 +81,7 @@ public sealed class GitHubDeviceFlow(HttpClient http, string clientId, Func<Time
             Content = new FormUrlEncodedContent(form.Select(f => new KeyValuePair<string, string>(f.Key, f.Value))),
         };
         request.Headers.Accept.ParseAdd("application/json");
+        request.Headers.UserAgent.ParseAdd("nfty");
         try
         {
             using var response = await http.SendAsync(request, token).ConfigureAwait(false);
@@ -92,6 +93,11 @@ public sealed class GitHubDeviceFlow(HttpClient http, string clientId, Func<Time
                 throw new GitHubAuthException(ShareRules.SignInFailed);
             }
             return doc;
+        }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+        {
+            // The HttpClient's own timeout, not the person canceling.
+            throw new GitHubAuthException(ShareRules.TimedOut);
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException)
         {

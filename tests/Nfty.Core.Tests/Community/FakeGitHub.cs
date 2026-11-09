@@ -10,7 +10,7 @@ namespace Nfty.Core.Tests.Community;
 internal sealed class FakeGitHub : HttpMessageHandler
 {
     /// <summary>One request as it arrived.</summary>
-    public sealed record Recorded(HttpMethod Method, Uri Url, IReadOnlyDictionary<string, string> Headers, string Body)
+    public sealed record Recorded(HttpMethod Method, Uri Url, IReadOnlyDictionary<string, string> Headers, string Body, byte[] BodyBytes)
     {
         /// <summary>The URL's path, without host or query.</summary>
         public string Path => Url.AbsolutePath;
@@ -30,6 +30,25 @@ internal sealed class FakeGitHub : HttpMessageHandler
     public FakeGitHub On(HttpMethod method, string path, HttpStatusCode status, string json,
         IReadOnlyDictionary<string, string>? headers = null)
         => On(method, path, _ => Make(status, json, headers));
+
+    /// <summary>Queues one reply with a raw byte body.</summary>
+    public FakeGitHub OnBytes(HttpMethod method, string path, HttpStatusCode status, byte[] body,
+        IReadOnlyDictionary<string, string>? headers = null)
+        => On(method, path, _ =>
+        {
+            var response = new HttpResponseMessage(status) { Content = new ByteArrayContent(body) };
+            AddHeaders(response, headers);
+            return response;
+        });
+
+    /// <summary>Fails the test when a queued reply was never asked for.</summary>
+    public void AssertAllConsumed()
+    {
+        string[] left;
+        lock (_gate)
+            left = _routes.Where(r => r.Value.Count > 0).Select(r => $"{r.Key.Method} {r.Key.Path} x{r.Value.Count}").ToArray();
+        if (left.Length > 0) Xunit.Assert.Fail("FakeGitHub: scripted replies never used: " + string.Join(", ", left));
+    }
 
     /// <summary>Queues one computed reply for <paramref name="method"/> + <paramref name="path"/>.</summary>
     public FakeGitHub On(HttpMethod method, string path, Func<HttpRequestMessage, HttpResponseMessage> reply)
@@ -52,17 +71,33 @@ internal sealed class FakeGitHub : HttpMessageHandler
     private static HttpResponseMessage Make(HttpStatusCode status, string json, IReadOnlyDictionary<string, string>? headers)
     {
         var response = new HttpResponseMessage(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
-        if (headers is not null)
-            foreach (var (name, value) in headers)
-                if (!response.Headers.TryAddWithoutValidation(name, value))
-                    response.Content.Headers.TryAddWithoutValidation(name, value);
+        AddHeaders(response, headers);
         return response;
+    }
+
+    private static void AddHeaders(HttpResponseMessage response, IReadOnlyDictionary<string, string>? headers)
+    {
+        if (headers is null) return;
+        foreach (var (name, value) in headers)
+            if (!response.Headers.TryAddWithoutValidation(name, value))
+                response.Content!.Headers.TryAddWithoutValidation(name, value);
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        string body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(token);
+        byte[] bytes = [];
+        if (request.Content is not null)
+        {
+            // Read the way a socket would: in 64 KB chunks, never asking the content to buffer itself.
+            using var source = await request.Content.ReadAsStreamAsync(token);
+            using var all = new MemoryStream();
+            var chunk = new byte[64 * 1024];
+            int n;
+            while ((n = await source.ReadAsync(chunk, token)) > 0) all.Write(chunk, 0, n);
+            bytes = all.ToArray();
+        }
+        string body = Encoding.UTF8.GetString(bytes);
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var h in request.Headers) headers[h.Key] = string.Join(", ", h.Value);
         if (request.Content is not null)
@@ -71,7 +106,7 @@ internal sealed class FakeGitHub : HttpMessageHandler
         Func<HttpRequestMessage, HttpResponseMessage>? reply = null;
         lock (_gate)
         {
-            _requests.Add(new Recorded(request.Method, request.RequestUri!, headers, body));
+            _requests.Add(new Recorded(request.Method, request.RequestUri!, headers, body, bytes));
             if (_routes.TryGetValue((request.Method.Method, request.RequestUri!.AbsolutePath), out var queue) && queue.Count > 0)
                 reply = queue.Dequeue();
         }

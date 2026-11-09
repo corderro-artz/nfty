@@ -157,4 +157,22 @@ public class GitHubDeviceFlowTests
 
         Assert.Empty(fake.Requests);
     }
+
+    [Fact]
+    public async Task Requests_carry_the_nfty_user_agent()
+    {
+        var fake = Script().Ok(HttpMethod.Post, CodePath, CodeJson());
+        var (flow, _) = Flow(fake);
+        await flow.StartAsync(CancellationToken.None);
+        Assert.Equal("nfty", Assert.Single(fake.Requests).Headers["User-Agent"]);
+    }
+
+    [Fact]
+    public async Task A_timeout_is_a_sentence_not_a_silent_cancel()
+    {
+        var fake = Script().On(HttpMethod.Post, CodePath, _ => throw new TaskCanceledException("timed out"));
+        var (flow, _) = Flow(fake);
+        var ex = await Assert.ThrowsAsync<GitHubAuthException>(() => flow.StartAsync(CancellationToken.None));
+        Assert.Equal(ShareRules.TimedOut, ex.Message);
+    }
 }

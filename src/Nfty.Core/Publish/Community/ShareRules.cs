@@ -164,6 +164,22 @@ public static class ShareRules
     public static string Offline(DateTime time) =>
         $"GitHub can't be reached. Showing the list from {time.ToString("HH:mm", CultureInfo.InvariantCulture)}.";
 
+    /// <summary>GitHub is limiting requests; says how long to wait.</summary>
+    public static string RateLimited(int minutes) =>
+        $"GitHub is limiting requests. Try again in {minutes} {(minutes == 1 ? "minute" : "minutes")}.";
+
+    /// <summary>GitHub answered no to a request.</summary>
+    public static string GitHubRefused => "GitHub refused the request.";
+
+    /// <summary>GitHub can't be reached.</summary>
+    public static string Unreachable => "GitHub can't be reached. Check your connection and try again.";
+
+    /// <summary>GitHub did not answer in time.</summary>
+    public static string TimedOut => "GitHub didn't answer in time. Try again.";
+
+    /// <summary>GitHub's answer was not what nfty expects.</summary>
+    public static string GitHubUnexpected => "GitHub's answer wasn't what nfty expected. Try again.";
+
     /// <summary>The user refused the GitHub sign-in.</summary>
     public static string SignInCanceled => "GitHub sign-in was canceled.";
 
