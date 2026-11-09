@@ -411,7 +411,14 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     public void Select(SetItemRow? row)
     {
         if (row is null) return;
-        SelectedItem = row;
+        SelectedItem = ReferenceEquals(SelectedItem, row) ? null : row;
+    }
+
+    [RelayCommand]
+    private void ClearSelection()
+    {
+        SelectedItem = null;
+        Hover(null);
     }
 
     /// <summary>Opens a cooked Set for browsing.</summary>

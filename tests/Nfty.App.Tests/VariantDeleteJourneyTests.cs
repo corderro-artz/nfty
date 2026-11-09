@@ -11,6 +11,13 @@ using Nfty.Core.Model;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
+using Avalonia.Controls;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia;
+using Point = Avalonia.Point;
 
 namespace Nfty.App.Tests;
 
@@ -30,6 +37,81 @@ namespace Nfty.App.Tests;
 /// </remarks>
 public class VariantDeleteJourneyTests
 {
+    [AvaloniaFact]
+    public async Task Rendered_delete_enables_after_unlock_and_real_confirmation_persists()
+    {
+        var (path, session) = OnDisk();
+        var dialogs = new DialogService();
+        using var vm = Explorer(session, dialogs);
+        var pane = Pane(vm);
+        var view = new Nfty.App.Views.IngredientDetailView { DataContext = pane };
+        var window = new Window { Content = view, Width = 900, Height = 650 };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var button = view.GetVisualDescendants().OfType<Button>()
+                .Single(b => Equals(b.Content, "Delete variant"));
+            Assert.False(button.IsEffectivelyEnabled);
+            vm.ToggleLockCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(button.IsEffectivelyEnabled);
+            var at = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Assert.IsType<ConfirmDialogViewModel>(dialogs.Active).ConfirmCommand.Execute(null);
+            await pane.DeleteVariantCommand.ExecutionTask!;
+            using var reread = CookBookArchive.Read(path);
+            Assert.Equal(new[] { "spark", "haze" }, reread.Recipes[0].Ingredients[0].Manifest.Variants.Select(v => v.Id));
+        }
+        finally { window.Close(); session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+
+    [AvaloniaFact]
+    public async Task Variant_reorder_and_names_survive_reopening_the_archive()
+    {
+        var (path, session) = OnDisk();
+        var dialogs = new DialogService();
+        using var vm = Explorer(session, dialogs);
+        try
+        {
+            vm.ToggleLockCommand.Execute(null);
+            var pane = Pane(vm);
+            var view = new Nfty.App.Views.IngredientDetailView { DataContext = pane };
+            var window = new Window { Content = view, Width = 900, Height = 650 };
+            try
+            {
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                var rows = view.GetVisualDescendants().OfType<Button>().Where(b => b.DataContext is VariantRow).ToArray();
+                var from = rows.Last().TranslatePoint(new Point(20, rows.Last().Bounds.Height / 2), window)!.Value;
+                var to = rows.First().TranslatePoint(new Point(20, 2), window)!.Value;
+                Assert.True(pane.CanReorder);
+                Assert.True(from.Y < window.Bounds.Height, $"Row outside window: {from}, window {window.Bounds}");
+                Assert.Contains((window.InputHitTest(from) as Visual)!.GetSelfAndVisualAncestors(), v => ReferenceEquals(v, rows.Last()));
+                window.MouseDown(from, MouseButton.Left);
+                window.MouseMove(to);
+                window.MouseUp(to, MouseButton.Left);
+                await view.PendingReorder;
+            }
+            finally { window.Close(); }
+            using (var reread = CookBookArchive.Read(path))
+                Assert.Equal(new[] { "haze", "glow", "spark" }, reread.Recipes[0].Ingredients[0].Manifest.Variants.Select(v => v.Id));
+            foreach (var node in new[] { vm.Root.Children[0], vm.Root.Children[0].Children[0] })
+            {
+                vm.SelectNodeCommand.Execute(node);
+                var editing = vm.EditSelectedCommand.ExecuteAsync(null);
+                var form = Assert.IsType<ItemSettingsDialogViewModel>(dialogs.Active);
+                form.Name = node.Name + " edited";
+                await form.SaveCommand.ExecuteAsync(null);
+                await editing;
+            }
+            using var saved = CookBookArchive.Read(path);
+            Assert.Equal("Cat edited", saved.Recipes[0].Manifest.Name);
+            Assert.Equal("Aura edited", saved.Recipes[0].Ingredients[0].Manifest.Name);
+        }
+        finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
     private sealed class Answering(bool answer) : IDialogService
     {
         public ViewModelBase? Active { get; private set; }

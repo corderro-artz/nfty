@@ -86,7 +86,7 @@
               </Border>
             </StackPanel>
           </StackPanel>
-          <Button Grid.Column="2" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" ToolTip.Tip="Edit ingredient"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
+          <Button Grid.Column="2" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" ToolTip.Tip="Edit variant images, names and weights"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
 
           <!-- .rarity: how the layer's weight actually splits, at a glance. The table below carries
                the same numbers, but a column of percentages does not show the SHAPE of the split. -->
@@ -239,7 +239,8 @@
              browser's rarity rail keeps. -->
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
-        <ItemsControl ItemsSource="{Binding Variants}" VerticalAlignment="Top">
+        <ItemsControl Name="VariantRows" ItemsSource="{Binding Variants}" VerticalAlignment="Top"
+                      ToolTip.Tip="Drag variants to reorder. Alt+Up / Alt+Down moves the focused variant. Unlock editing to save order.">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <!-- CLICKABLE, and the same shape the Recipe pane's layer table uses: a ghost Button
@@ -266,9 +267,13 @@
         </ScrollViewer>
       </Grid>
 
-      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+      <StackPanel Grid.Row="2" Spacing="4">
+      <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="Delete variant" Command="{Binding DeleteVariantCommand}" Classes="tbtn"
                 ToolTip.Tip="{Binding DeleteVariantTip}" />
+        <Button Classes="tbtn" Command="{Binding ClearSelectionCommand}" ToolTip.Tip="Clear variant selection">
+          <Path Classes="ico sm" Data="{StaticResource IconClose}" />
+        </Button>
         <!-- The CLI's preview: writes this variant as generation would render it. The GUI could not
              get a rendered PNG out at all short of cooking a whole Set. -->
         <Button Command="{Binding ExportPreviewCommand}" Classes="tbtn"
@@ -286,6 +291,8 @@
             <TextBlock Text="Rise" />
           </StackPanel>
         </Button>
+      </StackPanel>
+      <TextBlock Text="{Binding DeleteVariantTip}" Classes="keyhint" Height="16" TextTrimming="CharacterEllipsis" />
       </StackPanel>
     </Grid>
 
