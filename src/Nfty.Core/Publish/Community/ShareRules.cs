@@ -1,0 +1,159 @@
+using System.Globalization;
+
+namespace Nfty.Core.Publish.Community;
+
+/// <summary>The community gallery's limits and every sentence that refuses a share or a download, so each surface says the same thing.</summary>
+public static class ShareRules
+{
+    /// <summary>Largest canvas side, in pixels.</summary>
+    public const int MaxCanvas = 512;
+    /// <summary>Most assets in a shared Set.</summary>
+    public const int MaxAssets = 1000;
+    /// <summary>Most collections one account shares.</summary>
+    public const int MaxShares = 3;
+    /// <summary>Longest share name, in characters.</summary>
+    public const int MaxNameLength = 64;
+    /// <summary>Longest description, in characters.</summary>
+    public const int MaxDescriptionLength = 500;
+    /// <summary>Most tags on a share.</summary>
+    public const int MaxTags = 5;
+    /// <summary>Most entries in a Set's archive.</summary>
+    public const int MaxZipEntries = 6000;
+    /// <summary>Largest allowed expansion of one archive entry (uncompressed to compressed).</summary>
+    public const int MaxEntryRatio = 100;
+    /// <summary>Longest preview picture side, in pixels.</summary>
+    public const int MaxPreviewSide = 2048;
+    /// <summary>Largest repository history, in KB as GitHub reports it.</summary>
+    public const int MaxHistoryKb = 5120;
+    /// <summary>Youngest GitHub account that may share, in days.</summary>
+    public const int MinAccountAgeDays = 30;
+    /// <summary>Largest packed <c>.set</c>, in bytes (200 MB).</summary>
+    public const long MaxSetBytes = 209_715_200;
+    /// <summary>Most a Set's archive may expand to, in bytes (1 GiB).</summary>
+    public const long MaxUncompressedBytes = 1_073_741_824;
+    /// <summary>Largest preview picture, in bytes (2 MB).</summary>
+    public const long MaxPreviewBytes = 2_097_152;
+
+    private static string N(long n) => n.ToString("N0", CultureInfo.InvariantCulture);
+
+    /// <summary>The canvas is past the limit.</summary>
+    public static string CanvasTooLarge(int width, int height) =>
+        $"The canvas is {N(width)} x {N(height)}; the gallery takes up to {MaxCanvas} x {MaxCanvas}.";
+
+    /// <summary>The Set has too many assets.</summary>
+    public static string TooManyAssets(int count) =>
+        $"This Set has {N(count)} assets; the gallery takes up to {N(MaxAssets)}.";
+
+    /// <summary>The packed Set is too big; names the 3D models' share when leaving them out would help.</summary>
+    public static string SetTooLarge(long bytes, long modelsBytes)
+    {
+        var head = $"{SizeText.Of(bytes)} — the gallery takes up to {SizeText.Of(MaxSetBytes)}.";
+        return modelsBytes > 0
+            ? $"{head} Leave out 3D models (−{SizeText.Of(modelsBytes)}) or share fewer assets."
+            : $"{head} Share fewer assets.";
+    }
+
+    /// <summary>A sealed Set.</summary>
+    public static string Sealed => "Sealed Sets can't be shared or come from the gallery.";
+
+    /// <summary>The file is not a Set.</summary>
+    public static string NotASet => "This file isn't a Set nfty can open.";
+
+    /// <summary>The archive is unsafe to open.</summary>
+    public static string UnsafeArchive(string reason) => $"This Set's archive is unsafe to open: {reason}.";
+
+    /// <summary>Reason: too many entries.</summary>
+    public const string ReasonTooManyFiles = "too many files";
+    /// <summary>Reason: expands past the limits.</summary>
+    public const string ReasonExpandsTooFar = "it expands too far";
+    /// <summary>Reason: an entry name escapes the archive.</summary>
+    public const string ReasonNameLeaves = "a file name leaves the archive";
+    /// <summary>Reason: a link entry.</summary>
+    public const string ReasonHoldsLink = "it holds a link";
+
+    /// <summary>An entry no Set holds.</summary>
+    public static string UnexpectedFile(string path) => $"'{path}' isn't part of a Set.";
+
+    /// <summary>The CookBook inside is not the one that made the Set.</summary>
+    public static string ForeignBook => "The CookBook inside isn't the one that made this Set.";
+
+    /// <summary>A marketplace export with renamed files.</summary>
+    public static string RenamedExport => "This is a marketplace export with renamed files, not a Set.";
+
+    /// <summary>An asset picture can't be read.</summary>
+    public static string ImageUnreadable(string file) => $"The picture '{file}' is missing or can't be read.";
+
+    /// <summary>An asset picture is not the canvas size.</summary>
+    public static string ImageWrongSize(string file) => $"The picture '{file}' isn't the size of the canvas.";
+
+    /// <summary>The Set's asset count disagrees with its files.</summary>
+    public static string CountMismatch => "The number of assets doesn't match the pictures and metadata in this Set.";
+
+    /// <summary>The canvas disagrees with the pictures.</summary>
+    public static string CanvasMismatch => "The canvas size doesn't match the size of the pictures in this Set.";
+
+    /// <summary>The name is empty or too long.</summary>
+    public static string NameLength => $"A name takes 1 to {MaxNameLength} characters.";
+
+    /// <summary>The description is too long.</summary>
+    public static string DescriptionLength => $"A description takes up to {MaxDescriptionLength} characters.";
+
+    /// <summary>A link in a name or description.</summary>
+    public static string NoLinks => "Names and descriptions can't contain links.";
+
+    /// <summary>Too many tags.</summary>
+    public static string TooManyTags => $"A share takes up to {MaxTags} tags.";
+
+    /// <summary>A tag outside the list.</summary>
+    public static string UnknownTag(string tag) => $"'{tag}' isn't one of the gallery's tags.";
+
+    /// <summary>The preview picture is unusable.</summary>
+    public static string PreviewBad => "The preview picture is missing, too big or unreadable.";
+
+    /// <summary>A download that doesn't match its listed hash.</summary>
+    public static string HashMismatch => "The download doesn't match what the gallery lists, so it was not opened.";
+
+    /// <summary>Someone already shares this Set.</summary>
+    public static string AlreadyListed(string login) => $"This Set is already in the gallery, shared by @{login}.";
+
+    /// <summary>The user already shares this Set.</summary>
+    public static string AlreadySharedAs(string name) => $"You already share this Set as \"{name}\".";
+
+    /// <summary>The share would change nothing.</summary>
+    public static string NothingChanged(string name, DateTimeOffset date) =>
+        $"Nothing changed since you shared \"{name}\" on {date.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}.";
+
+    /// <summary>An update needs the replace box ticked.</summary>
+    public static string ReplaceNotChosen => "Tick Replace the shared version to update it.";
+
+    /// <summary>The user is at the share limit.</summary>
+    public static string AtShareLimit => "You share 3 collections, the most the gallery takes. Pick one to replace.";
+
+    /// <summary>The slug is taken by a different collection of the user's.</summary>
+    public static string SlugTaken(string name) =>
+        $"You already share a different collection as \"{name}\". Rename this one to share it too.";
+
+    /// <summary>A repository named nfty-public that nfty did not make.</summary>
+    public static string RepoNotOurs =>
+        "You already have a repository called nfty-public that nfty didn't make. Rename or remove it on GitHub, then share again.";
+
+    /// <summary>The nfty-public repository is private.</summary>
+    public static string RepoPrivate => "Your nfty-public repository is private; the gallery reads only public ones.";
+
+    /// <summary>The repository holds things the gallery doesn't allow.</summary>
+    public static string RepoExtras => "Your nfty-public holds things the gallery doesn't allow. Remove them to share.";
+
+    /// <summary>The repository history is past the limit.</summary>
+    public static string HistoryTooLarge(long kb) =>
+        $"Your nfty-public's history holds about {N((kb + 512) / 1024)} MB of deleted files. Delete the repository on GitHub and share again; nfty will make a fresh one.";
+
+    /// <summary>The GitHub token is gone or refused.</summary>
+    public static string Reconnect => "Reconnect GitHub to share.";
+
+    /// <summary>GitHub can't be reached; a cached list is shown.</summary>
+    public static string Offline(DateTime time) =>
+        $"GitHub can't be reached. Showing the list from {time.ToString("HH:mm", CultureInfo.InvariantCulture)}.";
+
+    /// <summary>The index is newer than this build understands.</summary>
+    public static string IndexTooNew => "The community gallery needs a newer nfty. Update to see the latest list.";
+}
