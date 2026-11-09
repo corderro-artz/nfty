@@ -20,7 +20,57 @@ public static class CommunitySchema
         throw new Nfty.Core.Formats.UnsupportedSchemaVersionException(version, Current,
             version > Current
                 ? ShareRules.IndexTooNew
-                : $"The community gallery list declares schemaVersion {version}, which this nfty no longer reads.");
+                : ShareRules.ListTooOld(version));
+    }
+
+    /// <summary>Gates the document's version and every entry's BEFORE any typed read, so a newer shape is named, never a parse error.</summary>
+    internal static void Peek(byte[] bytes, string arrayName)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(bytes);
+            var root = doc.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object || !Version(root, out var v))
+                throw new InvalidDataException(ShareRules.ListDamaged);
+            Require(v);
+            if (root.TryGetProperty(arrayName, out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                foreach (var el in arr.EnumerateArray())
+                    if (el.ValueKind == System.Text.Json.JsonValueKind.Object && Version(el, out var ev)) Require(ev);
+        }
+        catch (System.Text.Json.JsonException) { throw new InvalidDataException(ShareRules.ListDamaged); }
+    }
+
+    private static bool Version(System.Text.Json.JsonElement o, out int v)
+    {
+        v = 0;
+        return o.TryGetProperty("schemaVersion", out var e) && e.ValueKind == System.Text.Json.JsonValueKind.Number && e.TryGetInt32(out v);
+    }
+
+    /// <summary>Peeks, deserializes (a shape failure is "damaged") and returns the document.</summary>
+    internal static T Load<T>(Stream stream, string arrayName) where T : class
+    {
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        var bytes = ms.ToArray();
+        Peek(bytes, arrayName);
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<T>(bytes, Nfty.Core.Formats.Json.Options)
+                ?? throw new InvalidDataException(ShareRules.ListDamaged);
+        }
+        catch (System.Text.Json.JsonException) { throw new InvalidDataException(ShareRules.ListDamaged); }
+    }
+
+    /// <summary>Refuses an entry with a missing required member.</summary>
+    internal static void Verify(IReadOnlyList<CommunityEntry>? entries)
+    {
+        if (entries is null) throw new InvalidDataException(ShareRules.ListDamaged);
+        foreach (var e in entries)
+            if (e is null || e.Slug is null || e.Owner?.Login is null || e.Repo is null || e.Release is null
+                || e.Name is null || e.Collection is null || e.Tags is null || e.Tags.Any(t => t is null)
+                || e.Canvas is null || e.Set?.Url is null || e.Set.Sha256 is null || e.Preview?.Url is null
+                || e.Preview.Sha256 is null || e.Fingerprint is null)
+                throw new InvalidDataException(ShareRules.ListDamaged);
     }
 }
 

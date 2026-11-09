@@ -164,4 +164,11 @@ public static class ShareRules
 
     /// <summary>The entry's dates disagree with its history.</summary>
     public static string DatesMismatch => "The share's dates don't match its history.";
+
+    /// <summary>The list or file the gallery fetched is not readable.</summary>
+    public static string ListDamaged => "The community gallery list is damaged.";
+
+    /// <summary>The list is older than this nfty reads.</summary>
+    public static string ListTooOld(int version) =>
+        $"The community gallery list is in an old format (version {version}) this nfty no longer reads.";
 }

@@ -113,4 +113,37 @@ public class CommunityIndexTests
         Assert.Equal(ShareRules.DatesMismatch, CommunityDates.Problem(Entry(updated: pr.AddHours(1).AddMinutes(1)), null, pr));
         Assert.Null(CommunityDates.Problem(Entry(updated: pr.AddHours(1)), null, pr));
     }
+
+    [Fact]
+    public void A_newer_index_is_refused_even_when_its_shape_changed()
+    {
+        var ex = Assert.Throws<UnsupportedSchemaVersionException>(() =>
+            CommunityIndex.Read(S("{\"schemaVersion\":2,\"entries\":\"flat\"}")));
+        Assert.Equal(ShareRules.IndexTooNew, ex.Message);
+        Assert.Throws<UnsupportedSchemaVersionException>(() =>
+            PublicRepoManifest.Read(S("{\"schemaVersion\":2,\"shares\":7}")));
+        Assert.Throws<UnsupportedSchemaVersionException>(() => CommunityIndex.Read(S(
+            "{\"schemaVersion\":1,\"entries\":[{\"schemaVersion\":2,\"owner\":5}]}")));
+    }
+
+    [Theory]
+    [InlineData("{\"schemaVersion\":1,\"generated\":\"2026-11-01T10:00:00+00:00\"}")]
+    [InlineData("{\"schemaVersion\":1,\"generated\":\"2026-11-01T10:00:00+00:00\",\"entries\":[null]}")]
+    [InlineData("{\"schemaVersion\":1,\"generated\":\"2026-11-01T10:00:00+00:00\",\"entries\":\"x\"}")]
+    public void A_damaged_index_is_refused_in_product_words(string json)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => CommunityIndex.Read(S(json)));
+        Assert.Equal(ShareRules.ListDamaged, ex.Message);
+    }
+
+    [Fact]
+    public void An_entry_missing_a_member_is_refused()
+    {
+        var good = Encoding.UTF8.GetString(CommunityIndex.Write(new CommunityIndex(1, T0, new[] { Entry() })));
+        var noSet = good.Replace("\"set\":", "\"setx\":");
+        Assert.Equal(ShareRules.ListDamaged, Assert.Throws<InvalidDataException>(() => CommunityIndex.Read(S(noSet))).Message);
+        var nullTag = good.Replace("\"pixel\"", "null");
+        Assert.Equal(ShareRules.ListDamaged, Assert.Throws<InvalidDataException>(() => CommunityIndex.Read(S(nullTag))).Message);
+        Assert.Throws<InvalidDataException>(() => PublicRepoManifest.Read(S("{\"schemaVersion\":1}")));
+    }
 }

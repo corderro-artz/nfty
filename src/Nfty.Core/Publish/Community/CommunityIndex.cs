@@ -15,10 +15,8 @@ public sealed record CommunityIndex(int SchemaVersion, DateTimeOffset Generated,
     /// <param name="stream">The JSON.</param>
     public static CommunityIndex Read(Stream stream)
     {
-        var index = JsonSerializer.Deserialize<CommunityIndex>(stream, Json.Options)
-            ?? throw new InvalidDataException("The community list is empty.");
-        CommunitySchema.Require(index.SchemaVersion);
-        foreach (var e in index.Entries) CommunitySchema.Require(e.SchemaVersion);
+        var index = CommunitySchema.Load<CommunityIndex>(stream, "entries");
+        CommunitySchema.Verify(index.Entries);
         return index;
     }
 
@@ -43,10 +41,8 @@ public sealed record PublicRepoManifest(int SchemaVersion, IReadOnlyList<Communi
     /// <param name="stream">The JSON.</param>
     public static PublicRepoManifest Read(Stream stream)
     {
-        var m = JsonSerializer.Deserialize<PublicRepoManifest>(stream, Json.Options)
-            ?? throw new InvalidDataException("nfty-public.json is empty.");
-        CommunitySchema.Require(m.SchemaVersion);
-        foreach (var e in m.Shares) CommunitySchema.Require(e.SchemaVersion);
+        var m = CommunitySchema.Load<PublicRepoManifest>(stream, "shares");
+        CommunitySchema.Verify(m.Shares);
         return m;
     }
 
