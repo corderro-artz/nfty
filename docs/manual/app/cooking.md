@@ -10,8 +10,8 @@ to see any problems. The lock does not need to be open.
 
 1. Select the CookBook in the Explorer and click **Cook Set**.
 
-    ![The Cook dialog: count, seed, recipe, and the pack, repeats and 3D models options](../images/cook-dialog-light.png#only-light)
-    ![The Cook dialog: count, seed, recipe, and the pack, repeats and 3D models options](../images/cook-dialog-dark.png#only-dark)
+    ![The Cook dialog: count, seed, recipe, packing, repeats, folder naming and 3D models](../images/cook-dialog-light.png#only-light)
+    ![The Cook dialog: count, seed, recipe, packing, repeats, folder naming and 3D models](../images/cook-dialog-dark.png#only-dark)
 
 2. Fill in the options:
 
@@ -22,9 +22,18 @@ to see any problems. The lock does not need to be open.
     | **RECIPE** | Every Recipe by its weight (the default), or one Recipe only. |
     | **Pack into a single .set** | Also write the folder as one `.set` archive, inside the folder. |
     | **Allow repeats** | Accept repeated DNA, removing the uniqueness limit. Rules and bounded retries still apply; identity becomes the token number. See [Allowing repeats](../concepts/uniqueness.md#allowing-repeats). |
+    | **Name after CookBook** | Choose a parent folder and cook into a child named after the CookBook. Off by default. The name uses lowercase letters, numbers and hyphens: **Chests Demo** becomes `chests-demo`. Hover over the option to preview the folder name. |
     | **Include 3D models** | Also write a model of every asset into `models/`. See [below](#cook-with-3d-models). |
 
-3. Click **Cook** and choose an **empty** folder.
+3. Click **Cook**. With **Name after CookBook** off, choose an **empty** folder. With it on, choose
+   the **parent** folder; nfty creates the named child inside it. That parent can already contain
+   other files.
+
+The output folder must be empty, new, or an existing readable Set. If another file or a populated
+non-Set folder occupies the named child, the cook is refused; nfty does not silently replace it or
+choose a different name. For a nonempty folder such as your Desktop, enable **Name after CookBook**
+to keep the new Set in its own child folder, or choose an empty folder instead. Packing writes the
+archive inside the output folder, for example `chests-demo/chests-demo.set`.
 
 A progress bar runs while the assets are rolled and written; **Cancel** stops it, and the files that
 cook added are removed. Existing images and DNA are kept, although a canceled extend can already
@@ -39,7 +48,9 @@ to browse it in the [Set browser](set-browser.md). What the folder holds is in
 
 ## Add assets to an existing Set
 
-Choose a folder that **already holds a Set** in step 3. nfty extends it instead of overwriting it:
+With **Name after CookBook** off, choose a folder that **already holds a Set** in step 3. With it on,
+choose that Set's parent: an existing readable Set in the named child is extended. Check the folder
+name in the option's tooltip before choosing the parent. nfty extends that Set:
 
 - **COUNT** becomes the number to **add**; the dialog shows the resulting total (`→ 750 total`).
 - Existing images and DNA are kept, and numbering continues. With unique DNA required, new DNA
@@ -55,7 +66,7 @@ The command-line equivalent is `nfty extend`; see [Cook, extend and model](../cl
 ## Cook with 3D models
 
 Tick **Include 3D models** and every asset also gets a glTF model in `models/`, named like its image
-(`0001.glb`). **Model options** opens a row for:
+(`0001.glb`). Click the chevron beside the box (**Model options** in its tooltip) to open a row for:
 
 | Option | Choices |
 |---|---|
@@ -68,7 +79,7 @@ so paint depth first on the [Rise page](rise.md) if you want relief. An asset wi
 opaque gets no model and is counted in the result.
 
 If **Include 3D models** is dimmed, the book is **2D only**: some variant has partly transparent
-pixels. The line beside the box says how many; see [Fix a 2D-only book](2d-only.md).
+pixels. The line below the options says how many; see [Fix a 2D-only book](2d-only.md).
 
 ## If the book cannot make enough
 

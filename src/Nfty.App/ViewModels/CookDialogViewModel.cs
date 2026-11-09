@@ -59,6 +59,16 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
     }
     [ObservableProperty] private bool _pack;
 
+    /// <summary>Choose a parent folder and cook into its CookBook-named child instead of directly
+    /// into the selected folder. Off by default; an existing readable Set child is extended.</summary>
+    [ObservableProperty] private bool _nameFolderAfterCookBook;
+
+    /// <summary>The portable, lowercase, hyphenated child folder name derived from this CookBook.</summary>
+    public string OutputFolderName => CookOutputDirectory.Slug(_book.Manifest.Name);
+
+    /// <summary>Explains parent selection and extension without adding a changing layout row.</summary>
+    public string NamedFolderHint => $"Choose a parent folder. Cook into '{OutputFolderName}' inside it; an existing Set there is extended. Other nonempty folders are refused.";
+
     /// <summary>Accept every roll instead of requiring each asset to have distinct DNA.</summary>
     /// <remarks>
     /// The engine has always supported this and the CLI has always exposed it as <c>--unlimited</c>;
@@ -339,13 +349,18 @@ public partial class CookDialogViewModel : ViewModelBase, IUnsavedWork, ICancell
             // cancellation here too; a later picker answer must not start a new write.
             await ScanTask;
             cts.Token.ThrowIfCancellationRequested();
-            var dir = await _picker.PickFolderAsync("Cook to folder");
-            if (dir is null) return;
+            bool namedFolder = NameFolderAfterCookBook;
+            string folderName = OutputFolderName;
+            var selected = await _picker.PickFolderAsync(namedFolder ? $"Choose parent folder for {folderName}" : "Cook to folder");
+            if (selected is null) return;
             cts.Token.ThrowIfCancellationRequested();
+            var dir = namedFolder ? Path.Combine(selected, folderName) : selected;
 
             var par = Threads;
             ProvenanceWarning = "";
             IsRunning = true; IsDone = false; Progress = 0;
+            PhaseText = "Checking output folder…";
+            await CookOutputDirectory.ValidateAsync(dir, cts.Token, par);
             // EXTEND, when the folder already holds a Set. This is the `extend` command's whole
             // mechanism - CLAUDE.md: "not a second pipeline, the same Generator.Generate call with
             // its existingDnas / startNumber supplied" - and until now the GUI never supplied them.
