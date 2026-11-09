@@ -1,73 +1,81 @@
 # Open files with nfty on Windows
 
-Make double-clicking a CookBook, a Set, a picture or a model in File Explorer open it in nfty, or in
-the nfty viewer on its own. This is a Windows feature: on Linux and macOS the SYSTEM tab is not
-there.
+Register selected file types for the nfty app or its read-only viewer, then choose their defaults in
+Windows Settings. The **SYSTEM** tab is available on Windows; it is absent on Linux and macOS.
 
-nfty registers nothing until you ask. Everything it writes is **per user** (under
-`HKEY_CURRENT_USER`), so no administrator rights are needed, and **Remove** takes back exactly what it
-wrote.
+nfty registers nothing until you ask. Registration is **per user** and needs no administrator rights.
+Registering a program and choosing the program Windows opens by default are separate actions.
 
 ## Choose what opens where
 
-1. Open **Settings** (the gear in the status bar) and the **SYSTEM** tab.
-2. Choose a target for each row:
+1. Open **Settings** (the sliders button at the right end of the status bar), then **SYSTEM**.
+2. Check the extensions you want to change, or use **All**. The selection count shows how many file
+   types the next action includes. Changing a checkbox does not write anything.
+3. Choose **App** or **Viewer**, then press **Register**.
 
-    | Row | Files | Choices | Suggested |
-    |---|---|---|---|
-    | **NFTY FILES** | `.cbk` `.rcp` `.igt` `.set` `.tin` `.ktn` `.mnu` | Off, **App**, **Viewer** | App |
-    | **PICTURES, 3D** | `.png` `.jpg` `.jpeg` `.glb` `.gltf` | Off, **Viewer** | Viewer |
-    | **METADATA** | `.json` | Off, **Viewer** | Off |
+Only the selected extensions change. Unselected registrations, including entries pointing at another
+copy of nfty, are preserved. On opening the card, existing registrations are selected; clear **All**
+first if you want to change just one.
 
-3. Press **Apply**. The **REGISTRATION** chip reads **registered**, and the line under it says how many
-   file types now open with this copy of nfty.
+| Target | Opens |
+|---|---|
+| **App** | Editable nfty archives in the app: `.cbk`, `.rcp`, `.igt`, `.set`, `.tin`, and `.ktn`. |
+| **Viewer** | Any supported type in the read-only [viewer](viewer.md), without the app shell. |
 
-What the targets do:
-
-- **App** opens the file the way a Recent row would: a CookBook in the Explorer, a Set in the Set
-  browser, a `.tin` behind its passphrase, a Kitchen as the open workspace. A Menu (`.mnu`) always
-  opens in the viewer, because the app does not edit one.
-- **Viewer** opens the file in the [viewer](viewer.md) alone, with no app window behind it, read-only.
-  An archive opens as a gallery; a picture, model or metadata file opens on its own.
-- **METADATA** starts Off because most `.json` files are not asset metadata. The viewer shows the ones
-  in a Set's `metadata/` or `nfty/` folder and says so for any other.
+A Menu (`.mnu`), picture (`.png`, `.jpg`, `.jpeg`), model (`.glb`, `.gltf`) or JSON file always uses
+**Viewer**, including when **App** is selected. A `.tin` still asks for its passphrase. JSON files
+must contain supported asset metadata; registering `.json` does not make arbitrary JSON viewable.
 
 Each double-click starts its own nfty process, so two files open in two windows.
 
-## Make nfty the default for pictures, models and JSON
+## Choose the Windows defaults
 
-For nfty's own extensions, **Apply** sets the default only when it is empty or already belongs to
-nfty. Another program's default is preserved. If Windows already has a different choice for an
-extension, select nfty through **Default apps…**.
+**Register** adds nfty to the selected types' **Open with** lists and registers its capabilities for
+**Default apps**. It does not override a protected Windows default, for any extension.
 
-For `.png`, `.jpg`, `.glb`, `.gltf` and `.json`, Windows does not let *any* program make itself the
-default. Since Windows 10 the default is recorded in a per-user `UserChoice` key protected by a hash
-that only Windows' own settings can write, so the choice is always yours. **Apply** adds nfty to those
-types' **Open with** list and to Windows' **Default apps**, and stops there.
+For nfty's archive extensions, an empty or already-owned per-user class default can point at nfty.
+Another program's class default is preserved. Windows' protected effective choice still takes
+precedence, so registration alone does not prove double-clicks will open this copy.
 
-To finish:
+1. Press **Default apps…**. On Windows 11 23H2 or newer, this opens nfty's page. Older versions open
+   the general **Default apps** page; find nfty there.
+2. Choose the file types Windows should open with nfty.
+3. Return to nfty and press **Refresh** to read the result.
 
-1. Press **Default apps…**. Windows Settings opens on nfty's page.
-2. Pick each type you want nfty to open.
+Windows owns this choice. nfty never writes the protected `UserChoice` value or its hash.
 
-## Read the REGISTRATION chip
+## Read the status
 
-| Chip | Means | Do |
-|---|---|---|
-| **not registered** | Nothing is registered. | Choose targets, then **Apply**. |
-| **not applied** | You changed a row since the last Apply. | **Apply**. |
-| **registered** | Every chosen type opens with this copy of nfty. | Nothing. |
-| **needs repair** | The registration points at another copy of nfty (usually because the app was moved or updated into another folder), or part of it is missing. The line under the chip says which. | Press **Repair** (the Apply button relabels itself). |
+Checkboxes select the next action; the status beside each extension describes the registration
+already on the machine. Hover over a row for its full registration and default explanation.
+
+| Row status | Means |
+|---|---|
+| **not registered** | This extension has no nfty registration nfty recognizes. |
+| **app · registered** / **viewer · registered** | Registration is complete and points at this copy in that mode. It does not claim to be the Windows default. |
+| **app · default** / **viewer · default** | Windows reports this type's handler and command for this copy in that mode as its effective default. |
+| **needs repair** | A registration is incomplete, or points at another copy. Select the extension, choose its mode, and **Register** again. |
+
+The summary counts registrations, defaults identified as this copy, and types whose default could
+not be checked (**unknown**). Unknown does not mean another program is the default. **Refresh**
+reads these states without changing registration or selection.
+
+If a shared **Default apps** listing belongs to another copy or is missing, the row explains it.
+Select **All** and **Register** to repair the shared listing, or use **Open with**. Registering one
+extension preserves an unselected copy's shared listing.
 
 ## Take it back
 
-Press **Remove**. nfty deletes only what it wrote, for your Windows user:
+Select the extensions to remove, then press **Unregister**. For all registrations, use **All** first.
+The action removes only selected values nfty owns:
 
-- a value is deleted only while it still holds what nfty wrote, and a key only once it is empty;
-- another program's default, or an entry another program added since, stays.
+- a value is deleted only while it still contains what nfty wrote, and a key only once it is empty;
+- another program's values, defaults and added entries are preserved;
+- an older shared handler stays if an unselected sibling still references it, or its effective
+  default cannot be checked safely.
 
-nfty keeps a ledger of every key and value it created (under `HKEY_CURRENT_USER\Software\nfty`), which
-is how it knows. **Apply** removes the previous registration the same way before writing the new one.
+nfty keeps a ledger of the keys and values it created, so a partial failure can be retried. Removing
+a registration does not choose a replacement Windows default; use **Default apps…** if needed.
 
 ## What gets registered
 
@@ -75,13 +83,16 @@ For reference, or for checking with `regedit`. All paths are under `HKEY_CURRENT
 
 | Key | Holds |
 |---|---|
-| `Classes\nfty.CookBook`, `nfty.Recipe`, `nfty.Ingredient`, `nfty.Set`, `nfty.Sealed`, `nfty.Kitchen`, `nfty.Menu` | One ProgID per nfty file type: its name, icon and open command. |
-| `Classes\nfty.Viewer.Image`, `nfty.Viewer.Model`, `nfty.Viewer.Metadata` | The viewer ProgIDs for pictures, models and JSON. |
-| `Classes\<.ext>\OpenWithProgids` | nfty's entry in each type's **Open with** list. |
-| `Classes\<.ext>` (default value) | Set only for nfty's own extensions, and only when empty or already nfty's. |
-| `nfty\Capabilities` | nfty's description and file types for **Default apps**. |
+| `Classes\nfty.CookBook`, `nfty.Recipe`, `nfty.Ingredient`, `nfty.Set`, `nfty.Sealed`, `nfty.Kitchen`, `nfty.Menu` | Archive ProgIDs: friendly name, icon and open command. |
+| `Classes\nfty.Viewer.Image.png`, `nfty.Viewer.Image.jpg`, `nfty.Viewer.Image.jpeg` | Independent picture ProgIDs. |
+| `Classes\nfty.Viewer.Model.glb`, `nfty.Viewer.Model.gltf` | Independent model ProgIDs. |
+| `Classes\nfty.Viewer.Metadata` | JSON metadata's viewer ProgID. |
+| `Classes\nfty.Viewer.Image`, `nfty.Viewer.Model` | Older shared handlers, recognized and preserved while an unselected type may still need them. |
+| `Classes\<.ext>\OpenWithProgids` | nfty's entry in the selected type's **Open with** list. |
+| `Classes\<.ext>` (default value) | Set only for nfty's archive types, and only when empty or already owned by that type. |
+| `nfty\Capabilities` | Description and file types for **Default apps**. |
 | `RegisteredApplications` (value `nfty`) | Points **Default apps** at those capabilities. |
-| `nfty\Associations` | The ledger Remove reads. |
+| `nfty\Associations` | The ownership ledger. |
 
 The open commands are:
 
@@ -90,9 +101,10 @@ The open commands are:
 "<folder>\Nfty.Desktop.exe" --viewer "%1"     # Viewer
 ```
 
-The same two forms work from a shortcut or a terminal, with or without any registration.
+The same two forms work from a shortcut or a terminal, with or without registration.
 
 ## When something goes wrong
 
-If Windows refuses a read or a write, the card says so in a sentence and nothing half-done is left
-unrecorded: a failed Apply keeps its ledger, so **Remove** or **Repair** can finish the job.
+If Windows refuses a read, write or launch, nfty shows a product explanation. After a partial write,
+close the error card and inspect the rows. The ledger records completed writes so **Register** or
+**Unregister** can retry the selected operation. Unselected registrations remain outside that action.

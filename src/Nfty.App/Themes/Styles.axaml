@@ -940,17 +940,17 @@
        780px tall, 254 more than the 526 a modal is ever given, so the card photographed tidy while
        the running app scrolled every tab. The shorter pages spend the difference on air above the
        manifest instead of on moving it. -->
-  <!-- THE SETTINGS CARD: four tabbed pages under the export card's head grammar. Wider than the
+  <!-- THE SETTINGS CARD: four cross-platform pages and Windows SYSTEM under the export card's head grammar. Wider than the
        620 form card because the PUBLISHING page puts a 250px field and two buttons beside a 130px
        label column. Centered, so it hugs its pages and clamps to the window like the export card. -->
   <Style Selector="Border.modal.settings">
     <Setter Property="Width" Value="660" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <!-- ONE HEIGHT FOR ALL FOUR PAGES, the export card's rule: switching tabs moves neither the footer
+  <!-- ONE HEIGHT FOR ALL SETTINGS PAGES, the export card's rule: switching tabs moves neither the footer
        nor the card. The tallest page's height, measured at the smallest window: PUBLISHING 221, DATA
        184, GENERAL 131, PERFORMANCE 70, and Windows' SYSTEM fits under the same floor in its longest
-       state (the moved-copy sentence wrapping) - so the card is 358 tall in the 526 a modal is given
+       state (13 independent extensions and their short status labels) - so the card is 358 tall in the 526 a modal is given
        (SettingsPagesTests.Every_page_is_the_same_height_and_fits_the_smallest_window_unscrolled). -->
   <Style Selector="Border.modal.settings Panel.settingspages">
     <Setter Property="MinHeight" Value="221" />
@@ -3353,48 +3353,51 @@
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
   </Style>
 
-  <!-- status bar help trigger: accent-wash tile (explorer.html .helpbtn) -->
-  <!-- It had no hover state at all, so the one control in the status bar that looks like a button
-       felt dead under the pointer. Everything else down there either lights up or is text. -->
-  <Style Selector="Button.helpbtn:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-  </Style>
-  <Style Selector="Button.helpbtn:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-  </Style>
-  <Style Selector="Button.helpbtn:pointerover Path.ico">
-    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
-  </Style>
-  <Style Selector="Button.helpbtn:pressed /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-  </Style>
-
+  <!-- Footer triggers keep their transforms on wrappers: Path.ico owns its scale. Base
+       transitions also animate the return from hover/selection, without changing layout. -->
   <Style Selector="Button.helpbtn">
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="24" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Margin" Value="8,0,0,0" />
-    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.helpbtn /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="Transitions"><Transitions>
+      <BrushTransition Property="Background" Duration="0:0:0.18" />
+      <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+    </Transitions></Setter>
   </Style>
   <Style Selector="Button.helpbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
-  <Style Selector="Button.helpbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.helpbtn.on /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector="Button.helpbtn Path.ico">
-    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  <Style Selector="Button.helpbtn.on:disabled"><Setter Property="Opacity" Value="1" /></Style>
+  <Style Selector="Button.helpbtn Path.ico"><Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" /></Style>
+  <Style Selector="Panel.footer-icon">
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+    <Setter Property="RenderTransform" Value="rotate(0deg) scale(1)" />
+    <Setter Property="Transitions"><Transitions>
+      <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut" />
+    </Transitions></Setter>
   </Style>
+  <Style Selector="Button.settings-trigger:pointerover Panel.footer-icon"><Setter Property="RenderTransform" Value="rotate(8deg) scale(1.10)" /></Style>
+  <Style Selector="Button.settings-trigger.on Panel.footer-icon"><Setter Property="RenderTransform" Value="rotate(0deg) scale(1.10)" /></Style>
+  <Style Selector="Button.info-trigger:pointerover Panel.footer-icon"><Setter Property="RenderTransform" Value="rotate(-8deg) scale(1.12)" /></Style>
+  <Style Selector="Button.info-trigger.on Panel.footer-icon"><Setter Property="RenderTransform" Value="rotate(0deg) scale(1.12)" /></Style>
+  <Style Selector="Button.helpbtn:pressed Panel.footer-icon"><Setter Property="RenderTransform" Value="rotate(0deg) scale(0.92)" /></Style>
 
   <!-- ===================== Quick-reference sheet (help.html) =====================
        A fixed 780px three-column card, summoned over whatever the user is doing. Every class below

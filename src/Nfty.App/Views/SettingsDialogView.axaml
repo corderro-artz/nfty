@@ -8,10 +8,10 @@
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
   </UserControl.KeyBindings>
-  <!-- Four tabbed pages under one head, the export card's grammar: title left, underline tabs right,
+  <!-- Tabbed pages under one head, the export card's grammar: title left, underline tabs right,
        one hairline both sit on. Every page shares one reserved height (Panel.settingspages), so
        switching tabs moves nothing; the card never scrolls. Every row is LABEL | CONTROL on one
-       130px label column, so the four pages read as one form cut into four. -->
+       130px label column, so the preference pages read as one form. SYSTEM reserves a compact extension grid. -->
   <Border Classes="modal settings">
     <Grid RowDefinitions="Auto,Auto,Auto">
       <Border Grid.Row="0" Classes="exporthead" Margin="24,12,24,0">
@@ -182,83 +182,51 @@
                        Text="{Binding DataNote}" />
           </Grid>
 
-          <!-- =============================== SYSTEM =============================== -->
-          <!-- Windows only: which files open with nfty. Three groups, one tray each in a fixed 150px
-               column so the extension lists line up whatever the tray holds; then the state chip and
-               its actions, the reserved sentence under it, and the one honest line about what
-               Windows keeps for the user to choose. -->
-          <Grid x:Name="SystemPage" ColumnDefinitions="130,150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10"
-                IsVisible="{Binding IsSystemTab}">
-            <TextBlock Grid.Row="0" Grid.Column="0" Classes="seglbl" Text="NFTY FILES" />
-            <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
-              <StackPanel Orientation="Horizontal">
-                <Button Classes="seg-b tiny" Content="Off" Classes.on="{Binding IsNftyOff}"
-                        Command="{Binding UseNftyTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Off}" />
-                <Button Classes="seg-b tiny" Content="App" Classes.on="{Binding IsNftyApp}"
-                        Command="{Binding UseNftyTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.App}"
-                        ToolTip.Tip="Double-clicking one opens it in nfty, as a Recent row would." />
-                <Button Classes="seg-b tiny" Content="Viewer" Classes.on="{Binding IsNftyViewer}"
-                        Command="{Binding UseNftyTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Viewer}"
-                        ToolTip.Tip="Double-clicking one opens it in the viewer alone, read-only." />
-              </StackPanel>
-            </Border>
-            <TextBlock Grid.Row="0" Grid.Column="2" Classes="m-sub" Margin="0" VerticalAlignment="Center"
-                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                       Text="{Binding NftyExtensions}" ToolTip.Tip="{Binding NftyTypesTip}" />
-
-            <TextBlock Grid.Row="1" Grid.Column="0" Classes="seglbl" Text="PICTURES, 3D" />
-            <Border Grid.Row="1" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
-              <StackPanel Orientation="Horizontal">
-                <Button Classes="seg-b tiny" Content="Off" Classes.on="{Binding IsPicturesOff}"
-                        Command="{Binding UsePicturesTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Off}" />
-                <Button Classes="seg-b tiny" Content="Viewer" Classes.on="{Binding IsPicturesViewer}"
-                        Command="{Binding UsePicturesTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Viewer}"
-                        ToolTip.Tip="Offer the nfty viewer for pictures and glTF models." />
-              </StackPanel>
-            </Border>
-            <TextBlock Grid.Row="1" Grid.Column="2" Classes="m-sub" Margin="0" VerticalAlignment="Center"
-                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                       Text="{Binding PictureExtensions}" ToolTip.Tip="{Binding PictureTypesTip}" />
-
-            <TextBlock Grid.Row="2" Grid.Column="0" Classes="seglbl" Text="METADATA" />
-            <Border Grid.Row="2" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
-              <StackPanel Orientation="Horizontal">
-                <Button Classes="seg-b tiny" Content="Off" Classes.on="{Binding IsMetadataOff}"
-                        Command="{Binding UseMetadataTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Off}" />
-                <Button Classes="seg-b tiny" Content="Viewer" Classes.on="{Binding IsMetadataViewer}"
-                        Command="{Binding UseMetadataTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Viewer}"
-                        ToolTip.Tip="{Binding MetadataTypesTip}" />
-              </StackPanel>
-            </Border>
-            <TextBlock Grid.Row="2" Grid.Column="2" Classes="m-sub" Margin="0" VerticalAlignment="Center"
-                       TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                       Text="{Binding MetadataExtensions}" ToolTip.Tip="{Binding MetadataTypesTip}" />
-
-            <TextBlock Grid.Row="3" Grid.Column="0" Classes="seglbl" Text="REGISTRATION" />
-            <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
-              <!-- One width for all four states (the widest, "not registered"), so the buttons beside
-                   it never move as the state changes. -->
-              <Border x:Name="AssociationChip" Classes="idchip" VerticalAlignment="Center" Margin="0,0,2,0" Width="122">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="vdot"
-                           Classes.ok="{Binding IsAssociated}" Classes.idle="{Binding IsAssociationIdle}" />
-                  <TextBlock Classes="cvl" Text="{Binding AssociationSummary}" />
+          <!-- Every extension has an independent selection and evidence. Fixed rows keep all
+               five pages the same height, including unknown/default/repair states. -->
+          <Grid RowDefinitions="28,110,28,32" RowSpacing="6" IsVisible="{Binding IsSystemTab}">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+              <CheckBox Content="All" IsThreeState="False" IsChecked="{Binding AllTypesSelected, Mode=TwoWay}"
+                        VerticalAlignment="Center" ToolTip.Tip="Select or clear every supported extension." />
+              <TextBlock Grid.Column="1" Classes="m-sub" Margin="0" Text="{Binding SelectionText}" VerticalAlignment="Center" />
+              <Border Grid.Column="2" Classes="seg tiny">
+                <StackPanel Orientation="Horizontal">
+                  <Button x:Name="AssociationApp" Classes="seg-b tiny" Content="App" Classes.on="{Binding IsAssociationApp}"
+                          Command="{Binding UseAssociationTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.App}"
+                          ToolTip.Tip="Open editable archives in the app; pictures, models, Menu and JSON use Viewer." />
+                  <Button x:Name="AssociationViewer" Classes="seg-b tiny" Content="Viewer" Classes.on="{Binding IsAssociationViewer}"
+                          Command="{Binding UseAssociationTargetCommand}" CommandParameter="{x:Static svc:AssociationTarget.Viewer}"
+                          ToolTip.Tip="Open the selected files in the read-only viewer." />
                 </StackPanel>
               </Border>
-              <!-- Apply / Repair share one width, so the word changing moves nothing beside it. -->
-              <Button x:Name="ApplyAssociations" Classes="tbtn" Width="72" HorizontalContentAlignment="Center"
-                      Content="{Binding ApplyLabel}" Command="{Binding ApplyAssociationsCommand}"
-                      ToolTip.Tip="Register the choice above for this Windows user. No admin rights are asked for." />
-              <Button Classes="tbtn" Content="Remove" Command="{Binding RemoveAssociationsCommand}"
-                      ToolTip.Tip="Take back exactly what nfty registered. Other programs' settings are left alone." />
-              <Button Classes="tbtn" Content="Default apps…" Command="{Binding OpenDefaultAppsCommand}"
-                      ToolTip.Tip="Open Windows Settings at nfty's Default apps page, where you choose what opens each type." />
-            </StackPanel>
-            <!-- Two lines reserved: the moved-exe sentence names a path and wraps once. -->
-            <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Classes="m-sub" Margin="0" MinHeight="32"
-                       Text="{Binding AssociationDetail}" />
-            <TextBlock Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Classes="m-sub" Margin="0" MinHeight="32"
-                       Text="{Binding DefaultsNote}" />
+            </Grid>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding AssociationTypes}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" Rows="5" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SettingsAssociationRow">
+                  <Grid ColumnDefinitions="70,*" Height="22" Margin="0,0,12,0" ToolTip.Tip="{Binding Detail}">
+                    <CheckBox Content="{Binding Extension}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                              MinHeight="0" VerticalAlignment="Center" FontSize="12" />
+                    <TextBlock Grid.Column="1" Classes="m-sub" Margin="0" FontSize="10" Text="{Binding Status}"
+                               VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock x:Name="AssociationChip" Classes="m-sub" Margin="0" Text="{Binding AssociationSummary}"
+                         ToolTip.Tip="{Binding AssociationDetail}" VerticalAlignment="Center" TextWrapping="NoWrap" FontSize="11" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                <Button x:Name="ApplyAssociations" Classes="tbtn cellbtn" Content="Register" Command="{Binding ApplyAssociationsCommand}"
+                        ToolTip.Tip="Register only the selected file types for this user. No administrator rights required." />
+                <Button x:Name="RemoveAssociations" Classes="tbtn cellbtn" Content="Unregister" Command="{Binding RemoveAssociationsCommand}"
+                        ToolTip.Tip="Remove only the selected registrations nfty owns; preserve other programs' values." />
+                <Button Classes="tbtn cellbtn" Content="Default apps…" Command="{Binding OpenDefaultAppsCommand}"
+                        ToolTip.Tip="Choose effective defaults in Windows Settings, then Refresh." />
+                <Button Classes="tbtn cellbtn" Content="Refresh" Command="{Binding RefreshAssociationsCommand}" />
+              </StackPanel>
+            </Grid>
+            <TextBlock Grid.Row="3" Classes="m-sub" Margin="0" Text="{Binding DefaultsNote}" />
           </Grid>
         </Panel>
       </Border>
