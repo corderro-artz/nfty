@@ -288,7 +288,7 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
             if (!response.IsSuccessStatusCode && response.StatusCode != tolerate) throw Refusal(response);
             return new Reply(response.StatusCode, await ReadCappedAsync(response.Content, maxBody, ct).ConfigureAwait(false));
         }
-        catch (HttpRequestException) { throw new CommunityException(ShareRules.Unreachable); }
+        catch (Exception ex) when (ex is HttpRequestException or IOException) { throw new CommunityException(ShareRules.Unreachable); }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new CommunityException(ShareRules.TimedOut); }
     }
 
