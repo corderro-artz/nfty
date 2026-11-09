@@ -94,3 +94,15 @@ three explicit Windows platform/privilege skips**. Linux Cook/output/export sele
 **21/21 with zero skips**, executing both symlink cases. Package-output and publication gates remain
 pending for version 2.4.10. Evidence is
 retained under `artifacts/audit/cook-output/` on the main checkout. No real Desktop was used.
+
+### Publication gate: dispatcher test reliability
+
+Hosted CI 42608093420 passed eight jobs but failed Windows build-and-test in the unchanged
+SetRiseSource exception-path test. It expected a posted UI exception to escape one later RunJobs
+call, although awaiting BookSearch can already dispatch the arrival. The missed exception then
+left the headless session's dispatcher cleanup invalid. Release 2.4.10 remains unpublished.
+The test now observes and handles only its exact intentional exception through the dispatcher's
+exception event, and awaits both that evidence and ExportReady. Its focused Windows selection
+passed **24/24**; full App, Linux and new hosted CI checks remain required. No product exception
+handling or readiness behavior changes. Candidate packages built before this gate fix will be
+superseded; focused/cross-platform/full App and hosted CI proof must pass before publication.

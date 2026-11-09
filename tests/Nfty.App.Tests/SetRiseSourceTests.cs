@@ -63,11 +63,28 @@ public class SetRiseSourceTests
         var setDir = CookedBesideBook(out _);
         using var set = SetReader.Read(setDir);
         using var src = new SetRiseSource(set, set.Items[0].Number, () => Array.Empty<string>(), new ImageBridge());
-        src.Changed += () => throw new InvalidOperationException("a listener failed");
-        await src.BookSearch;
-        // The arrival is posted, and its listener throws on the UI thread: pump until it has run.
-        Assert.ThrowsAny<Exception>(() => PumpUntilDecoded(() => false, 5000));
-        Assert.True(src.ExportReady.IsCompleted);
+        var expected = new InvalidOperationException("a listener failed");
+        var observed = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var dispatcher = Dispatcher.UIThread;
+        void OnUnhandled(object? sender, DispatcherUnhandledExceptionEventArgs args)
+        {
+            if (!ReferenceEquals(args.Exception, expected)) return;
+            args.Handled = true;
+            observed.TrySetResult(args.Exception);
+        }
+        dispatcher.UnhandledException += OnUnhandled;
+        try
+        {
+            src.Changed += () => throw expected;
+            await src.BookSearch;
+            // Awaiting the search also pumps the headless dispatcher: arrival can throw before this
+            // continuation resumes. Observe its actual exception channel rather than requiring a
+            // later RunJobs call to own the exception (and poison headless session cleanup).
+            await Task.WhenAll(src.ExportReady, observed.Task).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Same(expected, await observed.Task);
+            Assert.True(src.ExportReady.IsCompletedSuccessfully);
+        }
+        finally { dispatcher.UnhandledException -= OnUnhandled; }
     }
 
     [AvaloniaFact]
