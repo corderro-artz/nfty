@@ -44,14 +44,6 @@
             <TextBlock Classes="wordmark" VerticalAlignment="Center"><Run Text="nft" /><Run Text="y" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
           </StackPanel>
         </Button>
-        <!-- Carmine, not the LineStrong the Kitchen chip uses on either side of itself. This
-             one separates the BRAND from the document, which is a different kind of boundary
-             than one crumb from the next: everything left of it is the application and
-             everything right of it is the file you have open. It is present whenever there is
-             a trail to divide from. -->
-        <Border Width="1" Height="16" Background="{DynamicResource AccentBrush}" Opacity="0.75"
-                IsVisible="{Binding CurrentExplorer, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
         <!-- Kitchen chip: the OPEN workspace, named. Hides entirely when no Kitchen is open, which
              is a normal state - a CookBook opened from anywhere on disk needs no workspace. Per
              explorer.html this is "fixed for every item below it; changes only when you close this

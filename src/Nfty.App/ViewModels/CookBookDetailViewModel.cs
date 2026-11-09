@@ -363,6 +363,8 @@ public partial class CookBookDetailViewModel : ViewModelBase
             && target!.Value > whole.Value.Total;
         SupplyPercent = Math.Min(100, raw);
         SupplyPercentText = !HasSupplyRail ? Unknown
+            : SupplyExceedsSpace ? (whole!.Value.Certainty == SpaceCertainty.AtMost ? "at least " : "")
+                + (target!.Value - whole.Value.Total).ToString("N0", CultureInfo.InvariantCulture) + " over capacity"
             : raw >= 10 ? raw.ToString("0", CultureInfo.InvariantCulture) + "%"
             : raw >= 1 ? raw.ToString("0.0", CultureInfo.InvariantCulture) + "%"
             : raw.ToString("0.00", CultureInfo.InvariantCulture) + "%";

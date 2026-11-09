@@ -99,10 +99,28 @@ public partial class ExplorerView : UserControl
         {
             if (menuNode is { } n && DataContext is ExplorerViewModel vm) vm.PopOutNodeCommand.Execute(n);
         };
-        _tree.ContextMenu = new ContextMenu { Items = { openInViewer } };
+        var edit = new MenuItem { Header = "Edit" };
+        var delete = new MenuItem { Header = "Delete" };
+        edit.Click += (_, _) =>
+        {
+            if (menuNode is { } n && DataContext is ExplorerViewModel vm)
+            { vm.SelectNodeCommand.Execute(n); vm.EditSelectedCommand.Execute(null); }
+        };
+        delete.Click += (_, _) =>
+        {
+            if (menuNode is { } n && DataContext is ExplorerViewModel vm)
+            { vm.SelectNodeCommand.Execute(n); vm.DeleteSelectedCommand.Execute(null); }
+        };
+        _tree.ContextMenu = new ContextMenu { Items = { edit, delete, new Separator(), openInViewer } };
         _tree.ContextRequested += (_, e) =>
         {
             menuNode = NodeUnder(e.Source as Visual);
+            if (menuNode is { } node && DataContext is ExplorerViewModel vm)
+            {
+                vm.SelectNodeCommand.Execute(node);
+                edit.IsEnabled = vm.EditSelectedCommand.CanExecute(null);
+                delete.IsEnabled = vm.DeleteSelectedCommand.CanExecute(null);
+            }
             if (menuNode is null) e.Handled = true;     // no row under the pointer: no menu
         };
         // TUNNEL, like the press, and for a sharper reason: a TreeView handles the ARROW KEYS

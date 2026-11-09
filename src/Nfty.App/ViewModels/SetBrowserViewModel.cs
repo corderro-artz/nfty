@@ -414,6 +414,21 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         SelectedItem = row;
     }
 
+    [RelayCommand]
+    private void ToggleSelection(SetItemRow? row)
+    {
+        if (row is null) return;
+        if (ReferenceEquals(SelectedItem, row)) ClearSelection();
+        else SelectCommand.Execute(row);
+    }
+
+    [RelayCommand]
+    private void ClearSelection()
+    {
+        SelectedItem = null;
+        Hover(null);
+    }
+
     /// <summary>Opens a cooked Set for browsing.</summary>
     /// <param name="set">The loaded Set; this takes ownership and disposes it.</param>
     /// <param name="picker">Where Save asks for a destination. Defaults to the null picker, which

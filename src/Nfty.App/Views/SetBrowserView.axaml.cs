@@ -162,7 +162,7 @@ public partial class SetBrowserView : UserControl
         }
         if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
         if (TileUnder(e.Source) is not { } row) return;
-        Vm?.SelectCommand.Execute(row);
+        Vm?.ToggleSelectionCommand.Execute(row);
         e.Handled = true;
     }
 

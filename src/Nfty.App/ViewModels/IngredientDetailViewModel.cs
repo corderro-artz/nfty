@@ -89,6 +89,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     private readonly IImageBridge _bridge;
     private readonly LoadedIngredient _ing;
     private readonly IReadOnlyList<VariantRow> _variants;
+    internal (string Recipe, string Ingredient) Identity { get; }
 
     /// <summary>The variant table's sort. Shared machinery (<see cref="TableSort"/>), so this table
     /// and the Set browser's and the Recipe's rules all follow one rule: first click ascending,
@@ -254,6 +255,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         "Weight" => v.Weight,
         "InRecipe" => v.WithinPercent,
         "Overall" => v.OverallPercent,
+        "Order" => null,
         _ => v.Name,
     });
 
@@ -267,6 +269,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <summary>The row the hero, the custom swatch and Delete variant act on.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedThumb))]
+    [NotifyCanExecuteChangedFor(nameof(ExportPreviewCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteVariantCommand))]
     [NotifyCanExecuteChangedFor(nameof(RiseCommand))]
     private VariantRow? _selected;
@@ -348,7 +351,8 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         Action<string>? rise = null)
     {
         _rise = rise;
-        Sort = new TableSort("Variant", () => OnPropertyChanged(nameof(Variants)));
+        Identity = (recipe.Manifest.Id, ing.Manifest.Id);
+        Sort = new TableSort("Order", () => OnPropertyChanged(nameof(Variants)));
         _ing = ing; _bridge = bridge;
         _editIngredient = editIngredient; _isEditing = isEditing;
         _deleteVariant = deleteVariant;
@@ -564,6 +568,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     {
         DeleteVariantCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(DeleteVariantTip));
+        OnPropertyChanged(nameof(CanReorder));
     }
 
 
@@ -587,6 +592,47 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         Hero = VariantImagery.Render(_bridge, _ing, id);
         old?.Dispose();
         OnPropertyChanged(nameof(DeleteVariantTip));
+    }
+
+    [RelayCommand]
+    private void ToggleVariant(string id)
+    {
+        if (Selected?.Id == id) ClearSelection();
+        else SelectVariant(id);
+    }
+
+    [RelayCommand]
+    private void ClearSelection()
+    {
+        if (Selected is not null) Selected.IsSelected = false;
+        Selected = null;
+        var old = Hero;
+        Hero = null;
+        old?.Dispose();
+        OnPropertyChanged(nameof(DeleteVariantTip));
+    }
+
+    /// <summary>Whether the current layer's variant order can be saved.</summary>
+    public bool CanReorder => _isEditing() && ReorderVariants is not null;
+
+    /// <summary>Persists a permutation of the current variants through the owning Explorer.</summary>
+    internal Func<IReadOnlyList<string>, Task>? ReorderVariants { get; set; }
+
+    /// <summary>Moves a variant in the displayed order and saves that order.</summary>
+    /// <param name="id">The variant to move.</param>
+    /// <param name="index">The desired zero-based position.</param>
+    /// <returns>The save lifetime.</returns>
+    internal async Task MoveVariantAsync(string id, int index)
+    {
+        if (!CanReorder) return;
+        var ids = Variants.Select(v => v.Id).ToList();
+        int from = ids.IndexOf(id);
+        if (from < 0) return;
+        index = Math.Clamp(index, 0, ids.Count - 1);
+        if (from == index) return;
+        if (!ids.Remove(id)) return;
+        ids.Insert(Math.Clamp(index, 0, ids.Count), id);
+        await ReorderVariants!(ids);
     }
 
     /// <summary>
@@ -670,7 +716,7 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         catch (Exception ex) { await ShowPreviewError(ErrorText.For(ex)); }
     }
 
-    private bool CanExportPreview() => _picker is not null && _variants.Count > 0;
+    private bool CanExportPreview() => _picker is not null && Selected is not null;
 
     /// <summary>Null for a Custom layer, which is never colorized and needs none.</summary>
     private string? DefaultColorSpec()
