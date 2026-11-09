@@ -65,6 +65,7 @@ public class CookDialogCleanupTests
             var footer = controls.OfType<Border>().Single(b => b.Classes.Contains("modal-foot"));
             Button Command(object command) => controls.OfType<Button>().Single(b => ReferenceEquals(b.Command, command));
             var cardBounds = In(card, window);
+            Assert.Equal(421, cardBounds.Height);
             var footerBounds = In(footer, window);
             var primaryBounds = In(Command(vm.CookCommand), window);
             var secondaryBounds = In(Command(vm.CloseCommand), window);
@@ -83,6 +84,8 @@ public class CookDialogCleanupTests
             }
             var states = new (string Name, Action Change)[]
             {
+                ("named-folder", () => vm.NameFolderAfterCookBook = true),
+                ("direct-folder", () => vm.NameFolderAfterCookBook = false),
                 ("repeats", () => vm.Unlimited = true),
                 ("models", () => vm.IncludeModels = true),
                 ("options", () => vm.ShowModelOptions = true),
@@ -193,6 +196,13 @@ public class CookDialogCleanupTests
             Assert.Same(buttons.Single(b => b.Command == vm.CloseCommand), window.FocusManager!.GetFocusedElement());
             Stroke(PhysicalKey.Tab);
             Assert.Same(buttons.Single(b => b.Command == vm.CookCommand), window.FocusManager.GetFocusedElement());
+
+            var naming = view.FindControl<CheckBox>("NamedFolderCheck")!;
+            Assert.True(naming.Focus());
+            Stroke(PhysicalKey.Space);
+            Assert.True(vm.NameFolderAfterCookBook);
+            Stroke(PhysicalKey.Space);
+            Assert.False(vm.NameFolderAfterCookBook);
         }
         finally { window.Close(); }
     }

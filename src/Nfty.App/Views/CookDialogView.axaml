@@ -95,9 +95,9 @@
                            Text="{x:Static vm:CookDialogViewModel.RecipeLockedReason}" />
               </Grid>
             </Grid>
-            <!-- Packing and DNA policy share one option row. The consequence keeps one reserved
-                 line and aligns with checkbox text, rather than the checkbox's leading edge. -->
-            <StackPanel Spacing="2">
+            <!-- Four options share two rows. Keep the previous options area's height: naming,
+                 model disclosure, scan answers and DNA hints never move the card or footer. -->
+            <StackPanel Height="143">
               <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <CheckBox Grid.Column="0" Content="Pack into a single .set" IsChecked="{Binding Pack}" />
                 <CheckBox Grid.Column="1" Content="Allow repeats" IsChecked="{Binding Unlimited}"
@@ -105,36 +105,29 @@
               </Grid>
               <TextBlock Text="{Binding UniqueHint}" Classes="m-sub" Height="16"
                          TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                         ToolTip.Tip="{Binding UniqueHint}" Margin="24,0,0,0" />
-            </StackPanel>
-
-            <!-- The box row is always laid out. For a 2D-only book it is disabled, and the reason sits
-                 OUTSIDE the box in its own text: a disabled control is dimmed to 0.38, and a reason
-                 inside that dimming would fail the contrast floor exactly when it is the only thing
-                 explaining why the box is off. -->
-            <StackPanel Spacing="2">
-              <!-- The disclosure has a reserved slot. Its details replace the note below inside
-                   one fixed-height region, so neither the card nor its action targets move. -->
-              <Grid ColumnDefinitions="*,Auto">
-                <CheckBox Grid.Column="0" Content="Include 3D models" IsChecked="{Binding IncludeModels}"
-                          IsEnabled="{Binding !BookIsTwoDOnly}" ToolTip.Tip="{Binding ModelsNote}" />
-                <Button Grid.Column="1" Classes="tbtn" Command="{Binding ToggleModelOptionsCommand}"
-                        Classes.absent="{Binding !ShowModelOptionsToggle}"
-                        Classes.on="{Binding ShowModelOptions}">
-                  <!-- Down and up chevrons share one slot, swapped by IsVisible inside a fixed-size
-                       Panel, so the label and the button never change width. -->
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="Model options" VerticalAlignment="Center" />
+                         ToolTip.Tip="{Binding UniqueHint}" Margin="24,2,0,0" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8" Margin="0,8,0,0">
+                <CheckBox Grid.Column="0" x:Name="NamedFolderCheck" Content="Name after CookBook"
+                          IsChecked="{Binding NameFolderAfterCookBook}" ToolTip.Tip="{Binding NamedFolderHint}" />
+                <Grid Grid.Column="1" ColumnDefinitions="*,28" ColumnSpacing="2">
+                  <CheckBox Grid.Column="0" Content="Include 3D models" IsChecked="{Binding IncludeModels}"
+                            IsEnabled="{Binding !BookIsTwoDOnly}" ToolTip.Tip="{Binding ModelsNote}" />
+                  <Button Grid.Column="1" Classes="tbtn" Width="28" Height="28" MinWidth="0" MinHeight="28" Padding="0"
+                          Command="{Binding ToggleModelOptionsCommand}" VerticalAlignment="Center"
+                          AutomationProperties.Name="Model options" ToolTip.Tip="Model options"
+                          Classes.absent="{Binding !ShowModelOptionsToggle}"
+                          Classes.on="{Binding ShowModelOptions}">
+                    <!-- Down and up chevrons swap ink inside one reserved slot. -->
                     <Panel Width="14" Height="14" VerticalAlignment="Center">
                       <Path Classes="ico xs" Data="{StaticResource IconChevronDown}"
                             IsVisible="{Binding !ShowModelOptions}" />
                       <Path Classes="ico xs" Data="{StaticResource IconChevronUp}"
                             IsVisible="{Binding ShowModelOptions}" />
                     </Panel>
-                  </StackPanel>
-                </Button>
+                  </Button>
+                </Grid>
               </Grid>
-              <Panel Height="48">
+              <Panel Height="48" Margin="0,2,0,0">
                 <!-- The scan answer and model fields occupy the same detail slot. A 2D-only reason
                      stays outside its disabled checkbox; open fields keep the note on its tooltip. -->
                 <TextBlock x:Name="ModelsNoteText" Text="{Binding ModelsNote}" Classes="m-sub" TextWrapping="Wrap"
