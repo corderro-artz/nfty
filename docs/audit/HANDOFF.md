@@ -1,3 +1,17 @@
+# Current continuation —2.4.12 candidate, then header patch
+
+Main2.4.10 and2.4.11 are published with eight verified assets each and all nine exact-commit CI
+jobs green. Settings source76a7b89 is complete. Preview source101872c is merged locally for2.4.12:
+WindowsApp2132/LinuxApp2133/Model679 passes, documented platform skips, zero-warning builds,
+current four manual images,270 API pages and exact default/pixel/geometry checks. Root now runs
+main component/package/native gates, then exact-commit CI/tag/push/release. No AA/GPU change.
+
+After2.4.12, complete the user's queued ViewerWindow header9DIP spacing patch and publish2.4.13.
+Do not forget final live-site deployment, current after-action/tracker and screenshot verification.
+Cook/Settings branches deleted; old ticket checkout archived after evidence preservation. Current
+primary Settings checkout cannot be removed (Codex protection); keep clean/detached at finalmain.
+Preview worktree is retained until final verified merge and ignored-evidence preservation.
+
 # Active continuation — post-audit usability
 
 2.4.10 is published from main 5bd61f3 with matching nine-job CI 42610209945 green and all eight

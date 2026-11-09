@@ -1,6 +1,6 @@
 # Staged codebase review
 
-Current baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
+Original audit baseline: `5dece661785a75990576f4016eb796558ba75fd4` (`origin/main`, verified 2026-11-08).
 
 Current audit status: **Complete.** All nine two-pass audits and approved fixes are committed on main.
 Audited [2.4.8](https://github.com/corderro-artz/nfty/releases/tag/v2.4.8) and the separately requested

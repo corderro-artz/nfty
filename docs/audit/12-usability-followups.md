@@ -40,7 +40,7 @@ branch `codex/ux-cook-output` (the former audit branch is already deleted).
 - [x] Use supported Windows Default Apps UI when Windows requires the user's existing default
   choice. Do not write UserChoice hashes or claim registration alone makes the app default.
 - [x] Test with fakes/private injected registry roots; verify keyboard, themes and fixed geometry.
-- [ ] Finish 2.4.11 main package/native/output proof, exact-commit hosted CI, tag/push/release.
+- [x] Finish 2.4.11 main package/native/output proof, exact-commit hosted CI, tag/push/release.
 
 Owner: Settings agent. Checkout `C:/Users/Corde/.codex/worktrees/nfty-settings-integration/nfty`,
 branch `codex/ux-settings-associations`.
@@ -49,15 +49,15 @@ branch `codex/ux-settings-associations`.
 
 - [x] Trace existing pooled buffers, bitmap reuse and input coalescing; record bounded orbit
   baselines and a failing missing-light-control test before implementation.
-- [ ] Improve measured hot paths and scheduling while preserving valid default render pixels,
+- [x] Improve measured hot paths and scheduling while preserving valid default render pixels,
   validation, camera/projection/depth math and export payloads. Qualify timing claims.
-- [ ] Add shared viewer/Rise light value 0–100, RGB color and quick light reset. Default 100%/white
+- [x] Add shared viewer/Rise light value 0–100, RGB color and quick light reset. Default 100%/white
   reproduces existing pixels. Resetting lights must not reset the camera.
-- [ ] Invalidate any preview cache when lighting changes; preserve alpha/background behavior.
-- [ ] Assess antialiasing options and quality/performance costs. The request is an assessment;
+- [x] Invalidate any preview cache when lighting changes; preserve alpha/background behavior.
+- [x] Assess antialiasing options and quality/performance costs. The request is an assessment;
   no AA or GPU renderer rewrite is included without a further decision.
-- [ ] Focused correctness/performance/rendered proof, API XML generation if affected, main
-  integration, version/tag/push/release and documentation.
+- [ ] Complete 2.4.12 main packaging/output/native proof, exact-commit CI, tag/push/release.
+  Source, correctness, documentation and platform verification below are complete.
 
 Owner: Preview agent. Checkout `C:/Users/Corde/.codex/worktrees/nfty-preview-lighting/nfty`,
 branch `codex/ux-preview-lighting`.
@@ -126,10 +126,51 @@ within 30 seconds, then verifies continued liveness and responsiveness.
 | Windows-only native behavior could reach other platforms | OS-guarded factory returns unsupported service outside Windows | Linux build and actual factory/no-native-call tests pass. Windows interop compiles safely but is never invoked there. |
 | Large Settings VM and stale guide | Focused association partial plus one row model, shared catalog/backend, three manual pages updated | Existing General/Performance/Publishing/Data behavior remains covered; no duplicated registration engine or invented parser. |
 
-Source commit 76a7b89 is merged locally; candidate version 2.4.11. Full Windows Release solution:
+Source commit 76a7b89 is merged into main. [2.4.11](https://github.com/corderro-artz/nfty/releases/tag/v2.4.11)
+is published from d6147c6, with all nine exact-commit CI jobs successful (42668645604), all eight
+server asset hashes verified, native readiness/centering passed, and 67/67 output payloads identical
+to 2.4.10 across both platforms/all shapes. [Inventory](releases/2.4.11.json). Full Windows Release solution:
 **5,419 passed, three platform skips, zero failures**. Linux isolated full Release build and full App:
 **2,112 passed, two capability skips, zero failures**. Both builds have zero warnings/errors.
 All 1,646 source files, including five frozen fixtures, retain matching before/after Linux hashes.
 Forty-four final Windows/Linux frames were inspected; strict manual/link checks pass. All registry
 writes in tests use fakes or private injected roots; no real registration/default was changed.
 Evidence: `artifacts/audit/settings-associations/` (102 copied files, SHA-256 verified).
+
+## Additional queued task — viewer header spacing
+
+After the current viewer release, balance the document icon's gap from the header divider with
+its existing brand-side gap. Fresh current screenshots and source show zero document-side gap
+versus 9 DIP on the brand side. Minimal proposed fix: a 9 DIP leading margin on ViewerWindow's
+TitleCenter Grid; leave shared WindowFrame/main breadcrumb spacing unchanged. Verify both themes,
+minimum window/title behavior and refresh affected current screenshots, then publish a separate
+main version/tag/release. No header source fix has been made yet.
+
+## Checkout cleanup update
+
+The merged Cook and Settings feature branches are deleted. The former ticket-audit-fixes checkout
+was successfully archived through Codex after all needed ignored evidence was preserved on M:.
+The current primary Settings checkout cannot be archived: the tool returned "The task's primary
+checkout cannot be removed." It is clean/detached at main; do not bypass this protection. The
+preview worktree remains active until its verified merge and evidence preservation are complete.
+
+## Batch C implementation and simplification results
+
+Source 101872c is merged locally for candidate 2.4.12. Detailed measured report:
+[Viewer quality](13-viewer-quality.md).
+
+| Change | Simplification/correctness | Result |
+|---|---|---|
+| Shared light value/color/reset | One PreviewLightingView in both existing footers, one immutable PreviewLighting contract, original Render overload retained | 0–100 and RGB color; reset preserves camera/edges/turntable. Source texture, depth, alpha, background and exported models remain unchanged. Still flushes a pending repaint before encoding chosen light. |
+| Raster setup and scheduling | Defer pure coverage/UV setup until after visibility culling; reuse pooled buffers/coalescing with 1/60s ceiling | Original 90-frame color hashes remain exact. Measured headless cadence22→47/25→49fps; dense per-frame work improved, small isolated case slightly worsened. No universal/60fps promise; report gives CPU totals and limits. |
+| Footer fit | Compact37DIP shared trigger with rounding slack; no existing group/font/viewport dimensions changed | Existing minimum footer remains41DIP; zero common info facts hidden. Both themes and100/120/200% geometry/keyboard/actual activation pass. |
+| Strong pixel evidence | Opaque models, positive inside-pane change, exact outside-pane pixels and full-frame exact Reset after identical no-op settling | First-paint clip/cache fringe measured separately; no blanket tolerance or enlarged mask. Superseded transparent/vacuous attempts are disclosed. |
+| Documentation | Four latest production Rise/viewer images and270 XML-generated API pages | Old manual images predated centered fitting/footer controls. Fresh captures prove current assemblies/source, centered canvas and exact unchanged pixels outside old/new Light slots. |
+| Quality boundaries | CPU retained by explicit user decision; AA/GPU remain assessments | No AA dependency/backend or generation/export math change. |
+
+Final Windows App: **2,132 passed, three platform skips**. Linux App: **2,133 passed, two skips**;
+Linux Model: **679 passed, six Windows-lock skips**. Both full solution Release builds have zero
+warnings/errors. All1,656 Linux source hashes and five frozen fixtures remain unchanged. Standalone
+API check/lint and strict manual pass. Final compiled source/tests and four images match the tested
+snapshot; only the tracked report's final result text was appended afterward. Evidence161 files
+were copied and SHA-256 verified under `artifacts/audit/preview-lighting/`.
