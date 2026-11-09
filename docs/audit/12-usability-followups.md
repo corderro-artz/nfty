@@ -56,7 +56,7 @@ branch `codex/ux-settings-associations`.
 - [x] Invalidate any preview cache when lighting changes; preserve alpha/background behavior.
 - [x] Assess antialiasing options and quality/performance costs. The request is an assessment;
   no AA or GPU renderer rewrite is included without a further decision.
-- [ ] Complete 2.4.12 main packaging/output/native proof, exact-commit CI, tag/push/release.
+- [x] Complete 2.4.12 main packaging/output/native proof, exact-commit CI, tag/push/release.
   Source, correctness, documentation and platform verification below are complete.
 
 Owner: Preview agent. Checkout `C:/Users/Corde/.codex/worktrees/nfty-preview-lighting/nfty`,
@@ -137,26 +137,31 @@ Forty-four final Windows/Linux frames were inspected; strict manual/link checks 
 writes in tests use fakes or private injected roots; no real registration/default was changed.
 Evidence: `artifacts/audit/settings-associations/` (102 copied files, SHA-256 verified).
 
-## Additional queued task — viewer header spacing
+## Header spacing — implementation and local verification complete
 
-After the current viewer release, balance the document icon's gap from the header divider with
-its existing brand-side gap. Fresh current screenshots and source show zero document-side gap
-versus 9 DIP on the brand side. Minimal proposed fix: a 9 DIP leading margin on ViewerWindow's
-TitleCenter Grid; leave shared WindowFrame/main breadcrumb spacing unchanged. Verify both themes,
-minimum window/title behavior and refresh affected current screenshots, then publish a separate
-main version/tag/release. No header source fix has been made yet.
+ViewerWindow now gives the document icon the same 9 DIP divider gap as the brand. Only its own
+TitleCenter margin changes; shared frame/main breadcrumb spacing stays intact. Existing 39 focused
+tests pass. Both themes/default and minimum windows prove balanced gaps, working hit tests and no
+overlap. Four viewer comparisons change only the header; both Rise frames remain exact. Two
+manual viewer images are refreshed from current production captures. [Detailed result](14-header-spacing.md).
+
+All requested implementation and local verification tasks are complete. Final version 2.4.13 is
+published only after matching exact-commit CI, all package/native/output checks and all uploaded
+asset hash checks pass. Its live status is [the release record](https://github.com/corderro-artz/nfty/releases/tag/v2.4.13).
+The final manual/site deployment is separately checked against committed image/API bytes. AA and
+GPU rendering remain deliberate optional backlog, with CPU rendering explicitly chosen by the user.
 
 ## Checkout cleanup update
 
 The merged Cook and Settings feature branches are deleted. The former ticket-audit-fixes checkout
 was successfully archived through Codex after all needed ignored evidence was preserved on M:.
 The current primary Settings checkout cannot be archived: the tool returned "The task's primary
-checkout cannot be removed." It is clean/detached at main; do not bypass this protection. The
-preview worktree remains active until its verified merge and evidence preservation are complete.
+checkout cannot be removed." It is clean/detached at main; do not bypass this protection. The preview worktree was archived after its verified merge and evidence preservation; its merged
+branch is deleted. The primary checkout is retained as a clean final-main snapshot.
 
 ## Batch C implementation and simplification results
 
-Source 101872c is merged locally for candidate 2.4.12. Detailed measured report:
+Source 101872c is merged. Release2.4.12 is published from main dec282d with all nine exact-commit CI jobs green (42675004557). All eight server digests match; native checks pass and67/67 payloads match2.4.11. See releases/2.4.12.json. Fresh main component gates total5451 Windows passes/three skips. Initial GitHub push startup failures were superseded by successful full CI and notification 42674557421 on the same commit. Detailed measured report:
 [Viewer quality](13-viewer-quality.md).
 
 | Change | Simplification/correctness | Result |
@@ -170,7 +175,7 @@ Source 101872c is merged locally for candidate 2.4.12. Detailed measured report:
 
 Final Windows App: **2,132 passed, three platform skips**. Linux App: **2,133 passed, two skips**;
 Linux Model: **679 passed, six Windows-lock skips**. Both full solution Release builds have zero
-warnings/errors. All1,656 Linux source hashes and five frozen fixtures remain unchanged. Standalone
+warnings/errors. All 1,656 Linux source hashes and five frozen fixtures remain unchanged. Standalone
 API check/lint and strict manual pass. Final compiled source/tests and four images match the tested
-snapshot; only the tracked report's final result text was appended afterward. Evidence161 files
+snapshot; only the tracked report's final result text was appended afterward. Evidence: 161 files
 were copied and SHA-256 verified under `artifacts/audit/preview-lighting/`.

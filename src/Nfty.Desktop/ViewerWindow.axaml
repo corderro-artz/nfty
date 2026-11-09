@@ -28,7 +28,7 @@
     <ctl:WindowFrame.TitleCenter>
       <!-- A Grid, not a StackPanel: a stack hands its children infinite width, so a long name never
            trimmed and ran under the badge beside it. -->
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" VerticalAlignment="Center">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" VerticalAlignment="Center" Margin="9,0,0,0">
         <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconPopout}" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />

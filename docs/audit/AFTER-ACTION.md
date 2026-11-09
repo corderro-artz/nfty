@@ -30,7 +30,22 @@ implementation, simplification and result.
 |---|---|---|
 | Cook destination safety and naming | A small GUI policy helper reuses existing name/device rules and SetReader; no parallel generator or manifest parser. New opt-in CookBook-named child; clear nonempty-folder refusal; collisions/linked Set write paths refused. | Source c71ac08 merged into main; [2.4.10](https://github.com/corderro-artz/nfty/releases/tag/v2.4.10) published from main 5bd61f3. Zero-warning Release build; 5,392 Windows passes, three explicit platform/privilege skips; Linux output/export 21/21 with both link cases executed. Stable 421 DIP card/footers in both themes; four real-production manual screenshots refreshed. All nine matching CI jobs pass; all eight server asset digests match. All 67 payloads are identical across Windows/Linux, packaging shapes and 2.4.9; native readiness/centering pass. [Inventory](releases/2.4.10.json). |
 | Settings/help and file associations | One catalog/backend, extension selection and selected-only ledger updates; focused VM partial/row model. Honest registered/default/unknown status, legacy sibling preservation and footer animations. | Source 76a7b89 merged; [2.4.11](https://github.com/corderro-artz/nfty/releases/tag/v2.4.11) published from d6147c6. Windows 5,419 passes/three skips; Linux App 2,112 passes/two skips; zero-warning Release builds; 44 frames and strict manual checks pass. All nine matching CI jobs pass; all eight server hashes match; native startup/centering pass; 67/67 payloads match 2.4.10 on both platforms/all shapes. [Inventory](releases/2.4.11.json). |
-| Model preview and lighting | One immutable light contract/shared footer component; deferred hidden-face setup and existing coalescing at a1/60s ceiling;270 XML API pages and four current images. | Source101872c merged for2.4.12. WindowsApp2,132/LinuxApp2,133 pass; LinuxModel679 pass/six capability skips; zero-warning builds. Original90-frame hashes exact; scaled opaque/reset/geometry proof passes. [Measured report](13-viewer-quality.md). CPU retained; AA/GPU assessed only. Publication gate pending. |
+| Model preview and lighting | One immutable light contract/shared footer component; deferred hidden-face setup and existing coalescing at a1/60s ceiling;270 XML API pages and four current images. | Source 101872c merged;2.4.12 published from dec282d. Windows App: 2,132/Linux App: 2,133 pass; Linux Model: 679 pass/six capability skips; zero-warning builds. Original90-frame hashes exact; scaled opaque/reset/geometry proof passes. [Measured report](13-viewer-quality.md). CPU retained; AA/GPU assessed only. All nine exact-commit CI jobs green; eight server hashes match; native checks pass and67/67 payloads match2.4.11. [Inventory](releases/2.4.12.json). |
+
+## Final header and documentation patch
+
+[Header report](14-header-spacing.md): one 9 DIP leading margin balances the viewer document icon
+with the existing brand-side divider gap. Existing 39 focused tests pass; both themes/default and
+minimum captures prove geometry and hit behavior. Every pixel outside the changed header stays
+exact, and the two latest viewer manual images are refreshed. The release READ-ME now accurately
+states that opt-in registrations and OS credentials are separate from portable settings; no archive,
+math, renderer or viewport behavior changes. This is the final 2.4.13 main release patch.
+
+All requested source fixes, simplifications, XML/API documentation and current screenshot work are
+complete. The final [release record](https://github.com/corderro-artz/nfty/releases/tag/v2.4.13) carries
+its exact source tag, matching successful CI link and verified downloads. Publication requires every
+exact-commit CI job and server asset digest to pass; operational evidence is retained locally under
+artifacts/audit/release-2.4.13/. CPU remains in use; AA/GPU are assessments, not unfinished fixes.
 
 ## Published 2.4.8 integration and publication record
 

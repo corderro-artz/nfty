@@ -8,12 +8,14 @@ Audited [2.4.8](https://github.com/corderro-artz/nfty/releases/tag/v2.4.8) and t
 verified assets each. [Full after-action report](AFTER-ACTION.md) lists every fix, simplification,
 XML correction, result and limitation. [Final integration](10-final-verification.md).
 
-## Active post-audit work
+## Completed post-audit work
 
-The user authorized additional Cook safety/naming, settings/association and model preview/lighting
-work after the completed 2.4.9 closeout. [Current batch tracker](12-usability-followups.md) records
-progress, ownership and acceptance. Three agents are authorized; each verified batch receives its
-own main commit, version tag, push and release, beginning with 2.4.10.
+Cook safety/naming (2.4.10), Settings/associations (2.4.11), CPU preview lighting/quality (2.4.12)
+and viewer header spacing (2.4.13) are implemented and locally verified. The
+[current result tracker](12-usability-followups.md), [viewer quality report](13-viewer-quality.md)
+and [header result](14-header-spacing.md) contain exact changes, simplifications, evidence and limits.
+Every release requires successful CI on its exact tagged commit and verified uploaded assets.
+The [latest release](https://github.com/corderro-artz/nfty/releases/latest) is the live publication record.
 
 ## Completed audit task checklist
 

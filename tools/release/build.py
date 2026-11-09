@@ -214,9 +214,10 @@ nfty %s (%s)
 The desktop app is Nfty.Desktop.exe in this folder.
 The command line is cli/Nfty.Cli.exe - run it with --help.
 
-nfty keeps its own settings in a .nfty folder beside the executable, so this
-copy carries its own recent-files list and saved palette and leaves the rest of
-the machine alone. Move or delete the folder and nothing is left behind.
+nfty normally keeps settings, recent files and palettes in .nfty beside the
+executable; Settings > DATA shows the active location if a fallback is needed.
+Optional file registrations and OS-saved publishing credentials live separately.
+Remove those in Settings before moving or deleting this copy if you used them.
 
 New here? Open Nfty.Desktop.exe and click "Open the demo CookBook" - a sample
 collection of layered chests, yours to take apart. It is built into the program,

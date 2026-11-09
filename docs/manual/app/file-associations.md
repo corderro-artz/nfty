@@ -19,7 +19,7 @@ first if you want to change just one.
 
 | Target | Opens |
 |---|---|
-| **App** | Editable nfty archives in the app: `.cbk`, `.rcp`, `.igt`, `.set`, `.tin`, and `.ktn`. |
+| **App** | Supported nfty archives in the app: `.cbk`, `.rcp`, `.igt`, `.set`, `.tin`, and `.ktn`. |
 | **Viewer** | Any supported type in the read-only [viewer](viewer.md), without the app shell. |
 
 A Menu (`.mnu`), picture (`.png`, `.jpg`, `.jpeg`), model (`.glb`, `.gltf`) or JSON file always uses

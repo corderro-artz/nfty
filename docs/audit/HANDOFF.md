@@ -1,80 +1,41 @@
-# Current continuation —2.4.12 candidate, then header patch
+# Final handoff
 
-Main2.4.10 and2.4.11 are published with eight verified assets each and all nine exact-commit CI
-jobs green. Settings source76a7b89 is complete. Preview source101872c is merged locally for2.4.12:
-WindowsApp2132/LinuxApp2133/Model679 passes, documented platform skips, zero-warning builds,
-current four manual images,270 API pages and exact default/pixel/geometry checks. Root now runs
-main component/package/native gates, then exact-commit CI/tag/push/release. No AA/GPU change.
+Active repository: M:/Repositories/nfty, main. The original nine two-pass audits and every approved
+follow-up are implemented. AFTER-ACTION.md lists changes/results; REVIEW.md and
+12-usability-followups.md track completion; 13-viewer-quality.md and 14-header-spacing.md explain
+the final viewer work. Intentional optional work remains in BACKLOG.md, including AA/GPU; the user
+explicitly chose CPU rendering and identical default views.
 
-After2.4.12, complete the user's queued ViewerWindow header9DIP spacing patch and publish2.4.13.
-Do not forget final live-site deployment, current after-action/tracker and screenshot verification.
-Cook/Settings branches deleted; old ticket checkout archived after evidence preservation. Current
-primary Settings checkout cannot be removed (Codex protection); keep clean/detached at finalmain.
-Preview worktree is retained until final verified merge and ignored-evidence preservation.
+## Releases and verification
 
-# Active continuation — post-audit usability
+- 2.4.8/2.4.9: original full audit, centering, Cook cleanup and documentation/security closeout.
+- 2.4.10: Cook destination safety and opt-in CookBook folder naming; main 5bd61f3.
+- 2.4.11: footer animations and per-type Windows association/default evidence; main d6147c6.
+- 2.4.12: CPU preview lighting, measured responsiveness, shared footer controls and current images;
+  main dec282d. Default 90-frame hashes unchanged; opaque/scaled/theme/reset proof exact.
+- 2.4.13: final 9 DIP viewer-header spacing and documentation patch. Canonical publication/CI/source
+  status is the matching GitHub release. Do not publish if any exact-commit gate fails.
 
-2.4.10 is published from main 5bd61f3 with matching nine-job CI 42610209945 green and all eight
-asset hashes verified. Settings source 76a7b89 is merged locally for candidate 2.4.11; full Windows
-5,419/Linux App 2,112 passes and zero-warning builds are verified. Viewer CPU/lighting/footer
-work remains isolated for final combined verification and subsequent 2.4.12 publication.
+Each release has eight Windows/Linux packages. Through 2.4.12, all server digests, native startup/
+centering and 67 cross-platform/cross-shape/cross-release output payloads are verified. Final 2.4.13
+uses the same mandatory proof before publication. Recent Windows component total: 5,451 passes;
+Linux App 2,133 and Model 679 passes with documented platform capability skips. Final header-specific
+selection: 39 passes. Builds have zero warnings/errors; ImageSharp stays 3.1.11 and fixtures are frozen.
 
-Previous 2.4.9 closeout is fully verified, including final main CI 42532337662. See
-12-usability-followups.md for the newly authorized Cook, settings and preview batches. Three
-workers are active in isolated worktrees; release only verified batches from M:/Repositories/nfty
-main, with successive versions starting 2.4.10. Root serializes .NET work and owns merges/releases.
-Do not mistake the completed audit checklist below for completion of the new requests.
+## Evidence and cleanup
 
-# Completed audit handoff — 2026-11-08
+Ignored evidence is preserved on M: with SHA inventories. Cook/Settings feature branches are deleted;
+old ticket checkout archived. Preview evidence is preserved before its managed checkout archive and
+branch deletion. The current primary Settings checkout cannot be removed by Codex; keep it clean,
+detached at final main. Do not bypass that protection or touch unrelated historical worktrees.
 
-Active development: `M:/Repositories/nfty`, branch main. All nine two-pass reviews and approved
-fixes are complete. The consolidated AFTER-ACTION.md lists every finding, simplification, XML
-correction, result and limit. REVIEW.md is the completed task list; BACKLOG.md contains deliberate
-optional work, not unfinished approved fixes.
+## Documentation
 
-## Published releases and verification
+The reusable XML/reflection generator produces 270 Ticket/Core/Model pages: run
+python tools/api-docs/build.py --check and --lint separately. MkDocs builds HTML. Final site publication
+uses the existing deploy.yml workflow in corderro-artz/corderro-artz.github.io; verify the actual live
+version, eight current Cook/Rise/viewer image hashes and PreviewLighting API page afterward. The
+optional SITE_DISPATCH_TOKEN is absent, so a green notification alone is not deployment proof.
 
-- v2.4.8: main 6c07a38, completed suite audit and centered main/viewer startup; eight verified assets.
-- v2.4.9: main c23eac4, UI 6b8617b, Pillow/tooling a0c23f2, documentation c23eac4. Eight fresh assets,
-  all server digests verified. All 67 payloads match Windows/Linux and 2.4.8/2.4.9 in every shape.
-- Final local Release build: zero warnings/errors; 5,375 passed, zero failed, one Linux-only skip.
-  App 2,067 passes. Release CI 42530430593: all nine jobs successful.
-- 453 frames compared: 403 common exact, 20 intentional Cook changes, six random path labels,
-  two tiny raster differences, 22 new frames. Cook 49 focused passes include seven new cases;
-  geometry/keyboard/scan-state checks and 18 footer pixel comparisons pass in both themes.
-- Four manual screenshots use real 50-asset/50-model production cooks and exact source crops.
-  Strict manual passes; all 269 generated API pages current, XML lint clean. Live four image hashes
-  and current API record/constraint declarations verified. Site deployment 42531923431 succeeded.
-- Pillow 13 tooling/Python 3.11 pin resolves all 59 recorded ranges; GitHub open dependency alerts 0.
-  Demo 49 PNGs/45 depth maps unchanged; frozen fixtures and ImageSharp 3.1.11 remain untouched.
-
-Release notes/inventories: releases/2.4.8.json and releases/2.4.9.json. Evidence is ignored under
-main artifacts/audit, including 2.4.9-final-tests-corrected.log, 2.4.9-frame-parity.json,
-release-2.4.9/live-site-verification.json, and the Cook/security preflight reports. Failed-before
-and superseded harness attempts remain disclosed, not counted as passing results.
-
-## Branch and checkout cleanup
-
-The merged codex/ticket-audit-fixes branch is deleted. All 25,780 ignored evidence files were
-copied to main and SHA-256 verified; inventory artifacts/audit-preservation-sha256.json. Codex's
-archive tool refused folder removal: “The task’s primary checkout cannot be removed.” The retained
-C:/Users/Corde/.codex/worktrees/ticket-audit-fixes/nfty folder is detached and can track a clean
-snapshot of current main; all future development/commits/releases belong on the M: main checkout.
-Do not bypass the primary-checkout protection. Other historical worktrees were not touched.
-
-## Reusable documentation workflow
-
-python tools/api-docs/build.py regenerates Ticket/Core/Model reference pages from compiler XML
-and reflection; run --check and --lint separately. MkDocs builds their HTML. The live reference is
-https://www.vaporsoft.dev/nfty/docs/reference/api/. The separate site repository's existing
-workflow can publish immediately with:
-
-gh workflow run deploy.yml -R corderro-artz/corderro-artz.github.io --ref main
-
-The optional SITE_DISPATCH_TOKEN is absent, so repository notifications alone do not immediately
-publish. Manual dispatch was used and actual deployment/images/API were verified for this release.
-No website code, credentials, permissions or wiki settings changed.
-
-Read CLAUDE.md and AGENTS.md. Never regenerate tests/fixtures, edit docs/design/archive or upgrade
-ImageSharp beyond 3.1.11. Preserve ordinal/invariant output, caller-owned images and fixed geometry.
-The release builder deletes .release each run; preserve validated archives before another RID build.
+Read CLAUDE.md/AGENTS.md before future edits. No fixture regeneration, archived-design edits, package
+license upgrades, UserChoice writes or real default-app changes were used to make tests pass.
