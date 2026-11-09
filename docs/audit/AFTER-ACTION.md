@@ -5,6 +5,10 @@ what changed, what was simplified, the result of each change, and the limits of 
 **Completed:** audited release 2.4.8 and the separately requested 2.4.9 Cook cleanup are
 published from main. The manual, refreshed screenshots and generated API reference are live.
 
+Additional user-authorized usability work follows this completed audit. Its current scope,
+progress and per-release results are tracked in [post-audit follow-ups](12-usability-followups.md).
+The historical release counts below remain evidence for their named versions.
+
 The audit covered Nfty.Ticket, Nfty.Core, Nfty.Model, Nfty.Cli, Nfty.App, Nfty.Desktop, both embedding
 samples, developer tools, CI and shared build configuration. Each scope received a correctness and
 ownership pass, then a separate documentation and bounded-simplification pass. A finding's proposed
@@ -15,6 +19,18 @@ Finding and D/S identifiers restart within each project. For example, Ticket T01
 are different items. Rows are not an additive count of unique defects: some integration work crosses
 projects, and Desktop W07/tooling T09 describe the same coordinated dependency-instruction correction.
 Focused test selections overlap full-suite totals and are never added to them.
+
+## Post-audit usability revisions
+
+The original audit remains complete. The subsequent user-authorized changes are released as
+separate verified batches; [the detailed follow-up table](12-usability-followups.md) records each
+implementation, simplification and result.
+
+| Batch | Fix/simplification | Verified result and publication state |
+|---|---|---|
+| Cook destination safety and naming | A small GUI policy helper reuses existing name/device rules and SetReader; no parallel generator or manifest parser. New opt-in CookBook-named child; clear nonempty-folder refusal; collisions/linked Set write paths refused. | Source c71ac08 merged into main, version 2.4.10 candidate. Zero-warning Release build; 5,392 Windows passes, three explicit platform/privilege skips; Linux output/export 21/21 with both link cases executed. Stable 421 DIP card/footers in both themes; four real-production manual screenshots refreshed. Package and publication verification pending. |
+| Settings/help and file associations | Per-type selection, honest effective-default status, selected-only registration changes and icon transitions. | Isolated implementation/verification in progress. |
+| Model preview and lighting | Measured scheduling/hot-path improvements, shared preview light value/color/reset, API XML and AA assessment. | Isolated implementation/verification in progress. No AA implementation included. |
 
 ## Published 2.4.8 integration and publication record
 
