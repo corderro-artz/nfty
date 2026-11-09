@@ -9,9 +9,8 @@ public class ShareRulesTests
     [Fact] public void Canvas_sentence_names_both_sizes() =>
         Assert.Equal("The canvas is 640 x 640; the gallery takes up to 512 x 512.", ShareRules.CanvasTooLarge(640, 640));
 
-    // SizeText prints one decimal for megabytes, so the brief's "214 MB" reads "214.0 MB".
     [Fact] public void Size_sentence_names_the_models_fix() =>
-        Assert.Equal("214.0 MB — the gallery takes up to 200.0 MB. Leave out 3D models (−160.0 MB) or share fewer assets.",
+        Assert.Equal("214 MB — the gallery takes up to 200 MB. Leave out 3D models (−160 MB) or share fewer assets.",
             ShareRules.SetTooLarge(224_395_264, modelsBytes: 167_772_160));
 
     [Fact] public void Size_sentence_has_no_models_clause_without_models() =>

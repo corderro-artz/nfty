@@ -35,6 +35,7 @@ public class ShareSlugTests
         Assert.False(ShareSlug.IsValid("-a"));
         Assert.False(ShareSlug.IsValid("a-"));
         Assert.False(ShareSlug.IsValid(""));
+        Assert.False(ShareSlug.IsValid("a\n"));
         Assert.False(ShareSlug.IsValid(new string('a', 41)));
         Assert.True(ShareSlug.IsValid(new string('a', 40)));
     }

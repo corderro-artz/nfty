@@ -12,7 +12,7 @@ public static partial class ShareSlug
     [GeneratedRegex("[^a-z0-9]+")]
     private static partial Regex NonSlug();
 
-    [GeneratedRegex("^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")]
+    [GeneratedRegex(@"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?\z")]
     private static partial Regex Valid();
 
     /// <summary>The slug for a name: lowercase letters and digits, runs of anything else as one dash, at most 40 characters.</summary>

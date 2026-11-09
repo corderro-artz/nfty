@@ -36,6 +36,11 @@ public static class ShareRules
 
     private static string N(long n) => n.ToString("N0", CultureInfo.InvariantCulture);
 
+    // Megabytes as SizeText computes them, but a whole number prints whole ("214 MB", not "214.0 MB").
+    private static string Size(long bytes) => bytes >= 1024L * 1024
+        ? string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.#} MB")
+        : SizeText.Of(bytes);
+
     /// <summary>The canvas is past the limit.</summary>
     public static string CanvasTooLarge(int width, int height) =>
         $"The canvas is {N(width)} x {N(height)}; the gallery takes up to {MaxCanvas} x {MaxCanvas}.";
@@ -47,9 +52,9 @@ public static class ShareRules
     /// <summary>The packed Set is too big; names the 3D models' share when leaving them out would help.</summary>
     public static string SetTooLarge(long bytes, long modelsBytes)
     {
-        var head = $"{SizeText.Of(bytes)} — the gallery takes up to {SizeText.Of(MaxSetBytes)}.";
+        var head = $"{Size(bytes)} — the gallery takes up to {Size(MaxSetBytes)}.";
         return modelsBytes > 0
-            ? $"{head} Leave out 3D models (−{SizeText.Of(modelsBytes)}) or share fewer assets."
+            ? $"{head} Leave out 3D models (−{Size(modelsBytes)}) or share fewer assets."
             : $"{head} Share fewer assets.";
     }
 
