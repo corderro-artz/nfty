@@ -33,6 +33,21 @@ public class ShareRulesTests
         Assert.Equal("Your nfty-public holds things the gallery doesn't allow. Remove them to share.", ShareRules.RepoExtras);
     }
 
+    [Fact]
+    public void Gallery_checker_sentences_read_verbatim()
+    {
+        Assert.Equal("A share can only add, update or remove your own entries in the gallery.", ShareRules.EntryFilesNotAllowed);
+        Assert.Equal("The share's entry file isn't one the gallery can read.", ShareRules.EntryUnreadable);
+        Assert.Equal("The share's name doesn't match its file name in the gallery.", ShareRules.EntryNameMismatch);
+        Assert.Equal("Your GitHub account is under 30 days old; the gallery takes shares from older accounts.", ShareRules.AccountTooYoung);
+        Assert.Equal("The gallery can't list this share.", ShareRules.Blocked);
+        Assert.Equal("The gallery takes one new share a day. Try again tomorrow.", ShareRules.OneNewShareADay);
+        Assert.Equal("The share's repository isn't your nfty-public.", ShareRules.RepoNotYours);
+        Assert.Equal("Your nfty-public.json doesn't list this share as it was submitted.", ShareRules.ManifestMismatch);
+        Assert.Equal("'cats.set' is missing from the share's release.", ShareRules.ReleaseFileMissing("cats.set"));
+        Assert.Equal("The share's details don't match its Set.", ShareRules.EntryDetailsMismatch);
+    }
+
     [Fact] public void History_sentence_names_megabytes() =>
         Assert.Contains("about 48 MB of deleted files", ShareRules.HistoryTooLarge(49_152));
 

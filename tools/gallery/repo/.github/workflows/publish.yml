@@ -1,0 +1,51 @@
+name: publish
+
+# Rebuilds index.json from entries/ and deploys it (with tags.json) to GitHub Pages. Entries are sorted by owner id
+# then slug, so the same entries always give the same bytes. A merge or the nightly health run asks for this with
+# workflow_dispatch, because a push made with GITHUB_TOKEN does not start workflows.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "entries/**"
+      - "blocked.json"
+      - "tags.json"
+      - "scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build index.json
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          python scripts/build_index.py entries --blocked blocked.json > site/index.json
+          cp tags.json site/tags.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

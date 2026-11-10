@@ -1,0 +1,35 @@
+name: Report a share
+description: Tell the maintainer about a share that shouldn't be in the community gallery.
+title: "Report: "
+labels: ["report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for telling us. The maintainer reads every report. nfty fills in the first box when you press
+        **Report** in the app; if you came here by hand, copy the share's id from its page (owner id and name).
+  - type: input
+    id: entry
+    attributes:
+      label: Which share
+      description: The share's id, like 1234567/vapor-chests.
+    validations:
+      required: true
+  - type: dropdown
+    id: reason
+    attributes:
+      label: What is wrong with it
+      options:
+        - Offensive or harmful pictures
+        - Someone else's work, shared without permission
+        - The download is broken or missing
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Anything that helps us look into it. Please don't paste the pictures themselves.
+    validations:
+      required: false

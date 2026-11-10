@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "slug": "vapor-chests",
+  "owner": {
+    "id": 1234567,
+    "login": "someone"
+  },
+  "repo": "someone/nfty-public",
+  "release": "vapor-chests-v1",
+  "name": "Vapor Chests",
+  "collection": "Vapor Chests",
+  "description": "Chests & strongboxes, 29 drawings <3 + more.",
+  "tags": [
+    "props",
+    "pixel-art"
+  ],
+  "canvas": {
+    "width": 32,
+    "height": 32
+  },
+  "assets": 600,
+  "models": true,
+  "includesCookBook": true,
+  "cookbookSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "set": {
+    "url": "https://github.com/someone/nfty-public/releases/download/vapor-chests-v1/vapor-chests.set",
+    "size": 4194304,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "preview": {
+    "url": "https://github.com/someone/nfty-public/releases/download/vapor-chests-v1/preview.png",
+    "size": 81920,
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "nftyVersion": "2.5.0",
+  "created": "2026-11-09T14:02:00Z",
+  "updated": "2026-11-09T14:02:00Z",
+  "futureField": 7
+}

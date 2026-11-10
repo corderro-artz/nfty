@@ -1,0 +1,20 @@
+{
+  "sha": "aa",
+  "truncated": false,
+  "tree": [
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1",
+      "size": 900
+    },
+    {
+      "path": "nfty-public.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2",
+      "size": 1500
+    }
+  ]
+}

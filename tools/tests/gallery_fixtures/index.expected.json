@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "generated": "2026-11-09T14:10:00+00:00",
+  "entries": [
+    {
+      "schemaVersion": 1,
+      "slug": "cafe-cats",
+      "owner": {
+        "id": 42,
+        "login": "ann"
+      },
+      "repo": "ann/nfty-public",
+      "release": "cafe-cats-v1",
+      "name": "Caf\u00E9 Cats",
+      "collection": "Caf\u00E9 Cats",
+      "description": "Na\u00EFve \u0022cats\u0022 \\ it\u0027s \u2603 \uD83D\uDC08 \u0060x\u0060 \u007F \u0001.",
+      "tags": [
+        "animals"
+      ],
+      "canvas": {
+        "width": 32,
+        "height": 32
+      },
+      "assets": 600,
+      "models": false,
+      "includesCookBook": false,
+      "cookbookSha256": null,
+      "set": {
+        "url": "https://github.com/ann/nfty-public/releases/download/cafe-cats-v1/cafe-cats.set",
+        "size": 4194304,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "preview": {
+        "url": "https://github.com/ann/nfty-public/releases/download/cafe-cats-v1/preview.png",
+        "size": 81920,
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "nftyVersion": "2.5.0",
+      "created": "2026-11-06T14:02:00+00:00",
+      "updated": "2026-11-09T21:02:00.123+02:00"
+    },
+    {
+      "schemaVersion": 1,
+      "slug": "bones",
+      "owner": {
+        "id": 1234567,
+        "login": "someone"
+      },
+      "repo": "someone/nfty-public",
+      "release": "bones-v1",
+      "name": "Bones",
+      "collection": "Bones",
+      "description": "",
+      "tags": [],
+      "canvas": {
+        "width": 32,
+        "height": 32
+      },
+      "assets": 600,
+      "models": false,
+      "includesCookBook": false,
+      "cookbookSha256": null,
+      "set": {
+        "url": "https://github.com/someone/nfty-public/releases/download/bones-v1/bones.set",
+        "size": 4194304,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "preview": {
+        "url": "https://github.com/someone/nfty-public/releases/download/bones-v1/preview.png",
+        "size": 81920,
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "nftyVersion": "2.5.0",
+      "created": "2026-11-09T14:02:00+00:00",
+      "updated": "2026-11-09T14:02:00+00:00"
+    },
+    {
+      "schemaVersion": 1,
+      "slug": "vapor-chests",
+      "owner": {
+        "id": 1234567,
+        "login": "someone"
+      },
+      "repo": "someone/nfty-public",
+      "release": "vapor-chests-v1",
+      "name": "Vapor Chests",
+      "collection": "Vapor Chests",
+      "description": "Chests \u0026 strongboxes, 29 drawings \u003C3 \u002B more.",
+      "tags": [
+        "props",
+        "pixel-art"
+      ],
+      "canvas": {
+        "width": 32,
+        "height": 32
+      },
+      "assets": 600,
+      "models": true,
+      "includesCookBook": true,
+      "cookbookSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "set": {
+        "url": "https://github.com/someone/nfty-public/releases/download/vapor-chests-v1/vapor-chests.set",
+        "size": 4194304,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "preview": {
+        "url": "https://github.com/someone/nfty-public/releases/download/vapor-chests-v1/preview.png",
+        "size": 81920,
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "nftyVersion": "2.5.0",
+      "created": "2026-11-09T14:02:00+00:00",
+      "updated": "2026-11-09T14:02:00+00:00"
+    }
+  ]
+}

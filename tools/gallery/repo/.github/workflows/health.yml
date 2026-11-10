@@ -1,0 +1,38 @@
+name: health
+
+# Nightly: HEAD every listed Set and preview. A file missing three nights in a row marks its entry "status": "gone"
+# (kept on disk, dropped from index.json); one miss is counted in health.json, a hit resets it, and any other
+# failure counts for nothing, so an outage cannot delist anyone.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check every listed file
+        run: python scripts/health.py entries health.json
+      - name: Commit what changed
+        run: |
+          set -euo pipefail
+          if git status --porcelain | grep -q .; then
+            git config user.name "nfty-gallery"
+            git config user.email "nfty-gallery@users.noreply.github.com"
+            git add health.json entries
+            git commit -m "health: nightly check"
+            git push
+            gh workflow run publish.yml --ref "$GITHUB_REF_NAME"
+          fi

@@ -220,6 +220,37 @@ public static class ShareRules
     /// <summary>The entry's dates disagree with its history.</summary>
     public static string DatesMismatch => "The share's dates don't match its history.";
 
+    /// <summary>A pull request touches files other than its author's own entries.</summary>
+    public static string EntryFilesNotAllowed => "A share can only add, update or remove your own entries in the gallery.";
+
+    /// <summary>An entry file the gallery's checker can't read.</summary>
+    public static string EntryUnreadable => "The share's entry file isn't one the gallery can read.";
+
+    /// <summary>An entry's slug disagrees with its file name.</summary>
+    public static string EntryNameMismatch => "The share's name doesn't match its file name in the gallery.";
+
+    /// <summary>The GitHub account is too young to share.</summary>
+    public static string AccountTooYoung =>
+        $"Your GitHub account is under {MinAccountAgeDays} days old; the gallery takes shares from older accounts.";
+
+    /// <summary>The account or Set is on the gallery's block list.</summary>
+    public static string Blocked => "The gallery can't list this share.";
+
+    /// <summary>A second new share inside a day.</summary>
+    public static string OneNewShareADay => "The gallery takes one new share a day. Try again tomorrow.";
+
+    /// <summary>The entry's repository is not the author's nfty-public.</summary>
+    public static string RepoNotYours => "The share's repository isn't your nfty-public.";
+
+    /// <summary>The repository's nfty-public.json does not list the share as submitted.</summary>
+    public static string ManifestMismatch => "Your nfty-public.json doesn't list this share as it was submitted.";
+
+    /// <summary>A file the entry points at is not attached to the release.</summary>
+    public static string ReleaseFileMissing(string file) => $"'{file}' is missing from the share's release.";
+
+    /// <summary>The entry's facts differ from what the Set says about itself.</summary>
+    public static string EntryDetailsMismatch => "The share's details don't match its Set.";
+
     /// <summary>The list or file the gallery fetched is not readable.</summary>
     public static string ListDamaged => "The community gallery list is damaged.";
 

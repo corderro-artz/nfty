@@ -1,0 +1,20 @@
+{
+  "id": 99,
+  "name": "nfty-public",
+  "full_name": "someone/nfty-public",
+  "private": false,
+  "owner": {
+    "login": "someone",
+    "id": 1234567
+  },
+  "default_branch": "main",
+  "size": 120,
+  "fork": false,
+  "branches": [
+    "main"
+  ],
+  "tags": [
+    "vapor-chests-v1"
+  ],
+  "manifest": null
+}

@@ -1,0 +1,70 @@
+name: merge
+
+# Acts on check.yml's verdict. It holds the write token, so it reads ONLY the artifact (verdict.json + comment.md),
+# takes the pull request number from it, and executes nothing from the pull request.
+#
+# check.yml runs the version of its workflow file that the pull request carries, so a pull request that edits
+# .github/ could report any verdict it likes. This workflow therefore re-derives the one fact a forged verdict
+# could not survive: that the pull request changes only entries/<id>/<slug>.json, and nothing else. Anything
+# else is refused here, with a fixed sentence, whatever the artifact says.
+on:
+  workflow_run:
+    workflows: [check]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  merge:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: verdict
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: verdict
+
+      - name: Act on the verdict
+        run: |
+          set -euo pipefail
+          pr=$(jq -r '.pr' verdict/verdict.json)
+          ok=$(jq -r '.ok' verdict/verdict.json)
+          head=$(jq -r '.head' verdict/verdict.json)
+          [[ "$pr" =~ ^[0-9]+$ ]] || { echo "verdict has no pull request number" >&2; exit 1; }
+          [[ "$head" =~ ^[0-9a-f]{40}$ ]] || { echo "verdict has no commit" >&2; exit 1; }
+
+          # The verdict must be about the commit that was checked AND the commit the pull request is at now.
+          current=$(gh api "repos/$REPO/pulls/$pr" --jq '.head.sha')
+          state=$(gh api "repos/$REPO/pulls/$pr" --jq '.state')
+          if [ "$head" != "$RUN_HEAD_SHA" ] || [ "$current" != "$head" ] || [ "$state" != "open" ]; then
+            echo "verdict is stale or for another commit; leaving the pull request alone"
+            exit 0
+          fi
+
+          # Only entry files, none renamed.
+          if ! gh api --paginate "repos/$REPO/pulls/$pr/files" | jq -s -e \
+               'add | all(.[]; (.filename | test("^entries/[0-9]+/[a-z0-9-]+\\.json$")) and (.previous_filename == null))' > /dev/null; then
+            printf '%s\n' "- A share can only add, update or remove your own entries in the gallery." > refusal.md
+            gh pr comment "$pr" --repo "$REPO" --body-file refusal.md
+            gh pr close "$pr" --repo "$REPO"
+            exit 0
+          fi
+
+          if [ "$ok" = "true" ]; then
+            gh pr merge "$pr" --repo "$REPO" --squash --match-head-commit "$head"
+            # Events made with GITHUB_TOKEN do not start other workflows, so ask for the publish directly.
+            gh workflow run publish.yml --repo "$REPO" --ref "$(gh api "repos/$REPO" --jq '.default_branch')"
+          else
+            gh pr comment "$pr" --repo "$REPO" --body-file verdict/comment.md
+            gh pr close "$pr" --repo "$REPO"
+          fi

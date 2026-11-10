@@ -1,0 +1,89 @@
+name: check
+
+# Validates a share's pull request. It runs with a READ-ONLY token and no secrets, and it never checks out or
+# executes anything from the pull request: the PR's files are read as data through the API, and the only code
+# that runs (scripts/ and the nfty CLI) comes from this repository's base commit and a pinned nfty release.
+# Findings go to merge.yml as an artifact (comment.md + verdict.json); this workflow does not merge or comment.
+on:
+  pull_request:
+    paths:
+      - "entries/**"
+
+permissions:
+  contents: read
+
+env:
+  # Set both for the real gallery (see README.md). NFTY_VERSION is the nfty release whose CLI runs `share check`.
+  NFTY_VERSION: "2.5.0"
+  NFTY_REPO: "nfty-art/nfty"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      OUT: ${{ github.workspace }}/work
+    steps:
+      # The BASE commit: trusted scripts, blocked.json, tags.json and the entries already listed. Never the PR.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Get the nfty CLI
+        run: |
+          set -euo pipefail
+          mkdir -p cli
+          gh release download "v${NFTY_VERSION}" --repo "${NFTY_REPO}" \
+            --pattern "nfty-${NFTY_VERSION}-linux-x64-portable.tar.gz" --dir cli
+          tar -xzf "cli/nfty-${NFTY_VERSION}-linux-x64-portable.tar.gz" -C cli
+          cli_bin=$(find cli -type f -name Nfty.Cli | head -n 1)
+          chmod +x "$cli_bin"
+          echo "NFTY_CLI=$GITHUB_WORKSPACE/$cli_bin" >> "$GITHUB_ENV"
+
+      - name: Gather the pull request as data
+        run: bash scripts/gather.sh
+
+      - name: Download the Set and preview the entry points at
+        run: |
+          set -euo pipefail
+          entry=$(cat "$OUT/entry-path")
+          if [ -n "$entry" ]; then
+            python scripts/fetch.py --entry "$entry" --login "$(cat "$OUT/author-login")" --out "$OUT/fetch"
+          fi
+
+      - name: Check
+        run: |
+          set -uo pipefail
+          args=(
+            --pr-files "$OUT/pr-files.json" --pr "$OUT/pr.json" --author "$OUT/author.json"
+            --repo "$OUT/repo.json" --tree "$OUT/tree.json" --releases "$OUT/releases.json"
+            --open-entries "$OUT/open-entries.json" --entries-dir entries --pr-dir "$OUT/pr"
+            --blocked blocked.json --tags tags.json --out "$OUT/out"
+            --nfty "$NFTY_CLI"
+          )
+          [ -f "$OUT/fetch/fetch.json" ] && args+=(--fetch "$OUT/fetch/fetch.json")
+          [ -f "$OUT/fetch/set.set" ] && args+=(--set "$OUT/fetch/set.set")
+          [ -f "$OUT/fetch/preview.png" ] && args+=(--preview "$OUT/fetch/preview.png")
+          python scripts/check.py "${args[@]}"
+          code=$?
+          # 1 = the share was refused: that is a verdict, not a failure of this job. Anything else is a failure.
+          [ "$code" -le 1 ]
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verdict
+          path: |
+            ${{ github.workspace }}/work/out/comment.md
+            ${{ github.workspace }}/work/out/verdict.json
+          if-no-files-found: error
+          retention-days: 7

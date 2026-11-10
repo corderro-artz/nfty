@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1001,
+    "tag_name": "vapor-chests-v1",
+    "name": "Vapor Chests v1",
+    "draft": false,
+    "assets": [
+      {
+        "id": 5001,
+        "name": "vapor-chests.set",
+        "size": 4194304,
+        "state": "uploaded"
+      },
+      {
+        "id": 5002,
+        "name": "preview.png",
+        "size": 81920,
+        "state": "uploaded"
+      }
+    ]
+  }
+]

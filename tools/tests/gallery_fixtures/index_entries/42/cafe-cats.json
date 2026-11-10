@@ -1,0 +1,38 @@
+{
+    "schemaVersion": 1,
+    "slug": "cafe-cats",
+    "owner": {
+        "id": 42,
+        "login": "ann"
+    },
+    "repo": "ann/nfty-public",
+    "release": "cafe-cats-v1",
+    "name": "Caf\u00e9 Cats",
+    "collection": "Caf\u00e9 Cats",
+    "description": "Na\u00efve \"cats\" \\ it's \u2603 \ud83d\udc08 `x` \u007f \u0001.",
+    "tags": [
+        "animals"
+    ],
+    "canvas": {
+        "width": 32,
+        "height": 32
+    },
+    "assets": 600,
+    "models": false,
+    "includesCookBook": false,
+    "cookbookSha256": null,
+    "set": {
+        "url": "https://github.com/ann/nfty-public/releases/download/cafe-cats-v1/cafe-cats.set",
+        "size": 4194304,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "preview": {
+        "url": "https://github.com/ann/nfty-public/releases/download/cafe-cats-v1/preview.png",
+        "size": 81920,
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "nftyVersion": "2.5.0",
+    "created": "2026-11-06T14:02:00Z",
+    "updated": "2026-11-09T21:02:00.1230000+02:00"
+}
