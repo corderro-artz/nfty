@@ -141,18 +141,59 @@
               <Border Classes="shareblock">
                 <Panel>
                   <!-- Nothing to decide: where the share goes, or (signed out) why GitHub is needed and the way to it. -->
-                  <Grid IsVisible="{Binding IsNoneBlock}" RowDefinitions="Auto,Auto,*" RowSpacing="4">
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                      <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconShare}" Stroke="{DynamicResource AccentTextBrush}" />
-                      <TextBlock Grid.Column="1" Classes="cname" VerticalAlignment="Center" Text="{Binding ReadyHeading}"
-                                 ToolTip.Tip="{Binding ReadyHeading}" />
+                  <Panel IsVisible="{Binding IsNoneBlock}">
+                    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="4" Classes.cgone="{Binding ShowDestination}">
+                      <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconShare}" Stroke="{DynamicResource AccentTextBrush}" />
+                        <TextBlock Grid.Column="1" Classes="cname" VerticalAlignment="Center" Text="{Binding ReadyHeading}"
+                                   ToolTip.Tip="{Binding ReadyHeading}" />
+                      </Grid>
+                      <TextBlock Grid.Row="1" Classes="sline" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding ReadyText}" ToolTip.Tip="{Binding ReadyText}" />
+                      <Button Grid.Row="2" x:Name="ConnectGitHub" Classes="tbtn shbtn" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                              Content="Connect GitHub…" Command="{Binding ConnectGitHubCommand}" Classes.cgone="{Binding IsSignedIn}"
+                              ToolTip.Tip="Opens Settings at PUBLISHING, where you sign in on github.com. This card stays open underneath." />
                     </Grid>
-                    <TextBlock Grid.Row="1" Classes="sline" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
-                               Text="{Binding ReadyText}" ToolTip.Tip="{Binding ReadyText}" />
-                    <Button Grid.Row="2" x:Name="ConnectGitHub" Classes="tbtn shbtn" VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                            Content="Connect GitHub…" Command="{Binding ConnectGitHubCommand}" Classes.cgone="{Binding IsSignedIn}"
-                            ToolTip.Tip="Opens Settings at PUBLISHING, where you sign in on github.com. This card stays open underneath." />
-                  </Grid>
+
+                    <!-- Ready: where it goes, which slot it takes, and the three steps after Share. -->
+                    <Grid RowDefinitions="Auto,Auto,*" Classes.cgone="{Binding !ShowDestination}" ToolTip.Tip="{Binding ReadyText}">
+                      <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="plabel" Margin="0" VerticalAlignment="Center" Text="DESTINATION" />
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding SlotPips}" VerticalAlignment="Center">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3" /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShareSlotPip">
+                              <Border Classes="slotpip" Classes.used="{Binding IsUsed}" Classes.this="{Binding IsThis}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Grid.Column="2" Classes="slimit" VerticalAlignment="Center" Text="{Binding SlotText}" />
+                      </Grid>
+                      <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,8,0,0">
+                        <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconShare}" Stroke="{DynamicResource AccentTextBrush}" />
+                        <TextBlock Grid.Column="1" Classes="destrepo" VerticalAlignment="Center" Text="{Binding DestinationText}"
+                                   TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                      <!-- The three steps, as a track: each a dot over its label, joined by one hairline. -->
+                      <Grid Grid.Row="2" VerticalAlignment="Bottom" ColumnDefinitions="*,*,*" Margin="0,0,0,1">
+                        <Border Grid.ColumnSpan="3" Classes="steptrack" />
+                        <StackPanel Grid.Column="0" Classes="sharestep" HorizontalAlignment="Left">
+                          <Border Classes="stepdot first" />
+                          <TextBlock Classes="steplbl" Text="Upload to your repo" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Classes="sharestep" HorizontalAlignment="Center">
+                          <Border Classes="stepdot" HorizontalAlignment="Center" />
+                          <TextBlock Classes="steplbl" HorizontalAlignment="Center" Text="Gallery checks it" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Classes="sharestep" HorizontalAlignment="Right">
+                          <Border Classes="stepdot" HorizontalAlignment="Right" />
+                          <TextBlock Classes="steplbl" HorizontalAlignment="Right" Text="Listed in minutes" />
+                        </StackPanel>
+                      </Grid>
+                    </Grid>
+                  </Panel>
 
                   <!-- Extras / repo trouble -->
                   <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsExtrasBlock}">

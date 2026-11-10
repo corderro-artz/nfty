@@ -555,6 +555,19 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     /// <summary>The sentence under <see cref="ReadyHeading"/>.</summary>
     [ObservableProperty] private string _readyText = "";
 
+    /// <summary>Whether the block draws the destination (signed in, repository read): the address, the share slots
+    /// and the three steps a share takes. Otherwise it draws <see cref="ReadyHeading"/> and <see cref="ReadyText"/>.</summary>
+    [ObservableProperty] private bool _showDestination;
+
+    /// <summary>The repository the share goes to: <c>@you/nfty-public</c>.</summary>
+    [ObservableProperty] private string _destinationText = "";
+
+    /// <summary>Which share this is: <c>share 2 of 3</c>.</summary>
+    [ObservableProperty] private string _slotText = "";
+
+    /// <summary>One pip per share the gallery allows: used, this one, or free.</summary>
+    [ObservableProperty] private IReadOnlyList<ShareSlotPip> _slotPips = [];
+
     /// <summary>The sentence at the head of the block, whichever it holds.</summary>
     [ObservableProperty] private string _blockHeading = "";
 
@@ -781,6 +794,15 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
             ReadyHeading = $"Goes to @{_account.Login}/nfty-public";
             ReadyText = string.Create(CultureInfo.InvariantCulture,
                 $"As share {shares.Count + 1} of {ShareRules.MaxShares}. The gallery checks it and usually lists it within a few minutes.");
+        }
+        ShowDestination = IsSignedIn && _repoLoaded;
+        if (ShowDestination)
+        {
+            int used = shares.Count, next = Math.Min(used + 1, ShareRules.MaxShares);
+            DestinationText = $"@{_account.Login}/nfty-public";
+            SlotText = string.Create(CultureInfo.InvariantCulture, $"share {next} of {ShareRules.MaxShares}");
+            SlotPips = [.. Enumerable.Range(0, ShareRules.MaxShares).Select(i =>
+                new ShareSlotPip(i == next - 1 ? "this" : i < used ? "used" : "free"))];
         }
 
         // ---- why Share can't be pressed, first failing reason in the order the card promises
@@ -1057,4 +1079,15 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         _runCts?.Cancel();
         foreach (var row in _shareRows) row.Dispose();
     }
+}
+
+/// <summary>One share slot in the destination meter.</summary>
+/// <param name="State"><c>used</c>, <c>this</c> (the share being made) or <c>free</c>.</param>
+public sealed record ShareSlotPip(string State)
+{
+    /// <summary>A slot an existing share holds.</summary>
+    public bool IsUsed => State == "used";
+
+    /// <summary>The slot this share takes.</summary>
+    public bool IsThis => State == "this";
 }

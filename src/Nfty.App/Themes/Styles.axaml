@@ -5237,6 +5237,57 @@
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
   </Style>
   <!-- The ONE reserved block. Its height is stated once, so every state is the same card. -->
+  <!-- The share card's DESTINATION block: slot pips (used / this share / free), the repository as an
+       address, and the three steps a share takes, drawn as dots on one hairline track. -->
+  <Style Selector="Border.slotpip">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.slotpip.used">
+    <Setter Property="Background" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="Border.slotpip.this">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.destrepo">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Border.steptrack">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="4,4,4,0" />
+    <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+  <Style Selector="StackPanel.sharestep">
+    <Setter Property="Spacing" Value="5" />
+  </Style>
+  <Style Selector="Border.stepdot">
+    <Setter Property="Width" Value="9" />
+    <Setter Property="Height" Value="9" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="Border.stepdot.first">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.steplbl">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+
   <Style Selector="Border.shareblock">
     <Setter Property="Height" Value="108" />
     <Setter Property="Padding" Value="9,7" />
