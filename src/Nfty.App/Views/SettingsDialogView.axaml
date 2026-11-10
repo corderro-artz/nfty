@@ -99,7 +99,9 @@
           </Grid>
 
           <!-- ============================= PUBLISHING ============================= -->
-          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10"
+          <!-- Eight equal gaps absorb the two pixels added by the larger text, keeping the
+               publishing page inside the shared 336px reserve without changing any field. -->
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="9.75"
                 IsVisible="{Binding IsPublishingTab}">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="UPLOAD TO" />
             <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">

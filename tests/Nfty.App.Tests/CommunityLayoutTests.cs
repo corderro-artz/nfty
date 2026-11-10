@@ -489,18 +489,26 @@ public class CommunityLayoutTests
         finally { window.Close(); }
     }
 
-    [AvaloniaFact]
-    public void The_rail_has_no_scrollbar_and_keeps_its_links_in_view_with_a_long_description()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_rail_has_no_scrollbar_and_keeps_its_links_in_view_with_a_long_description(bool dark)
     {
         var dir = TempSheetDir();
         var entry = CommunityFixtures.Entry("long", "A collection with a rather long name that wraps", login: "alice",
             tags: ["characters", "creatures", "props", "scenery", "effects"],
             description: string.Join(' ', Enumerable.Repeat("A long sentence that wraps.", 60)));
-        var vm = Page(CommunityFixtures.Listing([entry]), dir);
+        using var vm = Page(CommunityFixtures.Listing([entry]), dir);
         vm.SelectCommand.Execute(vm.Tiles[0]);
-        var (window, view) = Show(vm);
+        var (window, view) = Show(vm, variant: dark ? ThemeVariant.Dark : ThemeVariant.Light);
         try
         {
+            if (Environment.GetEnvironmentVariable("NFTY_CAPTURE_DIR") is { Length: > 0 } captureDir)
+            {
+                Directory.CreateDirectory(captureDir);
+                using var frame = window.CaptureRenderedFrame()!;
+                frame.Save(Path.Combine(captureDir, $"community-rail-long-description-dark-{dark}.png"), PngBitmapEncoderOptions.Default);
+            }
             var rail = Named<Border>(view, "rules-panel");
             Assert.DoesNotContain(rail.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>(), b => b.IsVisible);
             var links = rail.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("clink") && b.IsVisible).ToList();

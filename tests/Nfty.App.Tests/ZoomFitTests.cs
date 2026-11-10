@@ -1,7 +1,11 @@
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media.Imaging;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nfty.App.Services;
@@ -18,7 +22,7 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class ZoomFitTests
 {
-    private static (MainWindow Window, ShellViewModel Shell, ExplorerViewModel Page) Open()
+    internal static (MainWindow Window, ShellViewModel Shell, ExplorerViewModel Page) Open()
     {
         var nav = new FakeNav();
         var dialogs = new FakeDialogs();
@@ -38,14 +42,19 @@ public class ZoomFitTests
     private static T Named<T>(Window w, string name) where T : Control =>
         w.GetVisualDescendants().OfType<T>().First(c => c.Name == name);
 
+    /// <summary>Every percentage reachable by the ten-point zoom commands.</summary>
+    public static TheoryData<int> ZoomLevels
+    {
+        get
+        {
+            var levels = new TheoryData<int>();
+            for (int zoom = 50; zoom <= 300; zoom += 10) levels.Add(zoom);
+            return levels;
+        }
+    }
+
     [AvaloniaTheory]
-    [InlineData(50)]
-    [InlineData(80)]
-    [InlineData(100)]
-    [InlineData(110)]
-    [InlineData(150)]
-    [InlineData(200)]
-    [InlineData(300)]
+    [MemberData(nameof(ZoomLevels))]
     public void Every_zoom_gives_the_page_at_least_the_room_it_was_built_for(int zoom)
     {
         var (window, shell, explorer) = Open();
@@ -76,13 +85,13 @@ public class ZoomFitTests
             var page = host.GetVisualDescendants().OfType<Views.ExplorerView>().Single();
             Assert.True(page.Bounds.Width <= host.Bounds.Width + 0.5 && page.Bounds.Height <= host.Bounds.Height + 0.5);
         }
-        finally { window.Close(); }
+        finally { window.Close(); explorer.Dispose(); }
     }
 
     [AvaloniaFact]
     public void Zooming_in_scrolls_the_window_and_zooming_back_stops_it()
     {
-        var (window, shell, _) = Open();
+        var (window, shell, explorer) = Open();
         try
         {
             var scroller = Named<ScrollViewer>(window, "PageScroller");
@@ -96,6 +105,58 @@ public class ZoomFitTests
             Assert.Equal(ScrollBarVisibility.Disabled, scroller.VerticalScrollBarVisibility);
             Assert.Equal(ScrollBarVisibility.Disabled, scroller.HorizontalScrollBarVisibility);
         }
-        finally { window.Close(); }
+        finally { window.Close(); explorer.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void Zooming_the_page_keeps_the_dialog_at_its_original_size()
+    {
+        var (window, shell, explorer) = Open();
+        try
+        {
+            shell.ShowHelpCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            var sheet = window.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("sheet"));
+            var original = sheet.TranslatePoint(default, window);
+            var size = sheet.Bounds.Size;
+            foreach (int zoom in new[] { 50, 150, 200, 300, 100 })
+            {
+                shell.Zoom = zoom;
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(size, sheet.Bounds.Size);
+                Assert.Equal(original, sheet.TranslatePoint(default, window));
+            }
+        }
+        finally { window.Close(); explorer.Dispose(); }
+    }
+}
+
+public partial class VisualCapture
+{
+    /// <summary>The production shell at its minimum window, with reachable zoomed content and an unscaled dialog.</summary>
+    [AvaloniaFact]
+    public void Capture_page_zoom_at_minimum()
+    {
+        if (Dir is null) return;
+        foreach (var theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var (window, shell, explorer) = ZoomFitTests.Open();
+            try
+            {
+                window.RequestedThemeVariant = theme;
+                foreach (int zoom in new[] { 100, 150, 200, 300 })
+                {
+                    shell.Zoom = zoom;
+                    Dispatcher.UIThread.RunJobs();
+                    using var frame = window.CaptureRenderedFrame()!;
+                    frame.Save(Path.Combine(Dir, $"shell-min-zoom-{zoom}-{theme.Key.ToString()!.ToLowerInvariant()}.png"), PngBitmapEncoderOptions.Default);
+                }
+                shell.ShowHelpCommand.Execute(null);
+                Dispatcher.UIThread.RunJobs();
+                using var dialog = window.CaptureRenderedFrame()!;
+                dialog.Save(Path.Combine(Dir, $"shell-min-zoom-dialog-{theme.Key.ToString()!.ToLowerInvariant()}.png"), PngBitmapEncoderOptions.Default);
+            }
+            finally { window.Close(); explorer.Dispose(); }
+        }
     }
 }

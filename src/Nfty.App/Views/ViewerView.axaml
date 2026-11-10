@@ -215,7 +215,7 @@
           <Border Grid.Row="2" x:Name="FactTabs" Classes="facttabs" IsVisible="{Binding ShowTabs}">
             <ItemsControl ItemsSource="{Binding Tabs}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="13" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vw:ViewerFactTab">
@@ -381,7 +381,9 @@
          that show the ground they choose, the 3D camera (angles, edges), and the turntable as one
          button that steps its speed. One line at the default window; StripPanel wraps by group below. -->
     <Border Grid.Row="2" Classes="pane-hrow toolstrip" BorderThickness="0,1,0,0" IsVisible="{Binding IsNotGallery}">
-      <ctl:StripPanel Spacing="14">
+      <!-- Four groups still fit one line at the minimum width after the text-size increase;
+           the saved line belongs to the info rail's common facts. -->
+      <ctl:StripPanel Spacing="8">
         <StackPanel Orientation="Horizontal" Spacing="7">
           <Border Classes="idchip vtag"><TextBlock Classes="ck" Text="2D" /></Border>
           <Border Classes="seg bar">

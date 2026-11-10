@@ -279,7 +279,7 @@
                    HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                    Margin="24" IsVisible="{Binding !HasSelection}" />
 
-        <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="12" Classes.cgone="{Binding !HasSelection}">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="10" Classes.cgone="{Binding !HasSelection}">
           <StackPanel Grid.Row="0" Spacing="3">
             <Border x:Name="RailShot" Classes="cshot"
                     ToolTip.Tip="Scroll the wheel to step through the preview's cells.">
@@ -295,7 +295,7 @@
 
           <!-- The identity, pinned: nothing here scrolls, so the owner and tag links are always in view. The
                facts run together on wrapped lines to keep the block short. -->
-          <StackPanel x:Name="RailIdentity" Grid.Row="1" Spacing="4" Margin="0,4,0,0">
+          <StackPanel x:Name="RailIdentity" Grid.Row="1" Spacing="3" Margin="0,4,0,0">
             <TextBlock Text="{Binding Selected.Name}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"
                        TextTrimming="CharacterEllipsis" MaxLines="1" ToolTip.Tip="{Binding Selected.Name}" />
             <Button Classes="clink" HorizontalAlignment="Left" Content="{Binding Selected.OwnerLink.Label}"

@@ -190,7 +190,8 @@
            One cell. The pages stack in it and the inactive ones are inked out, never collapsed, so
            it is the tallest page's height whichever tab shows. The results layer is given EXACTLY
            that height (bound to the pages' own bounds, which it cannot change) and is inked in
-           instead, so searching moves nothing. -->
+           instead, so searching moves nothing. Its vertical inset lives inside that height: an
+           outside top margin would grow the shared cell even while the results are inked out. -->
       <Panel Grid.Row="1" x:Name="Pages">
         <ItemsControl x:Name="PagesHost" ItemsSource="{Binding Pages}" Classes="helppage" Classes.off="{Binding IsSearching}"
                       VerticalAlignment="Top">
@@ -200,8 +201,8 @@
         </ItemsControl>
 
         <Grid x:Name="ResultsLayer" Classes="helppage" Classes.off="{Binding ShowPages}"
-              VerticalAlignment="Top" Height="{Binding #PagesHost.Bounds.Height}" RowDefinitions="Auto,*" Margin="20,12,20,0">
-          <TextBlock Grid.Row="0" Classes="sh-fine" Margin="0,2,0,8" Text="{Binding ResultCountText}" />
+              VerticalAlignment="Top" Height="{Binding #PagesHost.Bounds.Height}" RowDefinitions="Auto,*" Margin="20,0">
+          <TextBlock Grid.Row="0" Classes="sh-fine" Margin="0,14,0,8" Text="{Binding ResultCountText}" />
           <ScrollViewer Grid.Row="1" x:Name="ResultsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                         IsVisible="{Binding HasResults}">
             <ItemsControl x:Name="ResultsList" ItemsSource="{Binding Results}">

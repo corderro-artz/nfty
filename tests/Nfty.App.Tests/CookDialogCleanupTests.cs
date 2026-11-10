@@ -65,7 +65,8 @@ public class CookDialogCleanupTests
             var footer = controls.OfType<Border>().Single(b => b.Classes.Contains("modal-foot"));
             Button Command(object command) => controls.OfType<Button>().Single(b => ReferenceEquals(b.Command, command));
             var cardBounds = In(card, window);
-            Assert.Equal(421, cardBounds.Height);
+            // The larger font adds two pixels; every state still shares this one fitting card.
+            Assert.Equal(423, cardBounds.Height);
             var footerBounds = In(footer, window);
             var primaryBounds = In(Command(vm.CookCommand), window);
             var secondaryBounds = In(Command(vm.CloseCommand), window);

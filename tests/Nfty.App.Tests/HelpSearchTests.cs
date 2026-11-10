@@ -48,6 +48,29 @@ public class HelpSearchTests
     }
 
     [AvaloniaFact]
+    public void Search_stays_inside_the_height_reserved_by_the_reference_pages()
+    {
+        var (w, view, vm) = HelpTabsTests.Render(smallest: true);
+        try
+        {
+            var cell = view.FindControl<Panel>("Pages")!;
+            var pages = view.FindControl<ItemsControl>("PagesHost")!;
+            var results = view.FindControl<Grid>("ResultsLayer")!;
+            foreach (var query in new[] { "", "zoom", "qzxv" })
+            {
+                vm.Query = query;
+                Pump();
+                // Insets belong inside the replacement layer. An outside top margin used to grow
+                // the shared cell even while that layer was inked out, pushing the footer down.
+                Assert.Equal(pages.Bounds.Height, cell.Bounds.Height, 0.5);
+                Assert.True(results.Bounds.Bottom <= cell.Bounds.Height + 0.5,
+                    $"search ends at {results.Bounds.Bottom:0}, pages at {cell.Bounds.Height:0}");
+            }
+        }
+        finally { w.Close(); }
+    }
+
+    [AvaloniaFact]
     public void A_query_with_no_hits_says_so_by_name_and_carries_the_clear_button()
     {
         var (w, view, vm) = HelpTabsTests.Render();

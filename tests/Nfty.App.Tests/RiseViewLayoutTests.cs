@@ -608,7 +608,7 @@ public class RiseViewLayoutTests
             Assert.Contains("tilecap", rise.Classes);
             Assert.Equal(editor.FontSize, rise.FontSize);
             Assert.Equal(editor.Margin, rise.Margin);
-            Assert.Equal(7.5, rise.FontSize);
+            Assert.Equal(8, rise.FontSize);
         }
         finally { window.Close(); }
     }

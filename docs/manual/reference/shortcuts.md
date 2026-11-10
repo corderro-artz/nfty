@@ -26,8 +26,8 @@ closes the sheet).
 | ++ctrl+slash++ | Open the Quick Reference |
 | ++ctrl+w++ | Close the open CookBook or Set, or leave the community gallery |
 | ++ctrl+t++ | Switch between light and dark |
-| ++ctrl+plus++ / ++ctrl+minus++ | Zoom the whole window in or out |
-| ++ctrl+0++ | Window zoom back to 100% |
+| ++ctrl+plus++ / ++ctrl+minus++ | Zoom the page in or out (50–300%); zoomed-in pages scroll to keep every control reachable |
+| ++ctrl+0++ | Page zoom back to 100%; titlebar, status bar and dialogs keep their size |
 | ++ctrl+grave-accent++ | Bring the next other window (viewer) forward |
 | ++ctrl+shift+w++ | List the other windows and pick one |
 | ++f11++ | Enter or leave full screen (also the first button in the titlebar). Esc closes dialogs and does not leave full screen |

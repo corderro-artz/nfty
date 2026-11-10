@@ -50,7 +50,7 @@
           <StackPanel Spacing="11" Classes="exportpages">
 
             <!-- ============================ CONTENTS ============================ -->
-            <StackPanel Spacing="12"
+            <StackPanel Spacing="4"
                         IsEnabled="{Binding ShowForm}">
               <StackPanel.IsVisible><MultiBinding Converter="{x:Static BoolConverters.And}"><Binding Path="IsContentsTab" /><Binding Path="!IsDone" /></MultiBinding></StackPanel.IsVisible>
 

@@ -104,11 +104,11 @@
                    The label lost the word "image" and the glyph to fit three across 237px: with
                    both it needs 130 and the row has 82 to spare. The tooltip carries what it opens. -->
               <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="7" Margin="0,4,0,0">
-                <Button Grid.Column="0" Content="Duplicate" Classes="tbtn" Padding="9,8"
+                <Button Grid.Column="0" Content="Duplicate" Classes="tbtn" Padding="7,8"
                         HorizontalAlignment="Stretch" Command="{Binding DuplicateVariantCommand}" />
-                <Button Grid.Column="1" Content="Delete" Classes="tbtn" Padding="9,8"
+                <Button Grid.Column="1" Content="Delete" Classes="tbtn" Padding="7,8"
                         HorizontalAlignment="Stretch" Command="{Binding DeleteVariantCommand}" />
-                <Button Grid.Column="2" Content="Import…" Classes="tbtn" Padding="9,8"
+                <Button Grid.Column="2" Content="Import…" Classes="tbtn" Padding="7,8"
                         Command="{Binding ImportImageCommand}"
                         ToolTip.Tip="Replace this variant's image from a PNG on disk" />
               </Grid>

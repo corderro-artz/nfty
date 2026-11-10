@@ -266,15 +266,21 @@ public class ViewerInfoRailTests
     }
 
     [AvaloniaTheory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Every_tab_and_its_count_fit_the_rail_at_the_smallest_window(bool bundle)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void Every_tab_and_its_count_fit_the_rail_at_the_smallest_window(bool bundle, bool dark)
     {
         var facts = AssetFacts();
         if (bundle) facts.Add(new ViewerFact("LINK", "https://chests.example/", Group: ViewerFactGroup.Links));
         var (window, view, vm, art) = Host(facts, Smallest);
         try
         {
+            window.RequestedThemeVariant = dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+            Settle();
+            using var frame = Frame(window);
+            SaveFrame(frame, $"viewer-info-tabs-bundle-{bundle}-dark-{dark}");
             var strip = view.FindControl<Border>("FactTabs")!;
             var tabs = strip.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("facttab")).ToList();
             Assert.Equal(vm.Tabs.Count, tabs.Count);
@@ -296,12 +302,18 @@ public class ViewerInfoRailTests
 
     // ---------------------------------------------------------------- the snap
 
-    [AvaloniaFact]
-    public void A_set_assets_common_facts_need_no_scrolling_at_the_smallest_window()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_set_assets_common_facts_need_no_scrolling_at_the_smallest_window(bool dark)
     {
         var (window, view, vm, art) = Host(AssetFacts(), Smallest);
         try
         {
+            window.RequestedThemeVariant = dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+            Settle();
+            using var frame = Frame(window);
+            SaveFrame(frame, $"viewer-info-common-facts-dark-{dark}");
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>(),
                 sb => sb.IsEffectivelyVisible);
             Assert.Equal(0, vm.RowsBelow);
