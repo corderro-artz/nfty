@@ -4029,7 +4029,7 @@
        the layout RECTANGLE, not to the corner radius, so this band's square background painted over
        the rounded corner and cut the border's arc off at both bottom corners. -->
   <Style Selector="Border.sh-f">
-    <Setter Property="CornerRadius" Value="0,0,8,8" />
+    <Setter Property="CornerRadius" Value="0,0,7,7" />
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
@@ -5189,7 +5189,7 @@
   <!-- ===================== The community share card ===================== -->
   <!-- This card is the one split modal with a hard height and no scroller, so its body gives back padding. Declared
        after the split rule it overrides (equal specificity, last wins). -->
-  <Style Selector="Border.modal.split.share Border.modal-body">
+  <Style Selector="Border.modal.split.sharecard Border.modal-body">
     <Setter Property="Padding" Value="24,14" />
   </Style>
   <!-- A line of the card's small print: limits, the manifest, notes. Font size and line box travel together. -->

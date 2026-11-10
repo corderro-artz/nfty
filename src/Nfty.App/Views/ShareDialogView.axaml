@@ -13,7 +13,7 @@
        (every state of the one reserved block is the same height). Only that block's row list may
        scroll, rows only, with Remove these... outside it. Left = what leaves the machine and what
        the gallery will make of it; right = the listing, and the one reserved block. -->
-  <Border Classes="modal monoform split share">
+  <Border Classes="modal monoform split sharecard">
     <Grid RowDefinitions="*,Auto">
       <Border Grid.Row="0" Classes="modal-body">
         <Panel>

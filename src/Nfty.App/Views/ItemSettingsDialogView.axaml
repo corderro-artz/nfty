@@ -9,6 +9,10 @@
     <Grid RowDefinitions="Auto,Auto">
       <Border Classes="modal-body tight">
         <StackPanel Spacing="9">
+          <StackPanel Classes="plabel-row">
+            <Ellipse Classes="kdot" />
+            <TextBlock Text="RENAME" Classes="slbl" />
+          </StackPanel>
           <TextBlock Text="{Binding Title}" Classes="m-h" />
           <TextBlock Text="NAME" Classes="plabel" />
           <TextBox Text="{Binding Name}" />
