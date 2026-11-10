@@ -17,3 +17,6 @@ tests/fixtures/** -text
 
 # Generated API pages: tools/api-docs/build.py --check compares bytes, so they must stay LF on every platform.
 docs/manual/reference/api/** text eol=lf
+
+# The expected index is compared byte-for-byte (no trailing newline, LF) by IndexFixtureTests and test_gallery.py.
+tools/tests/gallery_fixtures/index.expected.json -text
