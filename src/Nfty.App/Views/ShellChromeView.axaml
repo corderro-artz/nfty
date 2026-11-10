@@ -164,12 +164,21 @@
                zooming out actually fit more on screen. The status bar and titlebar stay outside it
                deliberately: window chrome is not content, and scaling it would move the resize
                grip and window buttons away from the window edge. -->
-          <LayoutTransformControl>
-            <LayoutTransformControl.LayoutTransform>
-              <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}" />
-            </LayoutTransformControl.LayoutTransform>
-            <ContentControl Content="{Binding CurrentPage}" />
-          </LayoutTransformControl>
+          <!-- Zoomed in, the page would get less room than the smallest window gives it at 100% and
+               its fixed layouts (paged tables, snapped rails, wrapped strips) would clip. So the page
+               is laid out at no less than ShellViewModel.MinPageArea and THIS scroller reaches the
+               rest. At 100% and below the page is sized to the viewport exactly and both bars are
+               disabled, so nothing changes there. Sizes are set from the scroller's own bounds and the
+               zoom, never from the content (a handler writing layout must only read inputs it cannot
+               change). -->
+          <ScrollViewer x:Name="PageScroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled">
+            <LayoutTransformControl>
+              <LayoutTransformControl.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}" />
+              </LayoutTransformControl.LayoutTransform>
+              <ContentControl x:Name="PageHost" Content="{Binding CurrentPage}" />
+            </LayoutTransformControl>
+          </ScrollViewer>
         </Border>
         <Panel Name="DialogScrim"
                IsVisible="{Binding ActiveDialog, Converter={x:Static ObjectConverters.IsNotNull}}"

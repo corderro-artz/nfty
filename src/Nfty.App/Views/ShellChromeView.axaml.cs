@@ -38,6 +38,8 @@ public partial class ShellChromeView : UserControl
         DetachedFromVisualTree += (_, _) => { _attached = false; ObserveShell(null); StopAttention(); };
         DataContextChanged += (_, _) => { if (_attached) ObserveShell(DataContext as ShellViewModel); };
 
+        this.FindControl<ScrollViewer>("PageScroller")!.SizeChanged += (_, _) => SizePage();
+
         // Click-the-scrim-to-dismiss is ordinary UI behavior rather than window behavior, so it
         // stays here with the scrim itself instead of being reached into from the head.
         var scrim = this.FindControl<Panel>("DialogScrim")!;
@@ -71,7 +73,29 @@ public partial class ShellChromeView : UserControl
             shell.PropertyChanged += OnShellChanged;
             shell.ChildWindowMenuRequested += OpenChildWindowMenu;
             shell.ChildWindowMenuCloseRequested += CloseChildWindowMenu;
+            SizePage();
         }
+    }
+
+    /// <summary>Sizes the page for the zoom: the viewport in page units, but never less than
+    /// <see cref="ShellViewModel.MinPageArea"/> while zoomed in, the scroller showing a bar only on an axis
+    /// that really overflows.</summary>
+    internal void SizePage()
+    {
+        var scroller = this.FindControl<ScrollViewer>("PageScroller");
+        var host = this.FindControl<ContentControl>("PageHost");
+        if (scroller is null || host is null) return;
+        double zoom = (DataContext as ShellViewModel)?.ZoomScale ?? 1;
+        if (zoom <= 0) zoom = 1;
+        var view = scroller.Bounds.Size;
+        if (view.Width <= 0 || view.Height <= 0) return;
+        var min = zoom > 1 ? ShellViewModel.MinPageArea : default;
+        double w = view.Width / zoom, h = view.Height / zoom;
+        bool overW = min.Width > w + 0.5, overH = min.Height > h + 0.5;
+        host.Width = overW ? min.Width : w;
+        host.Height = overH ? min.Height : h;
+        scroller.HorizontalScrollBarVisibility = overW ? Avalonia.Controls.Primitives.ScrollBarVisibility.Auto : Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
+        scroller.VerticalScrollBarVisibility = overH ? Avalonia.Controls.Primitives.ScrollBarVisibility.Auto : Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled;
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e)
@@ -81,6 +105,7 @@ public partial class ShellChromeView : UserControl
             Dispatcher.UIThread.Post(() => { if (ReferenceEquals(sender, _observedShell)) OnShellChanged(sender, e); });
             return;
         }
+        if (e.PropertyName is nameof(ShellViewModel.Zoom) or nameof(ShellViewModel.ZoomScale)) SizePage();
         if (e.PropertyName == nameof(ShellViewModel.StatusMessage)) StopAttention();
         if (e.PropertyName != nameof(ShellViewModel.StatusAttention)) return;
         StopAttention();

@@ -102,6 +102,13 @@ public partial class ShellViewModel : ViewModelBase
     /// applies BaseScale to this control's ancestor, so multiplying it in here would square it.</summary>
     public double ZoomScale => Zoom / 100.0;
 
+    /// <summary>The page area at the smallest window, in page units at 100%: what every page is built and tested
+    /// to fit (<c>MinimumWindowFitTests</c>). Zoomed in, the shell lays the page out at no less than this and
+    /// scrolls the rest, so zoom can never squeeze a page below the size it was designed for.</summary>
+    public static Avalonia.Size MinPageArea => new(
+        (MinWindowWidth - 24) / BaseScale,
+        (MinWindowHeight - ChromeReserve) / BaseScale);
+
     /// <summary>What the page is actually scaled by once both transforms compose. Nothing binds to it;
     /// it exists so the relationship is asserted somewhere rather than inferred from two XAML files.</summary>
     public double EffectivePageScale => ChromeScale * ZoomScale;
