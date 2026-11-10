@@ -17,6 +17,8 @@ internal sealed class FakeCommunityCache : ICommunityCache
     public string? PreviewPath { get; set; }
     public HashSet<string> MissingPreviews { get; } = [];
     public string SetsDir { get; set; } = Path.Combine(Path.GetTempPath(), "nfty-fake-community-sets");
+    public IReadOnlyList<PendingRecord> Pending { get; private set; } = [];
+    public void SavePending(IReadOnlyList<PendingRecord> records) => Pending = records.ToList();
 
     public Task<CommunityListing> RefreshAsync(CancellationToken ct)
     {
@@ -34,6 +36,8 @@ internal sealed class FakeGitHubAccount : IGitHubAccount
 {
     public string? Login { get; set; }
     public bool IsConnected => Login is not null;
+    public long? UserId { get; set; }
+    public Task<long?> EnsureUserIdAsync(CancellationToken cancellationToken) => Task.FromResult(UserId);
     public string? UnavailableReason => null;
     public Task<DeviceCode> BeginAsync(CancellationToken cancellationToken) => throw new InvalidOperationException();
     public Task ConnectAsync(DeviceCode code, CancellationToken cancellationToken) => throw new InvalidOperationException();

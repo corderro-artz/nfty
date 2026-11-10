@@ -1563,6 +1563,27 @@ public partial class VisualCapture
         }
     }
 
+    /// <summary>The share card while it runs, once it is submitted and when it fails, at the area a modal really gets.</summary>
+    [AvaloniaFact]
+    public void Capture_share_run()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            foreach (var state in new[] { "running", "done", "failed" })
+            {
+                var task = ShareRunTests.RunStateAsync(state);
+                UiThreadWait.For(task);
+                var (vm, rig) = task.Result;
+                using (rig)
+                using (vm)
+                    Capture(new Views.ShareDialogView { DataContext = vm }, variant, $"share-run-{state}-{key}.png");
+            }
+        }
+    }
+
     /// <summary>
     /// The states no fixture had ever built. This project's worst defect — an unresolved
     /// <c>WarningBrush</c> leaving "1 problem" as black text at 1.14:1 — survived every audit for

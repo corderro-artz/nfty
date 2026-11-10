@@ -82,6 +82,8 @@ internal sealed class RaisingAccount : IGitHubAccount
 {
     public string? Login { get; set; }
     public bool IsConnected => Login is not null;
+    public long? UserId { get; set; }
+    public Task<long?> EnsureUserIdAsync(CancellationToken cancellationToken) => Task.FromResult(UserId);
     public string? UnavailableReason => null;
     public Task<DeviceCode> BeginAsync(CancellationToken cancellationToken) => throw new InvalidOperationException();
     public Task ConnectAsync(DeviceCode code, CancellationToken cancellationToken) => throw new InvalidOperationException();
@@ -136,6 +138,9 @@ internal static class ShareFixtures
     }
 
     public static string Slug => ShareSlug.Of(Collection);
+
+    public static ShareResult Result(int pull = 12, string slug = "vaporcats") =>
+        new(pull, new Uri($"https://github.com/nfty-gallery/nfty-gallery/pull/{pull}"), slug, slug + "-v1", new PendingShare(pull, slug, null, null));
 }
 
 /// <summary>The share card's Editing state: what it says, when Share waits, and what it will and won't do.</summary>
@@ -163,7 +168,7 @@ public class ShareDialogTests
         public async Task<ShareDialogViewModel> OpenAsync()
         {
             var vm = new ShareDialogViewModel(Source, Dialogs, Account, Cache, Repo, Checker,
-                run: r => { Sent.Add(r); return Task.CompletedTask; }, tags: () => Tags);
+                run: (r, _, _, _) => { Sent.Add(r); return Task.FromResult(ShareFixtures.Result()); }, tags: () => Tags);
             await vm.PendingBook;
             await vm.PendingFacts;
             await vm.PendingRepo;
@@ -201,7 +206,7 @@ public class ShareDialogTests
         using var rig = new Rig();
         rig.Checker.Gate = new TaskCompletionSource();
         var vm = new ShareDialogViewModel(rig.Source, rig.Dialogs, rig.Account, rig.Cache, rig.Repo, rig.Checker,
-            run: _ => Task.CompletedTask, tags: () => []);
+            run: (_, _, _, _) => Task.FromResult(ShareFixtures.Result()), tags: () => []);
         using (vm)
         {
             await vm.PendingRepo;
@@ -391,7 +396,7 @@ public class ShareDialogTests
         rig.Account.Login = null;
         int connects = 0;
         var vm = new ShareDialogViewModel(rig.Source, rig.Dialogs, rig.Account, rig.Cache, rig.Repo, rig.Checker,
-            connect: () => { connects++; return Task.CompletedTask; }, run: _ => Task.CompletedTask, tags: () => []);
+            connect: () => { connects++; return Task.CompletedTask; }, run: (_, _, _, _) => Task.FromResult(ShareFixtures.Result()), tags: () => []);
         using (vm)
         {
             await vm.PendingFacts;

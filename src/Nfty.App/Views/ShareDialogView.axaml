@@ -15,7 +15,10 @@
   <Border Classes="modal monoform split share">
     <Grid RowDefinitions="*,Auto">
       <Border Grid.Row="0" Classes="modal-body">
-        <StackPanel>
+        <Panel>
+        <!-- THE FORM: stays laid out in every state, inked out and unreachable once a run has started, so the card is
+             the same size while it runs, finishes or fails. -->
+        <StackPanel Classes.cgone="{Binding !IsEditing}" IsEnabled="{Binding IsEditing}">
           <Grid ColumnDefinitions="*,Auto" Height="26">
             <TextBlock Grid.Column="0" Text="Share with the community" Classes="m-h" Margin="0" VerticalAlignment="Center" />
             <!-- ONE SLOT, TWO STATES: the chip and the Connect button share a cell and swap ink. -->
@@ -180,16 +183,49 @@
             </StackPanel>
           </Grid>
         </StackPanel>
+
+        <!-- THE RUN: drawn over the form, in the same space. Running, done and failed share the centered column. -->
+        <StackPanel x:Name="RunPanel" Classes.cgone="{Binding IsEditing}" VerticalAlignment="Center" Spacing="12"
+                    HorizontalAlignment="Center" Width="520">
+          <StackPanel Spacing="10" IsVisible="{Binding IsRunning}">
+            <TextBlock Classes="m-h" Margin="0" Text="Sharing…" />
+            <TextBlock Classes="cname" Text="{Binding StageText}" />
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Fraction}" />
+            <TextBlock Classes="sline" TextWrapping="Wrap"
+                       Text="Stopping takes back what this share made on GitHub. Nothing already in the gallery changes." />
+          </StackPanel>
+
+          <StackPanel Spacing="10" IsVisible="{Binding IsDone}">
+            <TextBlock Classes="m-h" Margin="0" Text="Sent to the gallery" />
+            <TextBlock Classes="cname" TextWrapping="Wrap" Text="{x:Static vm:ShareDialogViewModel.DoneText}" />
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <SelectableTextBlock Grid.Column="0" Classes="uri" Text="{Binding PullText}" ToolTip.Tip="{Binding PullText}" />
+              <Button Grid.Column="1" Classes="tbtn cellbtn" Content="Copy" Command="{Binding CopyPullCommand}"
+                      ToolTip.Tip="Copy the pull request's address." />
+              <Button Grid.Column="2" Classes="tbtn cellbtn" Content="Open" Command="{Binding OpenPullCommand}"
+                      ToolTip.Tip="Open the pull request on GitHub." />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="10" IsVisible="{Binding IsFailed}">
+            <TextBlock Classes="m-h" Margin="0" Text="Not shared" />
+            <TextBlock Classes="swarn" TextWrapping="Wrap" Text="{Binding Failure}" />
+            <TextBlock Classes="sline" TextWrapping="Wrap" Text="Nothing was left on GitHub by this attempt." />
+            <Button Classes="tbtn" HorizontalAlignment="Left" Content="Back to the form" Command="{Binding TryAgainCommand}" />
+          </StackPanel>
+        </StackPanel>
+        </Panel>
       </Border>
 
       <Border Grid.Row="1" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
           <!-- The reason Share waits, always laid out; ink only. -->
           <TextBlock Grid.Column="0" Classes="swarn" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                     Text="{Binding ShareReason}" ToolTip.Tip="{Binding ShareReason}" />
+                     Text="{Binding ShareReason}" ToolTip.Tip="{Binding ShareReason}" Classes.cgone="{Binding !IsEditing}" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
-            <Button Command="{Binding ShareCommand}" Classes="accent" ToolTip.Tip="{Binding ShareButtonTip}" MinWidth="96">
+            <Button Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Classes="tbtn" MinWidth="64" />
+            <Button Command="{Binding ShareCommand}" Classes="accent" ToolTip.Tip="{Binding ShareButtonTip}" MinWidth="96"
+                    Classes.cgone="{Binding !IsEditing}">
               <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                 <Path Classes="ico sm" Data="{StaticResource IconShare}" />
                 <TextBlock Text="Share" />

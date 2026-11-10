@@ -70,6 +70,8 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? _downloadCts;
     private string _downloadingId = "";
     private string _failedId = "";
+    private readonly ICommunitySharing? _sharing;
+    private readonly HashSet<string> _standIns = new(StringComparer.Ordinal);
 
     /// <summary>Creates the page.</summary>
     /// <param name="cache">The list and its pictures.</param>
@@ -84,11 +86,14 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <param name="bridge">Image to bitmap conversion; null makes the standard one.</param>
     /// <param name="http">The client downloads go through. It carries no token and no timeout (the download
     /// has its own stall limit); null makes one the page owns and disposes.</param>
+    /// <param name="sharing">Shares, unshares and the pending list; null leaves Unshare saying it is unavailable and shows nothing pending.</param>
     public CommunityViewModel(ICommunityCache cache, ICommunitySeen seen, IGitHubAccount account,
         INavigationService nav, IDialogService dialogs, IStatusService status, Func<string, Task> openSet,
-        IUrlOpener? urls = null, ThumbnailGate? gate = null, IImageBridge? bridge = null, HttpClient? http = null)
+        IUrlOpener? urls = null, ThumbnailGate? gate = null, IImageBridge? bridge = null, HttpClient? http = null,
+        ICommunitySharing? sharing = null)
     {
         _ownsHttp = http is null;
+        _sharing = sharing;
         _http = http ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         _cache = cache;
         _seen = seen;
@@ -100,11 +105,13 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         _urls = urls ?? new NoopUrlOpener();
         _gate = gate ?? new ThumbnailGate(2);
         _bridge = bridge ?? new ImageBridge();
-        UnshareHandler = _ =>
-        {
-            _status.Say("Unsharing isn't available yet.");
-            return Task.CompletedTask;
-        };
+        UnshareHandler = _sharing is null
+            ? _ =>
+            {
+                _status.Say("Unsharing isn't available here.");
+                return Task.CompletedTask;
+            }
+            : UnshareCoreAsync;
         _account.Changed += OnAccountChanged;
 
         if (_cache.Cached is { } cached) Apply(cached, refreshed: false);
@@ -121,7 +128,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>Opens a downloaded Set in the Set browser.</summary>
     internal Func<string, Task> OpenSet { get; }
 
-    /// <summary>What Unshare does with the selected entry. The shell replaces it with the real removal.</summary>
+    /// <summary>What Unshare does with the selected entry: asks, then opens the removal pull request.</summary>
     public Func<CommunityEntry, Task> UnshareHandler { get; set; }
 
     /// <summary>The refresh this page last started, so a test can wait for it.</summary>
@@ -397,6 +404,19 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
             if (listing.Notice is null) listing = listing with { Notice = ShareRules.Unreachable };
         }
         Apply(listing, refreshed: true);
+        await CheckPendingAsync(listing).ConfigureAwait(true);
+    }
+
+    /// <summary>Looks at the pending pull requests behind the list that just arrived. GitHub trouble never blocks browsing: whatever
+    /// fails is silently tried again at the next refresh.</summary>
+    private async Task CheckPendingAsync(CommunityListing listing)
+    {
+        if (_sharing is null || _sharing.Pending.Count == 0) return;
+        var before = _sharing.Pending;
+        try { await _sharing.CheckPendingAsync(listing.Index, _cts.Token).ConfigureAwait(true); }
+        catch (OperationCanceledException) { return; }
+        catch (Exception) { return; }
+        if (!ReferenceEquals(before, _sharing.Pending) && !_cts.IsCancellationRequested) Apply(listing, refreshed: true);
     }
 
     private void Apply(CommunityListing listing, bool refreshed)
@@ -417,6 +437,17 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
             old?.Dispose();
             _byId[e.Id] = new CommunityTile(e, _cache, _gate, _bridge, token => ToggleToken(token));
         }
+        // A share the gallery does not list yet is drawn from what was submitted, until the list shows it.
+        var pending = LatestPending();
+        _standIns.Clear();
+        foreach (var rec in pending.Values.Where(r => !r.IsUnshare && !keep.Contains(r.Id)))
+        {
+            keep.Add(rec.Id);
+            _standIns.Add(rec.Id);
+            if (_byId.TryGetValue(rec.Id, out var old) && old.Entry.Updated == rec.SubmittedAt && old.Entry.Name == rec.Name) continue;
+            old?.Dispose();
+            _byId[rec.Id] = new CommunityTile(rec.ToEntry(), _cache, _gate, _bridge, token => ToggleToken(token));
+        }
         foreach (var id in _byId.Keys.Where(k => !keep.Contains(k)).ToList())
         {
             _byId[id].Dispose();
@@ -424,8 +455,14 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         }
         foreach (var t in _byId.Values)
         {
-            t.Mark = _seen.MarkOf(t.Entry);
+            t.Mark = _standIns.Contains(t.Entry.Id) ? SeenMark.None : _seen.MarkOf(t.Entry);
             t.IsMine = IsMineEntry(t.Entry);
+            if (_sharing is not null)
+            {
+                var rec = pending.GetValueOrDefault(t.Entry.Id);
+                t.IsPending = rec is { Closed: false };
+                t.IsClosed = rec is { Closed: true };
+            }
         }
         if (selectedId is not null) Selected = _byId.GetValueOrDefault(selectedId);
 
@@ -482,8 +519,16 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     // ---- the account -----------------------------------------------------------------------
 
     private bool IsMineEntry(CommunityEntry e) =>
-        _account.Login is { Length: > 0 } login
-        && string.Equals(login, e.Owner.Login, StringComparison.OrdinalIgnoreCase);
+        _account.UserId is { } id ? e.Owner.Id == id
+        : _account.Login is { Length: > 0 } login && string.Equals(login, e.Owner.Login, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The newest pending record for each entry id.</summary>
+    private Dictionary<string, PendingRecord> LatestPending() =>
+        (_sharing?.Pending ?? []).GroupBy(r => r.Id, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.SubmittedAt).First(), StringComparer.Ordinal);
+
+    private PendingRecord? PendingFor(CommunityTile? tile) =>
+        tile is null || _sharing is null ? null : LatestPending().GetValueOrDefault(tile.Entry.Id);
 
     private void OnAccountChanged(object? sender, EventArgs e)
     {
@@ -671,7 +716,10 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     // ---- download, report, unshare ---------------------------------------------------------
 
     /// <summary>Whether the selected entry is the signed-in account's own.</summary>
-    public bool CanUnshareSelected => Selected is { IsMine: true };
+    public bool CanUnshareSelected => Selected is { IsMine: true } t && !_standIns.Contains(t.Entry.Id) && PendingFor(t) is null;
+
+    /// <summary>Whether the selected collection has a closed request whose reasons can be dismissed.</summary>
+    public bool CanDismissSelected => PendingFor(Selected) is { Closed: true };
 
     /// <summary>
     /// The sentence under the rail's buttons: why the last download of the selected collection failed
@@ -679,7 +727,19 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// </summary>
     public string DownloadNote =>
         DownloadFailure.Length > 0 && Selected?.Entry.Id == _failedId ? DownloadFailure
+        : PendingNote.Length > 0 ? PendingNote
         : IsOffline && _listing?.Notice is { } n ? n : "";
+
+    /// <summary>What the rail says about a pull request still open for the selected collection, or why the gallery turned it
+    /// away (its comment's lines, until dismissed); empty when nothing is pending for it.</summary>
+    public string PendingNote => PendingFor(Selected) switch
+    {
+        null => "",
+        { Closed: true, ClosedReasons.Count: > 0 } r => string.Join(" ", r.ClosedReasons),
+        { Closed: true } => "The gallery closed this request without listing it.",
+        { IsUnshare: true } => "Removal submitted. The gallery takes it out of the list within a few minutes.",
+        _ => "Submitted. The gallery lists it within a few minutes.",
+    };
 
     /// <summary>The sentence the last failed download ended with; empty after a success or a stop.</summary>
     [ObservableProperty]
@@ -708,11 +768,11 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         StopDownloadCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanDownload() => Selected is not null && !IsOffline && !IsDownloading;
+    private bool CanDownload() => Selected is { } t && !_standIns.Contains(t.Entry.Id) && !IsOffline && !IsDownloading;
 
-    private bool CanReport() => Selected is { } t && ReportUrl(t.Entry) is not null;
+    private bool CanReport() => Selected is { } t && !_standIns.Contains(t.Entry.Id) && ReportUrl(t.Entry) is not null;
 
-    private bool CanUnshare() => CanUnshareSelected;
+    private bool CanUnshare() => CanUnshareSelected && !IsUnsharing;
 
     /// <summary>Downloads the selected collection, proves it is what the gallery lists, and opens it in the Set browser.</summary>
     [RelayCommand(CanExecute = nameof(CanDownload))]
@@ -745,7 +805,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         }
         catch (CommunityException ex)
         {
-            DownloadFailure = ex.Message;        // a ShareRules sentence, shown verbatim
+            DownloadFailure = ErrorText.For(ex);        // a ShareRules sentence, shown verbatim
         }
         catch (Exception)
         {
@@ -774,8 +834,53 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanUnshare))]
     private Task Unshare() => Selected is { IsMine: true } t ? UnshareHandler(t.Entry) : Task.CompletedTask;
 
+    /// <summary>Lets go of a closed request's reasons, and of its stand-in tile when the gallery never listed it.</summary>
+    [RelayCommand(CanExecute = nameof(CanDismissSelected))]
+    private void DismissPending()
+    {
+        if (PendingFor(Selected) is not { Closed: true } rec || _sharing is null) return;
+        _sharing.Dismiss(rec);
+        if (_listing is { } listing) Apply(listing, refreshed: false);
+        else NotifyActions();
+    }
+
+    /// <summary>Whether an unshare is being sent; only one runs at a time.</summary>
+    [ObservableProperty]
+    private bool _isUnsharing;
+
+    partial void OnIsUnsharingChanged(bool value) => NotifyActions();
+
+    /// <summary>Finishes when the last unshare has, so a test can wait for it.</summary>
+    internal Task PendingUnshare { get; private set; } = Task.CompletedTask;
+
+    private Task UnshareCoreAsync(CommunityEntry entry) => PendingUnshare = UnshareRunAsync(entry);
+
+    private async Task UnshareRunAsync(CommunityEntry entry)
+    {
+        if (_sharing is null || IsUnsharing) return;
+        var confirm = new ConfirmDialogViewModel(Dialogs, "Unshare this collection?",
+            $"Remove \"{entry.Name}\" from the gallery? Your nfty-public repository stays.", "Remove");
+        if (await Dialogs.ShowAsync<bool>(confirm).ConfigureAwait(true) != true) return;
+
+        IsUnsharing = true;
+        try
+        {
+            // A slow job with no screen of its own gets the busy card, which is also what keeps the window from closing under it.
+            var record = await BusyViewModel.RunAsync(Dialogs, "Unsharing", "Opening the removal request…",
+                (_, ct) => _sharing.UnshareAsync(entry, ct), cancellable: true).ConfigureAwait(true);
+            _status.Say($"Removal submitted as pull request #{record.PullNumber}. The gallery takes it out of the list within a few minutes.");
+            if (_listing is { } listing) Apply(listing, refreshed: false);
+        }
+        catch (OperationCanceledException) { _status.Say("Unsharing stopped. Nothing was changed."); }
+                catch (Exception ex) { await Dialogs.ShowErrorAsync("Couldn't unshare", ErrorText.For(ex)).ConfigureAwait(true); }
+        finally { IsUnsharing = false; }
+    }
+
     private void NotifyActions()
     {
+        OnPropertyChanged(nameof(PendingNote));
+        OnPropertyChanged(nameof(CanDismissSelected));
+        DismissPendingCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanUnshareSelected));
         OnPropertyChanged(nameof(DownloadNote));
         OnPropertyChanged(nameof(ShowsDownloadProgress));

@@ -95,6 +95,31 @@ public class ShareDialogLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task The_card_is_the_same_size_while_it_runs_finishes_and_fails()
+    {
+        var sizes = new List<(string, double, double)>();
+        foreach (var state in new[] { "edit", "running", "done", "failed" })
+        {
+            var (vm, rig) = state == "edit" ? await StateAsync("none") : await ShareRunTests.RunStateAsync(state);
+            using var _ = rig; using var __ = vm;
+            var window = Show(vm, out var view);
+            try
+            {
+                var card = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("modal"));
+                var run = view.GetVisualDescendants().OfType<StackPanel>().First(p => p.Name == "RunPanel");
+                var body = view.GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("modal-body"));
+                sizes.Add((state, card.Bounds.Width, card.Bounds.Height));
+                // the run is drawn inside the card's body and never needs more than it has
+                Assert.True(run.DesiredSize.Height <= body.Bounds.Height - body.Padding.Top - body.Padding.Bottom + 0.5, state);
+                Assert.Equal(state != "edit" ? 1.0 : 0.0, run.Opacity);
+            }
+            finally { window.Close(); }
+        }
+        Assert.All(sizes, s => Assert.Equal(sizes[0].Item2, s.Item2));
+        Assert.All(sizes, s => Assert.Equal(sizes[0].Item3, s.Item3));
+    }
+
+    [AvaloniaFact]
     public async Task Lower_block_height_is_the_same_in_every_state()
     {
         var blocks = new List<(string, double, double)>();

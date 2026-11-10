@@ -96,6 +96,11 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(MarkText), nameof(MarkOpacity))]
     private bool _isPending;
 
+    /// <summary>Whether the gallery closed this share's pull request without merging it; the rail says why until it is dismissed.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MarkText), nameof(MarkOpacity))]
+    private bool _isClosed;
+
     /// <summary>Whether the tile is the selected one.</summary>
     [ObservableProperty]
     private bool _isSelected;
@@ -106,10 +111,10 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
     private SeenMark _mark;
 
     /// <summary>The badge word. The slot always holds a word so its width is the same whether it is inked or not.</summary>
-    public string MarkText => IsPending ? "Pending" : Mark == SeenMark.Updated ? "Updated" : "New";
+    public string MarkText => IsPending ? "Pending" : IsClosed ? "Closed" : Mark == SeenMark.Updated ? "Updated" : "New";
 
     /// <summary>1 when the badge slot shows a word, 0 when it is only reserved.</summary>
-    public double MarkOpacity => IsPending || Mark != SeenMark.None ? 1 : 0;
+    public double MarkOpacity => IsPending || IsClosed || Mark != SeenMark.None ? 1 : 0;
 
     /// <summary>The first cell of the preview sheet; null until it has been decoded. Reading it starts the decode.</summary>
     public Bitmap? Preview

@@ -54,6 +54,10 @@ public static class ServiceRegistration
             new CommunityCache(CommunityCache.RootFor(sp.GetRequiredService<IStateStore>())));
         services.AddSingleton<ICommunitySeen>(sp =>
             new CommunitySeen(CommunityCache.RootFor(sp.GetRequiredService<IStateStore>())));
+        // Share and unshare runs, and the pending list, share ONE serialization for the whole app.
+        services.AddSingleton<IShareBackend>(sp => new GitHubShareBackend(sp.GetRequiredService<IGitHubAccount>()));
+        services.AddSingleton<ICommunitySharing>(sp => new CommunitySharing(
+            sp.GetRequiredService<IShareBackend>(), sp.GetRequiredService<ICommunityCache>(), sp.GetRequiredService<IGitHubAccount>()));
         // A fresh page each time it is opened (Landing's button, a later task, calls this). Opening a
         // downloaded Set is the Set-browser route Landing takes: a busy card, then the browser.
         services.AddTransient<Func<CommunityViewModel>>(sp => () => new CommunityViewModel(
@@ -61,7 +65,7 @@ public static class ServiceRegistration
             sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<INavigationService>(),
             sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IStatusService>(),
             path => OpenDownloadedSet(sp, path), sp.GetRequiredService<IUrlOpener>(),
-            http: sp.GetRequiredService<CommunityHttp>().Client));
+            http: sp.GetRequiredService<CommunityHttp>().Client, sharing: sp.GetRequiredService<ICommunitySharing>()));
         // The one unauthenticated client downloads use: no token ever rides on it, and no overall
         // timeout (CommunityDownload stalls out on its own when bytes stop arriving).
         services.AddSingleton<CommunityHttp>();
@@ -228,13 +232,15 @@ public static class ServiceRegistration
 
         // The community share card. Connect GitHub… opens Settings on its PUBLISHING page, where the
         // device flow lives, so there is one place the account is connected. The run itself is
-        // supplied by the next step: until then Share stays disabled saying so.
+        // the community sharing service (serialized app-wide, remembering the pull request as pending).
         services.AddSingleton<IShareRepo>(sp => new GitHubShareRepo(sp.GetRequiredService<IGitHubAccount>()));
         services.AddSingleton<IShareChecker>(sp => new ShareChecker(sp.GetRequiredService<IParallelismSetting>()));
         services.AddSingleton<Func<ShareSource, ShareDialogViewModel>>(sp => source => new ShareDialogViewModel(
             source, sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IGitHubAccount>(),
             sp.GetRequiredService<ICommunityCache>(), sp.GetRequiredService<IShareRepo>(),
             sp.GetRequiredService<IShareChecker>(), bridge: sp.GetRequiredService<IImageBridge>(),
+            run: (request, info, progress, ct) => sp.GetRequiredService<ICommunitySharing>().ShareAsync(request, info, progress, ct),
+            urls: sp.GetRequiredService<IUrlOpener>(), clipboard: sp.GetService<IClipboardService>(),
             // The gallery's own tag list, as the cache last fetched or kept it.
             tags: () => sp.GetRequiredService<ICommunityCache>().Tags,
             connect: () => sp.GetRequiredService<IDialogService>().ShowAsync<object>(

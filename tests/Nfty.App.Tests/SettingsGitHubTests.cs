@@ -19,6 +19,8 @@ public class SettingsGitHubTests
         public TaskCompletionSource Approved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public string? Login { get; set; }
         public bool IsConnected => Login is not null;
+        public long? UserId { get; set; }
+        public Task<long?> EnsureUserIdAsync(CancellationToken cancellationToken) => Task.FromResult(UserId);
         public string? UnavailableReason { get; set; }
         public Exception? Fail { get; set; }
         public int Disconnects { get; private set; }

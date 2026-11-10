@@ -32,6 +32,14 @@ public interface ICommunityCache
 
     /// <summary>The folder downloaded Sets are kept in.</summary>
     string SetsDir { get; }
+
+    /// <summary>The shares and removals this machine opened and has not seen the end of (<c>pending.json</c>); empty when
+    /// there are none or the file is unreadable.</summary>
+    IReadOnlyList<PendingRecord> Pending { get; }
+
+    /// <summary>Replaces the pending list, writing <c>pending.json</c> (deleting it when the list is empty).</summary>
+    /// <param name="records">The new list.</param>
+    void SavePending(IReadOnlyList<PendingRecord> records);
 }
 
 /// <inheritdoc cref="ICommunityCache"/>

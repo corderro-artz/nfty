@@ -594,6 +594,14 @@ public class DarkModeContrastTests
         UiThreadWait.For(shareTask);
         var (shareVm, shareRig) = shareTask.Result;
         yield return ("dialog-share-extras", new Views.ShareDialogView { DataContext = shareVm }, () => { shareVm.Dispose(); shareRig.Dispose(); });
+        // Its run states: the warning ink of a failure and the pull request's link text are on the card only then.
+        foreach (var runState in new[] { "failed", "done" })
+        {
+            var runTask = ShareRunTests.RunStateAsync(runState);
+            UiThreadWait.For(runTask);
+            var (runVm, runRig) = runTask.Result;
+            yield return ("dialog-share-" + runState, new Views.ShareDialogView { DataContext = runVm }, () => { runVm.Dispose(); runRig.Dispose(); });
+        }
 
 
         var sealMismatch = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(), new FilePickerService(),

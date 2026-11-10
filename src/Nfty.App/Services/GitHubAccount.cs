@@ -19,6 +19,16 @@ public interface IGitHubAccount
     /// <summary>Whether an account is connected.</summary>
     bool IsConnected { get; }
 
+    /// <summary>The connected account's GitHub id (what a share's entry id is made from), or null when none is connected or it
+    /// has not been read yet; <see cref="EnsureUserIdAsync"/> reads it.</summary>
+    long? UserId { get; }
+
+    /// <summary>The account's id, asking GitHub once when it is not known (an account connected before the id was kept).</summary>
+    /// <param name="cancellationToken">Stops the request.</param>
+    /// <returns>The id, or null when no account is connected.</returns>
+    /// <exception cref="CommunityException">GitHub refused, in <see cref="ShareRules"/>' words.</exception>
+    Task<long?> EnsureUserIdAsync(CancellationToken cancellationToken);
+
     /// <summary>Why connecting is impossible (no secure storage, or a build without an OAuth app); null when it is possible.</summary>
     string? UnavailableReason { get; }
 
@@ -57,6 +67,9 @@ public sealed class GitHubAccountService : IGitHubAccount
     /// <summary>The <c>settings.json</c> key the login is cached under.</summary>
     public const string LoginKey = "githubLogin";
 
+    /// <summary>The <c>settings.json</c> key the account's GitHub id is cached under.</summary>
+    public const string UserIdKey = "githubUserId";
+
     private readonly IStateStore _store;
     private readonly ISecretStore _secrets;
     private readonly CommunityEndpoints _endpoints;
@@ -85,14 +98,37 @@ public sealed class GitHubAccountService : IGitHubAccount
 
         // A login with no token behind it (the entry was removed outside nfty) is not a connection.
         var login = SettingsJson.String(SettingsJson.Read(store), LoginKey);
-        if (login is { Length: > 0 } && _secrets.IsAvailable && TryReadToken() is not null) Login = login;
+        if (login is { Length: > 0 } && _secrets.IsAvailable && TryReadToken() is not null)
+        {
+            Login = login;
+            UserId = ReadUserId();
+        }
     }
+
+    private long? ReadUserId() =>
+        SettingsJson.Read(_store).FirstOrDefault(p => string.Equals(p.Key, UserIdKey, StringComparison.OrdinalIgnoreCase)).Value
+            is System.Text.Json.Nodes.JsonValue v && v.TryGetValue(out long id) && id > 0 ? id : null;
 
     /// <inheritdoc />
     public string? Login { get; private set; }
 
     /// <inheritdoc />
     public bool IsConnected => Login is not null;
+
+    /// <inheritdoc />
+    public long? UserId { get; private set; }
+
+    /// <inheritdoc />
+    public async Task<long?> EnsureUserIdAsync(CancellationToken cancellationToken)
+    {
+        if (!IsConnected) return null;
+        if (UserId is { } known) return known;
+        var client = Client() ?? throw new CommunityException(ShareRules.NotConnected);
+        var user = await client.GetViewerAsync(cancellationToken).ConfigureAwait(false);
+        SettingsJson.Set(_store, UserIdKey, System.Text.Json.Nodes.JsonValue.Create(user.Id));
+        UserId = user.Id;
+        return user.Id;
+    }
 
     /// <inheritdoc />
     public string? UnavailableReason =>
@@ -121,7 +157,9 @@ public sealed class GitHubAccountService : IGitHubAccount
         var user = await new GitHubShareClient(_flowHttp, token, _endpoints).GetViewerAsync(cancellationToken).ConfigureAwait(false);
         _secrets.Write(Target, token);
         SettingsJson.Set(_store, LoginKey, user.Login);
+        SettingsJson.Set(_store, UserIdKey, System.Text.Json.Nodes.JsonValue.Create(user.Id));
         Login = user.Login;
+        UserId = user.Id;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -130,7 +168,9 @@ public sealed class GitHubAccountService : IGitHubAccount
     {
         if (_secrets.IsAvailable) _secrets.Delete(Target);
         SettingsJson.Set(_store, LoginKey, null);
+        SettingsJson.Set(_store, UserIdKey, null);
         Login = null;
+        UserId = null;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

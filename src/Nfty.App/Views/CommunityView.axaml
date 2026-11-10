@@ -242,7 +242,8 @@
 
           <StackPanel Grid.Row="2" Spacing="6">
             <!-- Why Download is off. Reserved two lines, so the buttons never move. -->
-            <TextBlock Classes="cwarn" Height="30" Text="{Binding DownloadNote}" />
+            <TextBlock Classes="cwarn" Height="30" Text="{Binding DownloadNote}" TextTrimming="CharacterEllipsis"
+                       ToolTip.Tip="{Binding DownloadNote}" />
             <!-- The download's progress and its Stop. Always laid out; inked only while the selected
                  collection is the one downloading, so starting one moves nothing. -->
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Height="24"
@@ -259,9 +260,16 @@
               <Button Grid.Column="0" Classes="tbtn" HorizontalAlignment="Stretch" Content="Report"
                       Command="{Binding ReportCommand}"
                       ToolTip.Tip="Open the gallery's report form for this collection. Only its id is sent." />
-              <Button Grid.Column="1" Classes="tbtn" HorizontalAlignment="Stretch" Content="Unshare"
-                      Classes.cgone="{Binding !CanUnshareSelected}" Command="{Binding UnshareCommand}"
-                      ToolTip.Tip="Take your collection out of the gallery." />
+              <!-- One slot, two buttons that are never both inked: Unshare for a live collection of yours, Dismiss for a request
+                   the gallery turned away. -->
+              <Panel Grid.Column="1">
+                <Button Classes="tbtn" HorizontalAlignment="Stretch" Content="Unshare"
+                        Classes.cgone="{Binding !CanUnshareSelected}" Command="{Binding UnshareCommand}"
+                        ToolTip.Tip="Take your collection out of the gallery." />
+                <Button Classes="tbtn" HorizontalAlignment="Stretch" Content="Dismiss"
+                        Classes.cgone="{Binding !CanDismissSelected}" Command="{Binding DismissPendingCommand}"
+                        ToolTip.Tip="Forget this request and its reasons." />
+              </Panel>
             </Grid>
           </StackPanel>
         </Grid>

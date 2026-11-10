@@ -127,7 +127,7 @@ public sealed partial class ShareShareRow : ObservableObject, IDisposable
 /// <para>Every sentence is <see cref="ShareRules"/>' and the words are judged by
 /// <see cref="CommunityShare.ListingProblem"/>, so this card cannot enable Share for something the run would refuse.</para>
 /// </remarks>
-public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, IDisposable
+public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, ICancellableDialog, IDisposable
 {
     private const string CheckingSentence = "Checking your Set…";
 
@@ -140,7 +140,10 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     private readonly ThumbnailGate _gate;
     private readonly IImageBridge _bridge;
     private readonly Func<Task>? _connect;
-    private readonly Func<ShareRequest, Task>? _run;
+    private readonly Func<ShareRequest, ShareRunInfo, IProgress<ShareProgress>, CancellationToken, Task<ShareResult>>? _run;
+    private readonly IUrlOpener _urls;
+    private readonly IClipboardService? _clipboard;
+    private CancellationTokenSource? _runCts;
 
     private CancellationTokenSource? _factsCts;
     private CancellationTokenSource? _repoCts;
@@ -163,11 +166,15 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     /// <param name="gate">The decode limit for preview cells; null makes a small one.</param>
     /// <param name="bridge">Picture to bitmap conversion; null makes the standard one.</param>
     /// <param name="connect">Opens where GitHub is connected; null leaves Connect doing nothing.</param>
-    /// <param name="run">Sends the share. Null leaves Share disabled with <see cref="ShareRules.NotSetUp"/>.</param>
+    /// <param name="run">Sends the share and reports its stages; returns the pull request. Null leaves Share disabled with <see cref="ShareRules.NotSetUp"/>.</param>
     /// <param name="tags">The gallery's fixed tag list (its <c>tags.json</c>), read when the card opens; null or empty offers none.</param>
+    /// <param name="urls">Opens the pull request in the browser; null makes a recorder that opens nothing.</param>
+    /// <param name="clipboard">Copies the pull request's address; null leaves Copy doing nothing.</param>
     public ShareDialogViewModel(ShareSource source, IDialogService dialogs, IGitHubAccount account, ICommunityCache cache,
         IShareRepo repo, IShareChecker checker, ThumbnailGate? gate = null, IImageBridge? bridge = null,
-        Func<Task>? connect = null, Func<ShareRequest, Task>? run = null, Func<IReadOnlyList<string>>? tags = null)
+        Func<Task>? connect = null,
+        Func<ShareRequest, ShareRunInfo, IProgress<ShareProgress>, CancellationToken, Task<ShareResult>>? run = null,
+        Func<IReadOnlyList<string>>? tags = null, IUrlOpener? urls = null, IClipboardService? clipboard = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(dialogs);
@@ -185,6 +192,8 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         _bridge = bridge ?? new ImageBridge();
         _connect = connect;
         _run = run;
+        _urls = urls ?? new NoopUrlOpener();
+        _clipboard = clipboard;
 
         SetHasModels = SetLayout.ModelFilesIn(source.SetDirectory).Count > 0;
         _models = SetHasModels;
@@ -432,7 +441,7 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         string? notice = null;
         try { snapshot = await _repo.FetchAsync(login, ct).ConfigureAwait(true); }
         catch (OperationCanceledException) { return; }
-        catch (CommunityException ex) { notice = ex.Message; }
+        catch (CommunityException ex) { notice = ErrorText.For(ex); }
         catch (Exception ex) { notice = ErrorText.For(ex); }
         if (version != _repoVersion || _disposed) return;
         RepoPending = false;
@@ -629,7 +638,8 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         string? duplicate = null;
         if (factsIn && facts is { Problems.Count: 0 })
         {
-            long ownerId = shares.FirstOrDefault()?.Owner.Id
+            long ownerId = _account.UserId
+                ?? shares.FirstOrDefault()?.Owner.Id
                 ?? _cache.Cached?.Index?.Entries.FirstOrDefault(e => string.Equals(e.Owner.Login, _account.Login, StringComparison.OrdinalIgnoreCase))?.Owner.Id
                 ?? -1;
             var now = DateTimeOffset.UtcNow;
@@ -733,7 +743,7 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         if (await _dialogs.ShowAsync<bool>(confirm).ConfigureAwait(true) != true) return;
 
         try { await _repo.RemoveAsync(login, removable, CancellationToken.None).ConfigureAwait(true); }
-        catch (CommunityException ex) { _repoNotice = ex.Message; }
+        catch (CommunityException ex) { _repoNotice = ErrorText.For(ex); }
         catch (Exception ex) { _repoNotice = ErrorText.For(ex); }
 
         // Whatever happened, what is on GitHub now is what the card shows.
@@ -746,16 +756,76 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
 
     /// <summary>Where the card is.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanShare))]
+    [NotifyPropertyChangedFor(nameof(CanShare), nameof(IsEditing), nameof(IsRunning), nameof(IsDone), nameof(IsFailed),
+        nameof(CancelLabel), nameof(IsBusy))]
     private ShareState _state = ShareState.Editing;
 
     /// <summary>What went wrong, in product words, when <see cref="State"/> is <see cref="ShareState.Failed"/>.</summary>
     [ObservableProperty] private string _failure = "";
 
+    /// <summary>Whether the form is showing.</summary>
+    public bool IsEditing => State == ShareState.Editing;
+
+    /// <summary>Whether a share is being sent.</summary>
+    public bool IsRunning => State == ShareState.Running;
+
+    /// <summary>Whether the share was sent.</summary>
+    public bool IsDone => State == ShareState.Done;
+
+    /// <summary>Whether the share could not be sent.</summary>
+    public bool IsFailed => State == ShareState.Failed;
+
+    /// <summary>What the running share is doing, in words.</summary>
+    [ObservableProperty] private string _stageText = "";
+
+    /// <summary>How far the whole run has got, 0..1: one bar across every stage.</summary>
+    [ObservableProperty] private double _fraction;
+
+    /// <summary>The sentence the done state opens with.</summary>
+    public const string DoneText = "Submitted. The gallery checks it now; it usually lists within a few minutes.";
+
+    /// <summary>The gallery pull request the share opened, or null before there is one.</summary>
+    [ObservableProperty] private Uri? _pullUrl;
+
+    /// <summary>The pull request's address as text, for the done state's link.</summary>
+    public string PullText => PullUrl?.ToString() ?? "";
+
+    partial void OnPullUrlChanged(Uri? value) => OnPropertyChanged(nameof(PullText));
+
+    /// <summary>The label of the footer's left button: it stops a running share and closes the card otherwise.</summary>
+    public string CancelLabel => State switch
+    {
+        ShareState.Running => "Stop",
+        ShareState.Done or ShareState.Failed => "Close",
+        _ => "Cancel",
+    };
+
     partial void OnStateChanged(ShareState value)
     {
         ShareCommand.NotifyCanExecuteChanged();
         RemoveExtrasCommand.NotifyCanExecuteChanged();
+        TryAgainCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>The words for a stage, as the card's one progress line says them.</summary>
+    /// <param name="stage">The stage.</param>
+    /// <returns>The words.</returns>
+    public static string StageWords(ShareStage stage) => stage switch
+    {
+        ShareStage.Scanning => "Reading your nfty-public…",
+        ShareStage.Exporting => "Packing the Set…",
+        ShareStage.Checking => "Checking the pack…",
+        ShareStage.Preview => "Making the preview…",
+        ShareStage.Uploading => "Uploading the files…",
+        ShareStage.Listing => "Writing your listing…",
+        _ => "Opening the pull request…",
+    };
+
+    /// <summary>How far the whole run is: the stages share one bar equally, so it only ever moves forward.</summary>
+    private static double Overall(ShareProgress p)
+    {
+        var stages = Enum.GetValues<ShareStage>();
+        return (Array.IndexOf(stages, p.Stage) + Math.Clamp(p.Fraction, 0, 1)) / stages.Length;
     }
 
     /// <summary>The request the card's fields describe.</summary>
@@ -773,23 +843,87 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     private async Task ShareCoreAsync()
     {
         if (_run is null || !CanShare) return;
+        var request = BuildRequest();
+        var info = new ShareRunInfo(request.Name, _source.Manifest.Count, _result?.Width ?? 0, _result?.Height ?? 0,
+            request.Models, request.IncludeCookBook, _result?.Bytes ?? 0, AlreadyShared is not null);
+
+        var cts = _runCts = new CancellationTokenSource();
+        Failure = "";
+        Fraction = 0;
+        StageText = StageWords(ShareStage.Scanning);
+        PullUrl = null;
         State = ShareState.Running;
+        var progress = new Progress<ShareProgress>(p =>
+        {
+            // A late report from a run that has ended is not news.
+            if (!ReferenceEquals(_runCts, cts) || State != ShareState.Running) return;
+            StageText = StageWords(p.Stage);
+            Fraction = Math.Max(Fraction, Overall(p));
+        });
         try
         {
-            await _run(BuildRequest()).ConfigureAwait(true);
+            var result = await _run(request, info, progress, cts.Token).ConfigureAwait(true);
+            PullUrl = result.PullUrl;
+            Fraction = 1;
             State = ShareState.Done;
         }
         catch (OperationCanceledException) { State = ShareState.Editing; }
+        catch (CommunityException ex)
+        {
+            Failure = ErrorText.For(ex);          // a ShareRules sentence, shown verbatim
+            State = ShareState.Failed;
+        }
+        catch (GitHubAuthException ex)
+        {
+            Failure = ErrorText.For(ex);
+            State = ShareState.Failed;
+        }
         catch (Exception ex)
         {
             Failure = ErrorText.For(ex);
             State = ShareState.Failed;
         }
+        finally
+        {
+            if (ReferenceEquals(_runCts, cts)) _runCts = null;
+            cts.Dispose();
+        }
     }
 
-    /// <summary>Closes the card.</summary>
+    /// <summary>Goes back to the form after a failure, with everything as it was typed.</summary>
+    [RelayCommand(CanExecute = nameof(IsFailed))]
+    private void TryAgain()
+    {
+        State = ShareState.Editing;
+        Recompute();
+    }
+
+    /// <summary>Copies the pull request's address.</summary>
     [RelayCommand]
-    private void Cancel() => _dialogs.Close(this, null);
+    private async Task CopyPull()
+    {
+        if (PullUrl is { } url && _clipboard is not null) await _clipboard.SetTextAsync(url.ToString()).ConfigureAwait(true);
+    }
+
+    /// <summary>Opens the pull request in the browser.</summary>
+    [RelayCommand]
+    private void OpenPull()
+    {
+        if (PullUrl is { Scheme: "https" } url) _urls.Open(url);
+    }
+
+    /// <summary>Stops a running share (which takes back what it made), or closes the card.</summary>
+    [RelayCommand]
+    private void Cancel()
+    {
+        if (State == ShareState.Running)
+        {
+            StageText = "Stopping…";
+            _runCts?.Cancel();
+            return;
+        }
+        _dialogs.Close(this, null);
+    }
 
     // ------------------------------------------------------------------------------------------ closing
 
@@ -798,6 +932,14 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
 
     /// <inheritdoc />
     public bool IsBusy => State == ShareState.Running;
+
+    /// <inheritdoc />
+    public async Task CancelAndWaitAsync()
+    {
+        _runCts?.Cancel();
+        try { await PendingShare.ConfigureAwait(true); }
+        catch (Exception) { /* the run reports its own end through the state */ }
+    }
 
     /// <inheritdoc />
     public Task<bool> ConfirmLeaveAsync() => Task.FromResult(!IsBusy);
@@ -810,6 +952,7 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         _account.Changed -= OnAccountChanged;
         _factsCts?.Cancel();
         _repoCts?.Cancel();
+        _runCts?.Cancel();
         foreach (var row in _shareRows) row.Dispose();
     }
 }
