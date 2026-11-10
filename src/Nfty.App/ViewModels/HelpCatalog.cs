@@ -193,6 +193,7 @@ public static class HelpCatalog
             K(B, 3, "KEYS · ANYWHERE", KeyHints.CloseDocument, "close document"),
             K(B, 3, "KEYS · ANYWHERE", KeyHints.Theme, "light / dark"),
             K(B, 3, "KEYS · ANYWHERE", KeyHints.ZoomReset, "zoom to 100%"),
+            K(B, 3, "KEYS · ANYWHERE", KeyHints.FullScreen, "full screen (Esc never leaves it)"),
             K(B, 3, "KEYS · LANDING", KeyHints.NewCookBook, "new CookBook"),
             K(B, 3, "KEYS · LANDING", KeyHints.Open, "open"),
             K(B, 3, "KEYS · LANDING", KeyHints.Import, "import a loose file"),

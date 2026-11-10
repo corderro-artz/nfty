@@ -41,6 +41,8 @@ public static class KeyHints
     public static string CloseDocument { get; } = WithMod("W");
     /// <summary>Switch light/dark.</summary>
     public static string Theme { get; } = WithMod("T");
+    /// <summary>Toggle full screen.</summary>
+    public static string FullScreen { get; } = "F11";
     /// <summary>Reset zoom to 100%.</summary>
     public static string ZoomReset { get; } = WithMod("0");
     /// <summary>Undo.</summary>

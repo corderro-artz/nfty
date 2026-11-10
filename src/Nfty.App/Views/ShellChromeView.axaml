@@ -24,6 +24,8 @@
   <ctl:WindowFrame x:Name="ChromeFrame" Scale="{Binding ChromeScale}"
                    MinimizeCommand="{Binding MinimizeCommand}"
                    ToggleMaximizeCommand="{Binding ToggleMaximizeCommand}"
+                   ToggleFullScreenCommand="{Binding ToggleFullScreenCommand}"
+                   IsFullScreen="{Binding IsFullScreen}"
                    CloseCommand="{Binding CloseCommand}">
 
     <ctl:WindowFrame.TitleLeft>

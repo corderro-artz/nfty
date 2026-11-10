@@ -28,6 +28,7 @@ closes the sheet).
 | ++ctrl+t++ | Switch between light and dark |
 | ++ctrl+plus++ / ++ctrl+minus++ | Zoom the whole window in or out |
 | ++ctrl+0++ | Window zoom back to 100% |
+| ++f11++ | Enter or leave full screen (also the first button in the titlebar). Esc closes dialogs and does not leave full screen |
 | ++esc++ | Close the open dialog |
 
 ## Opening screen

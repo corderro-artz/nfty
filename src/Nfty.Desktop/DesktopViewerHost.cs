@@ -1,3 +1,6 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Avalonia.Controls;
 using Nfty.App.Services;
 using Nfty.App.Viewer;
@@ -56,6 +59,31 @@ public sealed class DesktopViewerHost : IViewerHost
     /// <summary>Raised with each window just before it is shown, so a test can reach it.</summary>
     public event Action<ViewerWindow>? Opened;
 
+    /// <summary>
+    /// A viewer opened over a full screen window stays above it.
+    /// </summary>
+    /// <remarks>Viewers are deliberately un-owned (an owned window dies with the shell), so nothing
+    /// ties their z-order to the main window's. A full screen window covers the display and can sit
+    /// above a window opened beside it, so while any window is full screen the new viewer is topmost,
+    /// and goes back to an ordinary window once none is.</remarks>
+    private static void KeepAboveFullScreen(Window viewer)
+    {
+        var windows = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Windows;
+        if (windows is null || !windows.Any(w => !ReferenceEquals(w, viewer) && w.WindowState == WindowState.FullScreen))
+            return;
+        viewer.Topmost = true;
+        viewer.Activate();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        timer.Tick += (_, _) =>
+        {
+            if (windows.Any(w => !ReferenceEquals(w, viewer) && w.WindowState == WindowState.FullScreen)) return;
+            viewer.Topmost = false;
+            timer.Stop();
+        };
+        viewer.Closed += (_, _) => timer.Stop();
+        timer.Start();
+    }
+
     private static Window? DefaultMainWindow() => DesktopWindowContext.Current;
 
     /// <inheritdoc />
@@ -84,6 +112,7 @@ public sealed class DesktopViewerHost : IViewerHost
 
             Opened?.Invoke(window);
             window.Show();
+            KeepAboveFullScreen(window);
         }
         catch
         {

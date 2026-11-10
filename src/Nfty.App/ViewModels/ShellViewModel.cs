@@ -201,8 +201,15 @@ public partial class ShellViewModel : ViewModelBase
     public event Action? MinimizeRequested;
     /// <summary>Raised when maximise is pressed or the titlebar is double-clicked.</summary>
     public event Action? ToggleMaximizeRequested;
+    /// <summary>Raised when F11 or the titlebar's full screen button asks to toggle full screen; the
+    /// head owns the window and reports the result back through <see cref="IsFullScreen"/>.</summary>
+    public event Action? ToggleFullScreenRequested;
     /// <summary>Raised when the window's close is pressed.</summary>
     public event Action? CloseRequested;
+
+    /// <summary>Whether the window is full screen. Set by the head from the real window state, so the
+    /// button's glyph and tooltip follow what the window is, not what was last asked.</summary>
+    [ObservableProperty] private bool _isFullScreen;
 
     /// <summary>The titlebar's workspace chip. Per explorer.html it is "fixed for every item below
     /// it; changes only when you close this Kitchen and open another" - so it lives on the shell
@@ -328,6 +335,9 @@ public partial class ShellViewModel : ViewModelBase
     [RelayCommand] private void ZoomReset() => Zoom = 100;
     [RelayCommand] private void Minimize() => MinimizeRequested?.Invoke();
     [RelayCommand] private void ToggleMaximize() => ToggleMaximizeRequested?.Invoke();
+    /// <summary>Toggles full screen (F11). Not gated by a dialog: Escape closes dialogs and never
+    /// leaves full screen, F11 is the only way in or out.</summary>
+    [RelayCommand] private void ToggleFullScreen() => ToggleFullScreenRequested?.Invoke();
     [RelayCommand] private void Close() => CloseRequested?.Invoke();
     [RelayCommand]
     private void ToggleTheme()

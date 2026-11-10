@@ -61,6 +61,16 @@
                                   HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
                   <Border Width="1" Height="18" Background="{DynamicResource LineStrongBrush}" Margin="0,0,10,0" />
+                  <!-- Present only on a window that offers full screen (the shell); the viewer sets no
+                       command. Static per window, so nothing reflows when it is used. -->
+                  <Button x:Name="FullScreenButton" Command="{Binding ToggleFullScreenCommand, ElementName=Root}" Classes="icon"
+                          IsVisible="{Binding ToggleFullScreenCommand, ElementName=Root, Converter={x:Static ObjectConverters.IsNotNull}}"
+                          ToolTip.Tip="Full screen  ·  F11">
+                    <Panel>
+                      <Path Classes="ico" Data="{StaticResource IconFullscreen}" IsVisible="{Binding !IsFullScreen, ElementName=Root}" />
+                      <Path Classes="ico" Data="{StaticResource IconFullscreenExit}" IsVisible="{Binding IsFullScreen, ElementName=Root}" />
+                    </Panel>
+                  </Button>
                   <Button x:Name="MinimizeButton" Command="{Binding MinimizeCommand, ElementName=Root}" Classes="icon"
                           ToolTip.Tip="Minimize"><Path Classes="ico" Data="{StaticResource IconMinimise}" /></Button>
                   <Button x:Name="MaximizeButton" Command="{Binding ToggleMaximizeCommand, ElementName=Root}" Classes="icon"
