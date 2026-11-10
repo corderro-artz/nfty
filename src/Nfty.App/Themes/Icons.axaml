@@ -154,6 +154,12 @@
 
   <StreamGeometry x:Key="IconRedo">M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0 10h1</StreamGeometry>
 
+  <!-- Two arrows chasing round a circle: fetch the list again. Not IconReroll's single arc, which rolls a new random draw. -->
+  <StreamGeometry x:Key="IconRefresh">M4.5 12a7.5 7.5 0 0 1 13.3-4.8M19.5 12a7.5 7.5 0 0 1-13.3 4.8M18 3v4.5h-4.5M6 21v-4.5h4.5</StreamGeometry>
+
+  <!-- A speech bubble with an exclamation: report this to the gallery's moderators. Not IconMarkFlag's pennant, which marks a layer that is in a rule. -->
+  <StreamGeometry x:Key="IconReport">M4 4.5h16v11H10l-4.5 4v-4H4zM12 7.5v4M12 13h.01</StreamGeometry>
+
   <!-- ingredient-editor.html: "Reroll sampled color" — also the recipe portrait's reroll -->
   <StreamGeometry x:Key="IconReroll">M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6</StreamGeometry>
 
@@ -166,6 +172,9 @@
   <!-- explorer.html: magnifier (mockup uses <circle cx=11 cy=11 r=7> + the handle path) -->
   <StreamGeometry x:Key="IconSearch">M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0zm3 10-4-4</StreamGeometry>
 
+  <!-- Two ticks, one behind the other: count everything as seen. Not IconCheck's single tick, which confirms one thing. -->
+  <StreamGeometry x:Key="IconSeen">M2.5 12.5l4.5 4.5L16.5 7.5M12 16l1 1 9.5-9.5</StreamGeometry>
+
   <!-- The marquee. Corners and mid-ticks drawn as segments - StreamGeometry has no dash array. -->
   <StreamGeometry x:Key="IconSelect">M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 2 2v3M20 15v3a2 2 0 0 1-2 2h-3M9 20H6a2 2 0 0 1-2-2v-3M11 4h2M20 11v2M13 20h-2M4 13v-2</StreamGeometry>
 
@@ -174,6 +183,9 @@
 
   <!-- Three nodes joined at one: send this somewhere other people can see it. Not IconUpload's tray, which is a file leaving the machine. -->
   <StreamGeometry x:Key="IconShare">M21 5a3 3 0 1 1-6 0a3 3 0 0 1 6 0M9 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0M21 19a3 3 0 1 1-6 0a3 3 0 0 1 6 0M8.6 10.5l6.8-4M8.6 13.5l6.8 4</StreamGeometry>
+
+  <!-- A square inside a ring: stop the running job. Not IconCircle (a bare ring) nor IconRect (a bare rounded rectangle). -->
+  <StreamGeometry x:Key="IconStop">M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0M9.5 9.5h5v5h-5z</StreamGeometry>
 
   <!-- The collection's ticker symbol: a type T in a frame. Not IconTag (one item's name). -->
   <StreamGeometry x:Key="IconSymbol">M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8h8M12 8v9</StreamGeometry>
@@ -206,6 +218,9 @@
 
   <!-- explorer.html: the unlocked variant (open shackle) -->
   <StreamGeometry x:Key="IconUnlock">M8 11V8a4 4 0 0 1 7.5-1.9M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
+
+  <!-- Two nodes whose link is cut by a slash: take a collection out of the gallery. The undoing of IconShare, drawn so the two never read alike. -->
+  <StreamGeometry x:Key="IconUnshare">M8 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0M22 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0M8 12h2M14 12h2M9.5 18.5l5-13</StreamGeometry>
 
   <!-- An arrow out of a tray: export, the other direction from IconDownload and IconImport. -->
   <StreamGeometry x:Key="IconUpload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12</StreamGeometry>

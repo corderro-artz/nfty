@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconReport</title>
+  <desc>A speech bubble with an exclamation: report this to the gallery's moderators. Not IconMarkFlag's pennant, which marks a layer that is in a rule.</desc>
+  <path d="M4 4.5h16v11H10l-4.5 4v-4H4zM12 7.5v4M12 13h.01"/>
+</svg>
