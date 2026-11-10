@@ -219,6 +219,12 @@ public class MinimumWindowFitTests
         yield return ("set-browser", new Views.SetBrowserView { DataContext = browser },
             () => { browser.Dispose(); try { Directory.Delete(setDir, true); } catch { } });
 
+        // THE COMMUNITY PAGE, full: a page of tiles, a notice in the status line, a long description in
+        // the rail. The grid pages and the rail scrolls its words, so what this catches is the fixed
+        // parts (header, status line, pager, the rail's picture and pinned buttons) outgrowing the area.
+        var community = CommunityLayoutTests.RiskyPage();
+        yield return ("community", new Views.CommunityView { DataContext = community }, community.Dispose);
+
         // THE RISE PAGE, in its three source kinds: the list rail is a different template in each, and
         // a rail that is a scroller never wants more than it is given - so what this catches is the
         // fixed parts (the toolstrip, the footer, the pinned manifest) outgrowing the area.

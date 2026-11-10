@@ -48,6 +48,19 @@ public static class ServiceRegistration
         // The GitHub token lives in the same credential store; only the login is in settings.json.
         services.AddSingleton<IGitHubAccount>(sp => new GitHubAccountService(
             sp.GetRequiredService<IStateStore>(), sp.GetRequiredService<ISecretStore>()));
+        // The Community page's two stores live in .nfty/community: the cached list and previews, and
+        // which entries the user has seen. Browsing is token-free, so neither takes the account.
+        services.AddSingleton<ICommunityCache>(sp =>
+            new CommunityCache(CommunityCache.RootFor(sp.GetRequiredService<IStateStore>())));
+        services.AddSingleton<ICommunitySeen>(sp =>
+            new CommunitySeen(CommunityCache.RootFor(sp.GetRequiredService<IStateStore>())));
+        // A fresh page each time it is opened (Landing's button, a later task, calls this). Opening a
+        // downloaded Set is the Set-browser route Landing takes: a busy card, then the browser.
+        services.AddTransient<Func<CommunityViewModel>>(sp => () => new CommunityViewModel(
+            sp.GetRequiredService<ICommunityCache>(), sp.GetRequiredService<ICommunitySeen>(),
+            sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<INavigationService>(),
+            sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IStatusService>(),
+            path => OpenDownloadedSet(sp, path), sp.GetRequiredService<IUrlOpener>()));
         services.AddSingleton<IUrlOpener, NoopUrlOpener>();
         // Which files Windows opens with nfty: the registrar on Windows, a refusal elsewhere (the
         // Settings card hides its SYSTEM tab then). Reads only until the user presses Apply.
@@ -290,4 +303,23 @@ public static class ServiceRegistration
         return editor;
     }
 
+    /// <summary>Reads a downloaded Set under a busy card and opens it in the Set browser.</summary>
+    private static async Task OpenDownloadedSet(IServiceProvider sp, string path)
+    {
+        var dialogs = sp.GetRequiredService<IDialogService>();
+        var par = sp.GetRequiredService<IParallelismSetting>().Current;
+        LoadedSet set;
+        try
+        {
+            set = await BusyViewModel.RunAsync(dialogs, "Opening Set", "Unpacking…",
+                (busy, ct) => SetReader.ReadAsync(path, ct, par, busy.Counting("assets")), cancellable: true);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            await dialogs.ShowErrorAsync("Could not open the set", ErrorText.For(ex));
+            return;
+        }
+        sp.GetRequiredService<INavigationService>().To(sp.GetRequiredService<Func<LoadedSet, SetBrowserViewModel>>()(set));
+    }
 }

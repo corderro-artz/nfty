@@ -374,6 +374,12 @@ public class DarkModeContrastTests
             viewer: new ArchiveGalleryTests.Host());
         yield return ("landing", new Views.LandingView { DataContext = landing }, null);
 
+        // THE COMMUNITY PAGE in its riskiest state: offline (the status line and the sentence under
+        // Download in warning ink), a New and an Updated badge (OnAccent on accent), both chips, and a
+        // selected collection so the rail's picture, facts and the disabled Download (0.38) are drawn.
+        var community = CommunityLayoutTests.RiskyPage();
+        yield return ("community-offline", new Views.CommunityView { DataContext = community }, community.Dispose);
+
         yield return ("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) }, null);
         // The two other pages of the same sheet: new text, new ink, and an inactive page sits at
         // Opacity 0 beneath the showing one, so each is scored with its own tab selected.

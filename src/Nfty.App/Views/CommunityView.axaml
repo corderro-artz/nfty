@@ -1,0 +1,206 @@
+<!-- RenderOptions.BitmapInterpolationMode=None on the root: pixel art scales with nearest
+     neighbour, never a filter. It inherits to every Image below. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.CommunityView"
+             x:DataType="vm:CommunityViewModel"
+             RenderOptions.BitmapInterpolationMode="None">
+  <!-- The Community page: header (title, search, tag tray, sort) over a reserved status line, then
+       a PAGED grid of fixed-size tiles beside a 288px rail.
+
+       The grid pages and never scrolls: how many tiles a page holds is measured from the host the
+       Grid gives it, divided by the tile pitch TOKENS (CommunityView.axaml.cs). The host is a
+       ScrollViewer with both bars off for the CookBook card's reason - it reports the room it was
+       GIVEN, so the tiles cannot grow the thing measured to decide how many fit. -->
+  <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*,288">
+
+    <!-- Header. Title left; search, tag tray and sort right, every one a stated width so nothing
+         moves as the tags change. -->
+    <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12"
+          Height="36">
+      <TextBlock Grid.Column="0" Classes="mono" FontSize="17" FontWeight="Bold" Text="Community"
+                 VerticalAlignment="Center" />
+
+      <Border Grid.Column="2" Classes="search" Width="200" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="Auto,*">
+          <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconSearch}" VerticalAlignment="Center" />
+          <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding Query}" Classes="bare" Margin="8,0,0,0"
+                   VerticalAlignment="Center" PlaceholderText="Find a collection…"
+                   ToolTip.Tip="Search the gallery" />
+        </Grid>
+      </Border>
+
+      <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock Classes="seglbl" Text="TAG" />
+        <Border Classes="seg tiny" VerticalAlignment="Center" ToolTip.Tip="Show one tag only.">
+          <ItemsControl ItemsSource="{Binding TagChoices}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CommunityTagChoice">
+                <Button Classes="seg-b tiny" Width="56" Classes.on="{Binding IsOn}"
+                        Command="{Binding $parent[UserControl].((vm:CommunityViewModel)DataContext).SelectTagCommand}"
+                        CommandParameter="{Binding Value}" ToolTip.Tip="{Binding Label}">
+                  <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+      </StackPanel>
+
+      <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock Classes="seglbl" Text="SORT" />
+        <Border Classes="seg tiny" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal">
+            <Button Classes="seg-b tiny" Width="64" Content="Updated" Classes.on="{Binding SortIsUpdated}"
+                    Command="{Binding SortByCommand}" ToolTip.Tip="Most recently changed first"
+                    CommandParameter="{x:Static vm:CommunitySort.RecentlyUpdated}" />
+            <Button Classes="seg-b tiny" Width="48" Content="Name" Classes.on="{Binding SortIsName}"
+                    Command="{Binding SortByCommand}" ToolTip.Tip="By collection name"
+                    CommandParameter="{x:Static vm:CommunitySort.Name}" />
+            <Button Classes="seg-b tiny" Width="52" Content="Assets" Classes.on="{Binding SortIsAssets}"
+                    Command="{Binding SortByCommand}" ToolTip.Tip="Most assets first"
+                    CommandParameter="{x:Static vm:CommunitySort.Assets}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- The reserved status line: when the list was fetched and what is new, or a notice in warning
+         ink. Always laid out; Mark all seen only loses its ink when there is nothing to mark. -->
+    <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="*,Auto" Height="24" Margin="0,0,14,0">
+      <TextBlock Grid.Column="0" Classes="cstatus" Classes.warn="{Binding StatusIsWarning}"
+                 Text="{Binding StatusLine}" />
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+        <Button Classes="cmarkall" Content="Mark all seen" Classes.cgone="{Binding !HasMarks}"
+                Command="{Binding MarkAllSeenCommand}" ToolTip.Tip="Count every collection in the list as seen." />
+        <Button Classes="cmarkall" Content="Refresh" Command="{Binding RefreshCommand}"
+                ToolTip.Tip="Fetch the list again." />
+      </StackPanel>
+    </Grid>
+
+    <!-- The grid host, with the empty state layered over it (IsVisible is right here: both share one
+         Panel cell and neither takes layout of its own). -->
+    <Panel Grid.Row="2" Grid.Column="0" Margin="0,0,14,0">
+      <ScrollViewer x:Name="TilesHost" HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Tiles}" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CommunityTile">
+              <Button Classes="ghost tcell ctile"
+                      Command="{Binding $parent[UserControl].((vm:CommunityViewModel)DataContext).SelectCommand}"
+                      CommandParameter="{Binding}">
+                <StackPanel Spacing="3">
+                  <Border Classes="tile cpreview" Classes.sel="{Binding IsSelected}">
+                    <Panel>
+                      <Border Classes="tload" IsVisible="{Binding IsLoading}" />
+                      <Border Classes="tmissing" IsVisible="{Binding ImageMissing}"
+                              ToolTip.Tip="This preview couldn't be fetched" />
+                      <Image Source="{Binding Preview}" Stretch="Uniform" Margin="4" />
+                      <!-- One badge slot, accent ink for New, Updated or Pending, never two. -->
+                      <Border Classes="cbadge" Opacity="{Binding MarkOpacity}">
+                        <TextBlock Text="{Binding MarkText}" />
+                      </Border>
+                      <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Left"
+                                  VerticalAlignment="Bottom" Margin="5,0,0,5">
+                        <Border Classes="cchip" Width="26" Classes.cgone="{Binding !HasModels}"
+                                ToolTip.Tip="Includes 3D models"><TextBlock Text="3D" /></Border>
+                        <Border Classes="cchip" Width="38" Classes.cgone="{Binding !HasBook}"
+                                ToolTip.Tip="Includes the CookBook"><TextBlock Text="BOOK" /></Border>
+                      </StackPanel>
+                    </Panel>
+                  </Border>
+                  <TextBlock Classes="cname" Text="{Binding Name}" />
+                  <TextBlock Classes="cmeta" Text="{Binding OwnerText}" />
+                  <TextBlock Classes="cmeta" Text="{Binding FactsText}" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <StackPanel IsVisible="{Binding IsEmpty}" Spacing="10" HorizontalAlignment="Center"
+                  VerticalAlignment="Center" MaxWidth="360">
+        <Path Classes="ico lg" Data="{StaticResource IconSearch}" HorizontalAlignment="Center" Opacity="0.4" />
+        <TextBlock Text="{Binding EmptyText}" Classes="zp" TextWrapping="Wrap" HorizontalAlignment="Center"
+                   TextAlignment="Center" />
+        <Button Content="{Binding EmptyActionText}" Command="{Binding EmptyActionCommand}" Classes="tbtn"
+                HorizontalAlignment="Center" />
+      </StackPanel>
+    </Panel>
+
+    <!-- The pager. A fixed band, so the grid above is one height whatever the page. -->
+    <Grid Grid.Row="3" Grid.Column="0" ColumnDefinitions="Auto,*,Auto" Height="36" Margin="0,0,14,0">
+      <Button Grid.Column="0" Classes="tbtn" Content="Previous" Command="{Binding PrevPageCommand}" />
+      <TextBlock Grid.Column="1" Classes="cstatus" HorizontalAlignment="Center" Text="{Binding PageText}" />
+      <Button Grid.Column="2" Classes="tbtn" Content="Next" Command="{Binding NextPageCommand}" />
+    </Grid>
+
+    <!-- The rail. Nothing selected: one sentence saying how to pick. Otherwise the picture with its
+         cells, then the words (scrolling, because a description is the sharer's to length), then the
+         actions pinned so they never move. -->
+    <Border Grid.Row="1" Grid.RowSpan="3" Grid.Column="1" Classes="rules-panel" Padding="0">
+      <Panel>
+        <TextBlock Classes="zp" Text="Pick a collection to see it here." TextWrapping="Wrap"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                   Margin="24" IsVisible="{Binding !HasSelection}" />
+
+        <Grid RowDefinitions="Auto,*,Auto" Margin="12" Classes.cgone="{Binding !HasSelection}">
+          <StackPanel Grid.Row="0" Spacing="3">
+            <Border x:Name="RailShot" Classes="cshot"
+                    ToolTip.Tip="Scroll the wheel to step through the preview's cells.">
+              <Panel>
+                <Border Classes="tload" IsVisible="{Binding RailLoading}" />
+                <Border Classes="tmissing" IsVisible="{Binding RailMissing}"
+                        ToolTip.Tip="This preview couldn't be fetched" />
+                <Image Source="{Binding RailPreview}" Stretch="Uniform" />
+              </Panel>
+            </Border>
+            <TextBlock Classes="derived" Height="14" Text="{Binding CellText}" />
+          </StackPanel>
+
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                        Margin="0,4,0,6">
+            <StackPanel Spacing="6" Margin="0,0,6,0">
+              <TextBlock Text="{Binding Selected.Name}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" />
+              <TextBlock Classes="cmeta" Text="{Binding Selected.OwnerText}" />
+              <TextBlock Classes="cmeta" Text="{Binding DatesText}" TextTrimming="None" TextWrapping="Wrap" />
+              <TextBlock Classes="zp" Text="{Binding DescriptionText}" TextWrapping="Wrap" TextAlignment="Left" Margin="0,4,0,4" />
+              <ItemsControl ItemsSource="{Binding RailFacts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Classes="cmeta" Text="{Binding}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="cmeta" Text="{Binding TagsText}" TextWrapping="Wrap" TextTrimming="None" />
+            </StackPanel>
+          </ScrollViewer>
+
+          <StackPanel Grid.Row="2" Spacing="6">
+            <!-- Why Download is off. Reserved two lines, so the buttons never move. -->
+            <TextBlock Classes="cwarn" Height="30" Text="{Binding DownloadNote}" />
+            <Button Classes="accent" HorizontalAlignment="Stretch" Content="Download"
+                    Command="{Binding DownloadCommand}"
+                    ToolTip.Tip="Download this collection and open it in the Set browser." />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+              <Button Grid.Column="0" Classes="tbtn" HorizontalAlignment="Stretch" Content="Report"
+                      Command="{Binding ReportCommand}"
+                      ToolTip.Tip="Open the gallery's report form for this collection. Only its id is sent." />
+              <Button Grid.Column="1" Classes="tbtn" HorizontalAlignment="Stretch" Content="Unshare"
+                      Classes.cgone="{Binding !CanUnshareSelected}" Command="{Binding UnshareCommand}"
+                      ToolTip.Tip="Take your collection out of the gallery." />
+            </Grid>
+          </StackPanel>
+        </Grid>
+      </Panel>
+    </Border>
+  </Grid>
+</UserControl>

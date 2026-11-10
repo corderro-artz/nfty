@@ -1481,6 +1481,43 @@ public partial class VisualCapture
         }
     }
 
+    /// <summary>
+    /// The Community page at the area the smallest window really gives a page (not the 1180x720 of a
+    /// mockup): online with a selection and badges, offline with a notice, and the empty states.
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_community_page()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        var area = CommunityLayoutTests.PageArea;
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            using var offline = CommunityLayoutTests.RiskyPage();
+            CaptureSettled(new Views.CommunityView { DataContext = offline }, offline, variant, $"community-offline-{key}.png", area);
+
+            using var online = CommunityLayoutTests.RiskyPage(online: true);
+            CaptureSettled(new Views.CommunityView { DataContext = online }, online, variant, $"community-online-{key}.png", area);
+
+            using var none = CommunityLayoutTests.RiskyPage(online: true);
+            none.Query = "zzzz";
+            CaptureSettled(new Views.CommunityView { DataContext = none }, none, variant, $"community-nomatches-{key}.png", area);
+        }
+    }
+
+    private static void CaptureSettled(Control view, CommunityViewModel vm, ThemeVariant variant, string fileName, Avalonia.Size area)
+    {
+        var window = new Window { RequestedThemeVariant = variant, Content = view, Width = area.Width, Height = area.Height };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        foreach (var t in vm.Tiles) UiThreadWait.For(t.PendingDecode);
+        UiThreadWait.For(vm.PendingRail);
+        Dispatcher.UIThread.RunJobs();
+        window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
+        window.Close();
+    }
+
     private static void Capture(Control view, ThemeVariant variant, string fileName,
         double width = 1180, double height = 720)
     {
