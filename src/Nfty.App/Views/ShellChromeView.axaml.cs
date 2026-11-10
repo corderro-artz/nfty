@@ -1,6 +1,15 @@
+using System;
+using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
+using Avalonia.Threading;
 using Nfty.App.Controls;
 using Nfty.App.ViewModels;
 
@@ -15,10 +24,20 @@ namespace Nfty.App.Views;
 /// control reference; everything else is bound.</remarks>
 public partial class ShellChromeView : UserControl
 {
+    private ShellViewModel? _observedShell;
+    private CancellationTokenSource? _attentionCancellation;
+    private bool _attached;
+
+    /// <summary>The current footer cue's lifetime, for rendered interaction checks.</summary>
+    internal Task PendingStatusAttention { get; private set; } = Task.CompletedTask;
+
     /// <summary>Loads the view.</summary>
     public ShellChromeView()
     {
         AvaloniaXamlLoader.Load(this);
+        AttachedToVisualTree += (_, _) => { _attached = true; ObserveShell(DataContext as ShellViewModel); };
+        DetachedFromVisualTree += (_, _) => { _attached = false; ObserveShell(null); StopAttention(); };
+        DataContextChanged += (_, _) => { if (_attached) ObserveShell(DataContext as ShellViewModel); };
 
         // Click-the-scrim-to-dismiss is ordinary UI behavior rather than window behavior, so it
         // stays here with the scrim itself instead of being reached into from the head.
@@ -29,6 +48,54 @@ public partial class ShellChromeView : UserControl
             if (e.Source == sender && DataContext is ShellViewModel shell)
                 shell.CloseDialogCommand.Execute(null);
         };
+    }
+
+    private void ObserveShell(ShellViewModel? shell)
+    {
+        if (_observedShell is not null) _observedShell.PropertyChanged -= OnShellChanged;
+        StopAttention();
+        _observedShell = shell;
+        if (shell is not null) shell.PropertyChanged += OnShellChanged;
+    }
+
+    private void OnShellChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => { if (ReferenceEquals(sender, _observedShell)) OnShellChanged(sender, e); });
+            return;
+        }
+        if (e.PropertyName == nameof(ShellViewModel.StatusMessage)) StopAttention();
+        if (e.PropertyName != nameof(ShellViewModel.StatusAttention)) return;
+        StopAttention();
+        _attentionCancellation = new CancellationTokenSource();
+        PendingStatusAttention = FlashAttentionAsync(_attentionCancellation.Token);
+    }
+
+    private void StopAttention()
+    {
+        _attentionCancellation?.Cancel();
+        _attentionCancellation?.Dispose();
+        _attentionCancellation = null;
+        this.FindControl<Border>("StatusAttentionWash")!.Opacity = 0;
+    }
+
+    private async Task FlashAttentionAsync(CancellationToken token)
+    {
+        var wash = this.FindControl<Border>("StatusAttentionWash")!;
+        var animation = new Animation
+        {
+            Duration = TimeSpan.FromMilliseconds(900),
+            Easing = new CubicEaseOut(),
+            Children =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(OpacityProperty, 0d) } },
+                new KeyFrame { Cue = new Cue(0.15), Setters = { new Setter(OpacityProperty, 0.28d) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter(OpacityProperty, 0d) } },
+            },
+        };
+        try { await animation.RunAsync(wash, token); }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>The shared window frame this shell is drawn in.</summary>

@@ -150,7 +150,10 @@
         <!-- 28 + the 1px top border above = 29 drawn. Deliberately shorter than the titlebar:
              that bar carries the brand, the document name and the window buttons, and a status
              strip of equal weight makes the frame read as two footers. -->
-        <Grid ColumnDefinitions="*,Auto" Height="28">
+        <Grid Name="StatusBar" ColumnDefinitions="*,Auto" Height="28" ClipToBounds="True">
+          <!-- Ink only: this overlay never participates in layout or intercepts the footer. -->
+          <Border Name="StatusAttentionWash" Grid.ColumnSpan="2" Opacity="0"
+                  Background="{DynamicResource AccentBrush}" IsHitTestVisible="False" />
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Margin="16,0" VerticalAlignment="Center">
             <!-- A BUTTON, because it is a count and a count owes the reader the thing it counted.
                  It opens on a valid book too: a green light nobody can interrogate is a green
