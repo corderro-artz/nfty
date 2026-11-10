@@ -20,7 +20,7 @@ public RepoScan(IReadOnlyList<RepoExtra> Extras, string? Blocker);
 
 **Parameters**
 
-- `Extras` (`IReadOnlyList<RepoExtra>`) - Everything not allowed, for display and for [`PublicRepoScan.RemoveAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-removeasync-nfty-core-publish-community-githubsharecli-280469).
+- `Extras` (`IReadOnlyList<RepoExtra>`) - Everything not allowed, for display and for [`PublicRepoScan.RemoveAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-removeasync-nfty-core-publish-community-githubsharecli-634eab).
 - `Blocker` (`string?`) - The sentence that stops sharing outright (not ours, private, history too large), or null. Extras are still listed.
 
 ## Properties
@@ -39,4 +39,4 @@ The sentence that stops sharing outright (not ours, private, history too large),
 public IReadOnlyList<RepoExtra> Extras { get; init; }
 ```
 
-Everything not allowed, for display and for [`PublicRepoScan.RemoveAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-removeasync-nfty-core-publish-community-githubsharecli-280469).
+Everything not allowed, for display and for [`PublicRepoScan.RemoveAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-removeasync-nfty-core-publish-community-githubsharecli-634eab).

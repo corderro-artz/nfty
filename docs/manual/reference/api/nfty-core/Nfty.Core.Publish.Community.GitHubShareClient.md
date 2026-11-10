@@ -247,7 +247,7 @@ A pull request's state.
 public Task<IReadOnlyList<string>> GetPullCommentsAsync(string galleryRepo, int number, CancellationToken ct);
 ```
 
-The text of a pull request's conversation comments (where the gallery's checks answer).
+The text of a pull request's conversation comments written by the gallery's checks bot ([`CommunityEndpoints.ActionsBot`](Nfty.Core.Publish.Community.CommunityEndpoints.md#p-actionsbot)); anyone else's comment is dropped, since anyone may comment on a pull request.
 
 **Parameters**
 

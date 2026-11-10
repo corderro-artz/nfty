@@ -110,6 +110,21 @@ Finds a grid in a picture that does not say: equal cells separated by transparen
 
 Per axis, the SMALLEST divisor of the side such that no run of content (a maximal span of columns, or rows, holding any pixel with alpha above zero) crosses a multiple of it. Smallest, not largest: the largest divisor is always the whole side, which always "works" and says nothing. Equal cells hold by construction. `Count` runs to the last cell holding content in reading order, so a short last row is counted as it was drawn.
 
+### FitsWithin(int, int) { #m-fitswithin-system-int32-system-int32 }
+
+```csharp
+public bool FitsWithin(int width, int height);
+```
+
+Whether the grid's cells stay inside a picture: its columns and rows of cells fit the width and height, and it holds as many cells as it claims.
+
+**Parameters**
+
+- `width` (`int`) - The picture's width.
+- `height` (`int`) - The picture's height.
+
+**Returns.** False for a grid that describes more picture than there is (a hostile or damaged chunk), which no reader should slice by.
+
 ### FromCellSize(int, int, int, int) { #m-fromcellsize-system-int32-system-int32-system-int32-sy-9c2cda }
 
 ```csharp

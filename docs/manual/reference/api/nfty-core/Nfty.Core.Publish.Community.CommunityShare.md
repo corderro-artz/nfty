@@ -68,10 +68,10 @@ The export the card plans and the run performs: the Asset pack, one archive, nev
 
 - `request` (`ShareRequest`) - What the person asked for.
 
-### RunAsync(GitHubShareClient, GitHubUser, ShareRequest, CommunityEndpoints, string, IProgress&lt;ShareProgress&gt;?, CancellationToken, string?, Func&lt;DateTimeOffset&gt;?, Func&lt;TimeSpan, CancellationToken, Task&gt;?) { #m-runasync-nfty-core-publish-community-githubshareclient-162f11 }
+### RunAsync(GitHubShareClient, GitHubUser, ShareRequest, CommunityEndpoints, string, IProgress&lt;ShareProgress&gt;?, CancellationToken, IReadOnlyCollection&lt;string&gt;, Func&lt;DateTimeOffset&gt;?, Func&lt;TimeSpan, CancellationToken, Task&gt;?) { #m-runasync-nfty-core-publish-community-githubshareclient-566364 }
 
 ```csharp
-public static Task<ShareResult> RunAsync(GitHubShareClient client, GitHubUser user, ShareRequest request, CommunityEndpoints endpoints, string tempRoot, IProgress<ShareProgress>? progress, CancellationToken ct, string? pendingSupersededTag = null, Func<DateTimeOffset>? clock = null, Func<TimeSpan, CancellationToken, Task>? delay = null);
+public static Task<ShareResult> RunAsync(GitHubShareClient client, GitHubUser user, ShareRequest request, CommunityEndpoints endpoints, string tempRoot, IProgress<ShareProgress>? progress, CancellationToken ct, IReadOnlyCollection<string> protectedTags, Func<DateTimeOffset>? clock = null, Func<TimeSpan, CancellationToken, Task>? delay = null);
 ```
 
 Shares, updates or swaps; see the type's remarks for what the caller owes.
@@ -85,7 +85,7 @@ Shares, updates or swaps; see the type's remarks for what the caller owes.
 - `tempRoot` (`string`) - A folder to work in; the run cleans up what it makes there.
 - `progress` (`IProgress<ShareProgress>?`) - Progress, in order.
 - `ct` (`CancellationToken`) - Stops the run (and rolls it back).
-- `pendingSupersededTag` (`string?`) - The tag of a superseded Release whose replacing pull request is still open, so the scan allows it.
+- `protectedTags` (`IReadOnlyCollection<string>`) - Release tags the scan must never call extras: what the gallery lists for the account and what any open pull request names ([`PublicRepoScan.FetchAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-fetchasync-nfty-core-publish-community-githubshareclie-fa7233)). Empty only when nothing is listed or pending.
 - `clock` (`Func<DateTimeOffset>?`) - The time stamped on the entry; tests inject one.
 - `delay` (`Func<TimeSpan, CancellationToken, Task>?`) - The wait between polls of a new fork; tests inject one.
 

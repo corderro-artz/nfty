@@ -8,7 +8,7 @@ Namespace `Nfty.Core.Publish.Community` in assembly `Nfty.Core`.
 public static class PublicRepoScan
 ```
 
-The scan before every share (spec 3.3). [`PublicRepoScan.Scan()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-scan-nfty-core-publish-community-reposnapshot) is pure over a fetched [`RepoSnapshot`](Nfty.Core.Publish.Community.RepoSnapshot.md) and never throws; [`PublicRepoScan.RemoveAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-removeasync-nfty-core-publish-community-githubsharecli-280469) deletes exactly the extras it is given, and only ones a fresh scan still names.
+The scan before every share (spec 3.3). [`PublicRepoScan.Scan()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-scan-nfty-core-publish-community-reposnapshot) is pure over a fetched [`RepoSnapshot`](Nfty.Core.Publish.Community.RepoSnapshot.md) and never throws; [`PublicRepoScan.RemoveAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-removeasync-nfty-core-publish-community-githubsharecli-634eab) deletes exactly the extras it is given, and only ones a fresh scan still names.
 
 ## Fields
 
@@ -19,6 +19,14 @@ public const string ManifestFile = "nfty-public.json";
 ```
 
 The manifest file at its root.
+
+### MaxProtectedTags { #f-maxprotectedtags }
+
+```csharp
+public const int MaxProtectedTags = 12;
+```
+
+The most protected tags one scan honors: three shares, each with a live and a pending version, with room to spare.
 
 ### PreviewAsset { #f-previewasset }
 
@@ -46,10 +54,10 @@ The repository's name.
 
 ## Methods
 
-### FetchAsync(GitHubShareClient, string, string?, CancellationToken) { #m-fetchasync-nfty-core-publish-community-githubshareclie-8d4b93 }
+### FetchAsync(GitHubShareClient, string, IReadOnlyCollection&lt;string&gt;, CancellationToken) { #m-fetchasync-nfty-core-publish-community-githubshareclie-fa7233 }
 
 ```csharp
-public static Task<RepoSnapshot?> FetchAsync(GitHubShareClient client, string login, string? pendingTag, CancellationToken ct);
+public static Task<RepoSnapshot?> FetchAsync(GitHubShareClient client, string login, IReadOnlyCollection<string> protectedTags, CancellationToken ct);
 ```
 
 Reads everything the scan needs. Returns `null` when the repository does not exist (the first share creates it). A missing or damaged `nfty-public.json` is a null [`RepoSnapshot.Manifest`](Nfty.Core.Publish.Community.RepoSnapshot.md#p-manifest); one written by a newer nfty throws a [`CommunityException`](Nfty.Core.Publish.Community.CommunityException.md) saying so rather than being called foreign.
@@ -58,13 +66,13 @@ Reads everything the scan needs. Returns `null` when the repository does not exi
 
 - `client` (`GitHubShareClient`) - The GitHub client.
 - `login` (`string`) - The signed-in account, which owns the repository.
-- `pendingTag` (`string?`) - The superseded Release's tag while its replacing pull request is open, or null.
+- `protectedTags` (`IReadOnlyCollection<string>`) - Release tags that are never extras: every one the gallery lists for the account, and every one an open pull request names (the live version while an update waits, and the new one). Pass an empty set only when nothing is pending.
 - `ct` (`CancellationToken`) - Cancellation.
 
-### RemoveAsync(GitHubShareClient, string, IReadOnlyList&lt;RepoExtra&gt;, CancellationToken, string?) { #m-removeasync-nfty-core-publish-community-githubsharecli-280469 }
+### RemoveAsync(GitHubShareClient, string, IReadOnlyList&lt;RepoExtra&gt;, IReadOnlyCollection&lt;string&gt;, CancellationToken) { #m-removeasync-nfty-core-publish-community-githubsharecli-634eab }
 
 ```csharp
-public static Task RemoveAsync(GitHubShareClient client, string login, IReadOnlyList<RepoExtra> extras, CancellationToken ct, string? pendingTag = null);
+public static Task RemoveAsync(GitHubShareClient client, string login, IReadOnlyList<RepoExtra> extras, IReadOnlyCollection<string> protectedTags, CancellationToken ct);
 ```
 
 Deletes exactly `extras`: assets, then Releases, then tags, then files (each blob at its own sha), the extra branches last. Before deleting anything it re-reads the repository and refuses (nothing deleted) when the repository is not nfty's, or when any item is not an extra of that fresh scan, which is what keeps `README.md`, `nfty-public.json`, the default branch and every allowed Release and tag out of reach.
@@ -74,8 +82,8 @@ Deletes exactly `extras`: assets, then Releases, then tags, then files (each blo
 - `client` (`GitHubShareClient`) - The GitHub client.
 - `login` (`string`) - The signed-in account, which owns the repository.
 - `extras` (`IReadOnlyList<RepoExtra>`) - What to delete, as the scan listed it.
+- `protectedTags` (`IReadOnlyCollection<string>`) - The tags kept out of reach (see [`PublicRepoScan.FetchAsync()`](Nfty.Core.Publish.Community.PublicRepoScan.md#m-fetchasync-nfty-core-publish-community-githubshareclie-fa7233)): the live version while an update waits, and the new one.
 - `ct` (`CancellationToken`) - Cancellation.
-- `pendingTag` (`string?`) - The superseded Release's tag while its replacing pull request is open (kept out of reach).
 
 **Exceptions**
 

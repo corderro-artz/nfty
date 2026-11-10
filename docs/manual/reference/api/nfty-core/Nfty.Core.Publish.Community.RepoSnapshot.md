@@ -12,10 +12,10 @@ Everything the scan reads about a user's `nfty-public` repository.
 
 ## Constructors
 
-### RepoSnapshot(GitHubRepo, IReadOnlyList&lt;GitHubTreeItem&gt;, IReadOnlyList&lt;string&gt;, IReadOnlyList&lt;GitHubRelease&gt;, IReadOnlyList&lt;string&gt;, PublicRepoManifest?, string?) { #m-ctor-nfty-core-publish-community-githubrepo-system-col-d1a1c0 }
+### RepoSnapshot(GitHubRepo, IReadOnlyList&lt;GitHubTreeItem&gt;, IReadOnlyList&lt;string&gt;, IReadOnlyList&lt;GitHubRelease&gt;, IReadOnlyList&lt;string&gt;, PublicRepoManifest?, IReadOnlyCollection&lt;string&gt;) { #m-ctor-nfty-core-publish-community-githubrepo-system-col-c39c80 }
 
 ```csharp
-public RepoSnapshot(GitHubRepo Repo, IReadOnlyList<GitHubTreeItem> Tree, IReadOnlyList<string> Branches, IReadOnlyList<GitHubRelease> Releases, IReadOnlyList<string> Tags, PublicRepoManifest? Manifest, string? PendingSupersededTag);
+public RepoSnapshot(GitHubRepo Repo, IReadOnlyList<GitHubTreeItem> Tree, IReadOnlyList<string> Branches, IReadOnlyList<GitHubRelease> Releases, IReadOnlyList<string> Tags, PublicRepoManifest? Manifest, IReadOnlyCollection<string> ProtectedTags);
 ```
 
 **Parameters**
@@ -26,7 +26,7 @@ public RepoSnapshot(GitHubRepo Repo, IReadOnlyList<GitHubTreeItem> Tree, IReadOn
 - `Releases` (`IReadOnlyList<GitHubRelease>`) - Every release with its files.
 - `Tags` (`IReadOnlyList<string>`) - Every tag name.
 - `Manifest` (`PublicRepoManifest?`) - The repository's `nfty-public.json`, or null when it is missing or not one nfty wrote.
-- `PendingSupersededTag` (`string?`) - The tag of a superseded Release whose replacing pull request is still open, or null.
+- `ProtectedTags` (`IReadOnlyCollection<string>`) - Release tags the gallery or an open pull request still depends on, which are never extras even when `nfty-public.json` does not list them (the live version while an update is open, the new one while it is).
 
 ## Properties
 
@@ -46,13 +46,13 @@ public PublicRepoManifest? Manifest { get; init; }
 
 The repository's `nfty-public.json`, or null when it is missing or not one nfty wrote.
 
-### PendingSupersededTag { #p-pendingsupersededtag }
+### ProtectedTags { #p-protectedtags }
 
 ```csharp
-public string? PendingSupersededTag { get; init; }
+public IReadOnlyCollection<string> ProtectedTags { get; init; }
 ```
 
-The tag of a superseded Release whose replacing pull request is still open, or null.
+Release tags the gallery or an open pull request still depends on, which are never extras even when `nfty-public.json` does not list them (the live version while an update is open, the new one while it is).
 
 ### Releases { #p-releases }
 

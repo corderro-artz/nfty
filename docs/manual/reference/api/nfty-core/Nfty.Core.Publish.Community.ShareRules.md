@@ -174,6 +174,14 @@ public static string AccountTooYoung { get; }
 
 The GitHub account is too young to share.
 
+### AlreadySharedThis { #p-alreadysharedthis }
+
+```csharp
+public static string AlreadySharedThis { get; }
+```
+
+The card's note that the account already shares the collection being looked at.
+
 ### AtShareLimit { #p-atsharelimit }
 
 ```csharp
@@ -245,6 +253,14 @@ public static string EntryNameMismatch { get; }
 ```
 
 An entry's slug disagrees with its file name.
+
+### EntryOwnerMismatch { #p-entryownermismatch }
+
+```csharp
+public static string EntryOwnerMismatch { get; }
+```
+
+An entry names an owner other than the account that submitted it.
 
 ### EntryUnreadable { #p-entryunreadable }
 
@@ -414,6 +430,14 @@ public static string ReplaceNotChosen { get; }
 
 An update needs the replace box ticked.
 
+### ReplaceOneToShare { #p-replaceonetoshare }
+
+```csharp
+public static string ReplaceOneToShare { get; }
+```
+
+The card's note at the share limit: a swap is the way in, and nothing happens until Share.
+
 ### RepoChanged { #p-repochanged }
 
 ```csharp
@@ -429,6 +453,14 @@ public static string RepoExtras { get; }
 ```
 
 The repository holds things the gallery doesn't allow.
+
+### RepoManifestDamaged { #p-repomanifestdamaged }
+
+```csharp
+public static string RepoManifestDamaged { get; }
+```
+
+nfty-public.json lists a share whose Release tag nfty would not have written.
 
 ### RepoNewerNfty { #p-reponewernfty }
 
@@ -525,6 +557,14 @@ public static string Unreachable { get; }
 ```
 
 GitHub can't be reached.
+
+### UnshareUnavailable { #p-unshareunavailable }
+
+```csharp
+public static string UnshareUnavailable { get; }
+```
+
+Unsharing is not wired on this page (no sharing service).
 
 ### UploadSourceFailed { #p-uploadsourcefailed }
 

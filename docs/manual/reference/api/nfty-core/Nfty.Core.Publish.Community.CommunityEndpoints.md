@@ -12,10 +12,10 @@ Where the community gallery lives. Only the API and uploads hosts ever receive t
 
 ## Constructors
 
-### CommunityEndpoints(string, Uri, Uri, Uri, string) { #m-ctor-system-string-system-uri-system-uri-system-uri-sy-b5275a }
+### CommunityEndpoints(string, Uri, Uri, Uri, string, string) { #m-ctor-system-string-system-uri-system-uri-system-uri-sy-437fb7 }
 
 ```csharp
-public CommunityEndpoints(string GalleryRepo, Uri IndexUrl, Uri ApiBase, Uri UploadsBase, string ClientId);
+public CommunityEndpoints(string GalleryRepo, Uri IndexUrl, Uri ApiBase, Uri UploadsBase, string ClientId, string ActionsBot = "github-actions[bot]");
 ```
 
 **Parameters**
@@ -25,8 +25,17 @@ public CommunityEndpoints(string GalleryRepo, Uri IndexUrl, Uri ApiBase, Uri Upl
 - `ApiBase` (`Uri`) - The GitHub REST API root.
 - `UploadsBase` (`Uri`) - The GitHub release-upload root.
 - `ClientId` (`string`) - The OAuth app's public client id.
+- `ActionsBot` (`string`) - The login whose pull request comments are the gallery's checks; any other commenter is ignored.
 
 ## Properties
+
+### ActionsBot { #p-actionsbot }
+
+```csharp
+public string ActionsBot { get; init; }
+```
+
+The login whose pull request comments are the gallery's checks; any other commenter is ignored.
 
 ### ApiBase { #p-apibase }
 
