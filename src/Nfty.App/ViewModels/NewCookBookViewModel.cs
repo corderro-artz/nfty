@@ -35,8 +35,7 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     /// <summary>Null when unset, so the optional target-supply field is omitted. Supported archives use the v2 floor.</summary>
     public int? TargetSupplyOrNull => TargetSupply > 0 ? TargetSupply : null;
 
-    private double _ratio = 1.0;
-    private bool _syncing;
+    private readonly AspectLink _link = new();
 
     /// <summary>The id derived from the name: lower-case, spaces to dashes.</summary>
     public string DerivedId => DeriveId(Name);
@@ -66,31 +65,17 @@ public partial class NewCookBookViewModel : WizardViewModelBase
 
     partial void OnAspectLockedChanged(bool value)
     {
-        if (value && _height > 0) _ratio = (double)_width / _height;   // W:H captured when locking
+        if (value) _link.Capture(Width, Height);   // W:H captured when locking
     }
 
     partial void OnWidthChanged(int value)
     {
-        if (_syncing) return;
-        if (AspectLocked && _ratio > 0)
-        {
-            _syncing = true;
-            Height = Math.Max(1, (int)Math.Round(value / _ratio));
-            _syncing = false;
-        }
-        else if (_height > 0) _ratio = (double)value / _height;        // unlocked: track the current ratio
+        if (_link.WidthChanged(AspectLocked, value, Height) is { } h) _link.Follow(() => Height = h);
     }
 
     partial void OnHeightChanged(int value)
     {
-        if (_syncing) return;
-        if (AspectLocked && _ratio > 0)
-        {
-            _syncing = true;
-            Width = Math.Max(1, (int)Math.Round(value * _ratio));
-            _syncing = false;
-        }
-        else if (value > 0) _ratio = (double)_width / value;
+        if (_link.HeightChanged(AspectLocked, Width, value) is { } w) _link.Follow(() => Width = w);
     }
 
     private bool CanCreate() => !string.IsNullOrWhiteSpace(DerivedId);

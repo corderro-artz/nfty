@@ -212,7 +212,7 @@
                     <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
-                <TextBox PlaceholderText="32x32" Text="{Binding CanvasSize}" />
+                <ctl:CanvasSizeField PixelWidth="{Binding CanvasWidth}" PixelHeight="{Binding CanvasHeight}" IsLinked="{Binding CanvasLinked}" />
                 <!-- Reserved: always laid out, inked past 512 x 512 (CanvasAdvice). -->
                 <TextBlock Classes="canvaswarn" Text="{x:Static vm:CanvasAdvice.LargeWarning}"
                            Opacity="{Binding LargeCanvasOpacity}" />

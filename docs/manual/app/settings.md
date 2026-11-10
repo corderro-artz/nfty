@@ -12,7 +12,7 @@ Windows.
 | Setting | Does |
 |---|---|
 | **THEME** | **System** follows your operating system; **Light** or **Dark** always. ++ctrl+t++ switches too, and the choice is remembered. |
-| **NEW CANVAS** | The side, in pixels, that a new CookBook's or loose Ingredient's canvas starts at (32 unless changed). The creation form can still change it; past 512 the card warns that cooking many assets that size is slow. |
+| **NEW CANVAS** | The side, in pixels, that a new CookBook's or loose Ingredient's canvas starts at (32 unless changed). The creation form can still change it: width and height are two number fields, and the link between them keeps their ratio while it is on (click it to change one side alone); past 512 the card warns that cooking many assets that size is slow. |
 
 ## PERFORMANCE
 

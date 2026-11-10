@@ -85,19 +85,8 @@
                     <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
-                <!-- Width / aspect lock / height, with the lock centered between the two fields.
-                     Star-sized rather than fixed: Fluent's spinner is a wide side-by-side pair
-                     (Known deviation - the mockup's .stepr is a 20px column we cannot reach from a
-                     Style), so it eats most of a fixed field and clipped "1000" to "100(" in mono.
-                     Letting both fields take what is left keeps the value readable. -->
-                <Grid ColumnDefinitions="*,Auto,*">
-                  <NumericUpDown Grid.Column="0" Value="{Binding Width}" Minimum="1" />
-                  <ToggleButton Grid.Column="1" IsChecked="{Binding AspectLocked}" Margin="6,0"
-                                ToolTip.Tip="Lock aspect ratio" VerticalAlignment="Center">
-                    <Path Classes="ico xs" Data="{StaticResource IconLink}" />
-                  </ToggleButton>
-                  <NumericUpDown Grid.Column="2" Value="{Binding Height}" Minimum="1" />
-                </Grid>
+                <!-- The one canvas picker (Controls/CanvasSizeField): width, link, height. -->
+                <ctl:CanvasSizeField PixelWidth="{Binding Width}" PixelHeight="{Binding Height}" IsLinked="{Binding AspectLocked}" />
                 <!-- Reserved: always laid out, inked past 512 x 512 (CanvasAdvice). -->
                 <TextBlock Classes="canvaswarn" Text="{x:Static vm:CanvasAdvice.LargeWarning}"
                            Opacity="{Binding LargeCanvasOpacity}" />

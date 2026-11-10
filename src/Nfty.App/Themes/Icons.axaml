@@ -204,6 +204,9 @@
   <!-- ingredient-editor.html: undo / redo -->
   <StreamGeometry x:Key="IconUndo">M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-1</StreamGeometry>
 
+  <!-- The aspect-ratio link opened: the two links of IconLink pulled apart, with the break marked. Not IconLink (held together). -->
+  <StreamGeometry x:Key="IconUnlink">M12.5 7.5l1.6-1.6a4 4 0 0 1 5.7 5.7l-1.6 1.6M11.5 16.5l-1.6 1.6a4 4 0 0 1-5.7-5.7l1.6-1.6M8 3v2M3 8h2M16 21v-2M21 16h-2</StreamGeometry>
+
   <!-- explorer.html: the unlocked variant (open shackle) -->
   <StreamGeometry x:Key="IconUnlock">M8 11V8a4 4 0 0 1 7.5-1.9M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z</StreamGeometry>
 

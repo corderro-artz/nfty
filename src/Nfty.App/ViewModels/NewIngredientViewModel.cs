@@ -25,8 +25,29 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     [ObservableProperty] private double _hueMin, _hueMax = 360, _satMin = 40, _satMax = 100;
     /// <summary>The typed color specification used for a static layer.</summary>
     [ObservableProperty] private string _fixedColor = "hex:d6249f";
-    /// <summary>Loose canvas dimensions as width x height; book insertion inherits its canvas.</summary>
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private string _canvasSize = "32x32";
+    /// <summary>Loose canvas width in pixels; book insertion inherits its canvas.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private int _canvasWidth = CanvasAdvice.DefaultSide;
+    /// <summary>Loose canvas height in pixels; book insertion inherits its canvas.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(LargeCanvasOpacity))] private int _canvasHeight = CanvasAdvice.DefaultSide;
+    /// <summary>Keep the loose canvas ratio while editing either side.</summary>
+    [ObservableProperty] private bool _canvasLinked = true;
+
+    private readonly AspectLink _link = new();
+
+    partial void OnCanvasLinkedChanged(bool value)
+    {
+        if (value) _link.Capture(CanvasWidth, CanvasHeight);
+    }
+
+    partial void OnCanvasWidthChanged(int value)
+    {
+        if (_link.WidthChanged(CanvasLinked, value, CanvasHeight) is { } h) _link.Follow(() => CanvasHeight = h);
+    }
+
+    partial void OnCanvasHeightChanged(int value)
+    {
+        if (_link.HeightChanged(CanvasLinked, CanvasWidth, value) is { } w) _link.Follow(() => CanvasWidth = w);
+    }
 
     /// <summary>Ink for the large-canvas warning under the loose canvas field: always laid out.</summary>
     public double LargeCanvasOpacity => TryGetCanvas(out var c) && CanvasAdvice.IsLarge(c.Width, c.Height) ? 1 : 0;
@@ -106,8 +127,11 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     /// <summary>Creates the wizard with a loose canvas starting at the side Settings remembers.</summary>
     /// <param name="dialogs">The dialog layer.</param>
     /// <param name="canvasSide">The side the loose canvas starts at (<see cref="Services.IAppSettings.DefaultCanvasSide"/>).</param>
-    public NewIngredientViewModel(IDialogService dialogs, int canvasSide) : base(dialogs) =>
-        CanvasSize = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{canvasSide}x{canvasSide}");
+    public NewIngredientViewModel(IDialogService dialogs, int canvasSide) : base(dialogs)
+    {
+        CanvasWidth = canvasSide;
+        CanvasHeight = canvasSide;
+    }
 
     partial void OnKindChanged(LayerKind value)
     {
@@ -179,15 +203,13 @@ public partial class NewIngredientViewModel : WizardViewModelBase
     /// <summary>The derived id as the Identifier chip prints it.</summary>
     public string DerivedIdText => IdChipText(DerivedId);
 
-    /// <summary>Parse the CanvasSize field ("{W}x{H}") into positive dimensions.</summary>
-    /// <param name="canvas">Positive dimensions on success; default on invalid text.</param>
-    /// <returns>True for positive dimensions within the supported pixel budget.</returns>
+    /// <summary>The loose canvas the two fields describe.</summary>
+    /// <param name="canvas">Positive dimensions on success; default otherwise.</param>
+    /// <returns>True for positive sides within the supported pixel budget.</returns>
     public bool TryGetCanvas(out Dimensions canvas)
     {
         canvas = default!;
-        var parts = CanvasSize.Split('x', 'X');
-        if (parts.Length != 2) return false;
-        if (!int.TryParse(parts[0].Trim(), out var w) || !int.TryParse(parts[1].Trim(), out var h)) return false;
+        int w = CanvasWidth, h = CanvasHeight;
         if (w <= 0 || h <= 0) return false;
         if ((long)w * h > 100_000_000) return false;   // cap pixels: avoids int-overflow / OOM allocating the raster
         canvas = new Dimensions(w, h);

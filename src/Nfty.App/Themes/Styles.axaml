@@ -4855,6 +4855,39 @@
   </Style>
   <!-- The large-canvas warning under a canvas field: one line, warning ink, its height always
        reserved (Opacity toggles) so typing past 512 x 512 moves nothing on the card. -->
+  <!-- The canvas picker's link toggle (Controls/CanvasSizeField): a bare glyph between the two
+       fields, muted when the sides are free, accent when linked. Fluent's checked toggle is a stock
+       blue slab, so every state is stated. Fixed 28x28 so the glyph swap moves nothing. -->
+  <Style Selector="ToggleButton.linktog">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Margin" Value="6,0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleButton.linktog /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.linktog:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="ToggleButton.linktog:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ToggleButton.linktog:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+  </Style>
+  <Style Selector="ToggleButton.linktog Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.linktog:checked Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+
   <Style Selector="TextBlock.canvaswarn">
     <Setter Property="FontSize" Value="11" />
     <Setter Property="LineHeight" Value="14" />

@@ -995,6 +995,9 @@ public partial class VisualCapture
 
             Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs) { Name = "Aura" } },
                 variant, $"wizard-ingredient-{key}.png");
+            // The loose destination is the one state that draws the canvas picker on this form.
+            Capture(new Views.NewIngredientView { DataContext = new NewIngredientViewModel(dialogs) { Name = "Aura", Destination = RecipeDestination.LooseKitchen } },
+                variant, $"wizard-ingredient-loose-{key}.png");
         }
     }
 

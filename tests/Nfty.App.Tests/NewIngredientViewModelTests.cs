@@ -91,21 +91,31 @@ public class NewIngredientViewModelTests
     }
 
     [Fact]
-    public void TryGetCanvas_parses_WxH_and_rejects_bad_input()
+    public void TryGetCanvas_takes_the_two_sides_and_rejects_impossible_ones()
     {
         var vm = Make(out _);
-        vm.CanvasSize = "512x512";
+        vm.CanvasLinked = false;
+        vm.CanvasWidth = 512; vm.CanvasHeight = 256;
         Assert.True(vm.TryGetCanvas(out var c));
-        Assert.Equal(512, c.Width); Assert.Equal(512, c.Height);
+        Assert.Equal((512, 256), (c.Width, c.Height));
 
-        vm.CanvasSize = " 8 x 8 ";
-        Assert.True(vm.TryGetCanvas(out var c2));
-        Assert.Equal(8, c2.Width); Assert.Equal(8, c2.Height);
-
-        foreach (var bad in new[] { "", "abc", "0x8", "8", "8x", "-4x4", "8xY" })
+        foreach (var (w, h) in new[] { (0, 8), (8, 0), (-4, 4), (20_000, 20_000) })
         {
-            vm.CanvasSize = bad;
-            Assert.False(vm.TryGetCanvas(out _), $"expected '{bad}' to be rejected");
+            vm.CanvasWidth = w; vm.CanvasHeight = h;
+            Assert.False(vm.TryGetCanvas(out _), $"expected {w}x{h} to be rejected");
         }
+    }
+
+    [Fact]
+    public void Linked_loose_canvas_keeps_its_ratio_like_the_cookbook_one()
+    {
+        var vm = Make(out _);
+        vm.CanvasLinked = false;
+        vm.CanvasWidth = 64; vm.CanvasHeight = 32;
+        vm.CanvasLinked = true;                 // captures 2:1
+        vm.CanvasWidth = 128;
+        Assert.Equal(64, vm.CanvasHeight);
+        vm.CanvasHeight = 8;
+        Assert.Equal(16, vm.CanvasWidth);
     }
 }

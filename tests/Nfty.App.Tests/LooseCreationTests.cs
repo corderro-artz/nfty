@@ -62,7 +62,7 @@ public class LooseCreationTests
                     r.Name = _name; r.Destination = RecipeDestination.LooseKitchen;
                     return Task.FromResult((TResult?)(object?)r);
                 case NewIngredientViewModel i:
-                    i.Name = _name; i.Kind = LayerKind.Dynamic; i.CanvasSize = "8x8";
+                    i.Name = _name; i.Kind = LayerKind.Dynamic; i.SetCanvas("8x8");
                     i.Destination = RecipeDestination.LooseKitchen;
                     return Task.FromResult((TResult?)(object?)i);
                 case ConfirmDialogViewModel:

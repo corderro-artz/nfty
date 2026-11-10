@@ -33,7 +33,7 @@ public class ExplorerAddLooseTests
         public Task<TResult?> ShowAsync<TResult>(ViewModelBase dialog)
         {
             if (dialog is NewIngredientViewModel w)
-            { w.Name = _name; w.Kind = LayerKind.Dynamic; w.CanvasSize = _canvas;
+            { w.Name = _name; w.Kind = LayerKind.Dynamic; w.SetCanvas(_canvas);
               w.Destination = RecipeDestination.LooseKitchen; return Task.FromResult((TResult?)(object?)w); }
             if (dialog is ErrorDialogViewModel e) { ErrorTitle = e.Title; return Task.FromResult(default(TResult)); }
             return Task.FromResult(default(TResult));

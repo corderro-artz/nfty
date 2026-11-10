@@ -28,7 +28,7 @@ public class CanvasAdviceTests
         Assert.Equal((32, 32), (book.Width, book.Height));
         Assert.Equal(0, book.LargeCanvasOpacity);
         var ing = new NewIngredientViewModel(new FakeDialogs());
-        Assert.Equal("32x32", ing.CanvasSize);
+        Assert.Equal((32, 32), (ing.CanvasWidth, ing.CanvasHeight));
         Assert.Equal(0, ing.LargeCanvasOpacity);
     }
 
