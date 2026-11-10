@@ -415,6 +415,18 @@ Layout at the 1280 x 720 floor (page area ~1067 x 526):
 - **Header row:** title left; search box, tag filter (`seg` tray, stated widths), sort
   (Newest / Name / Assets) right; under it the reserved one-line status (`Updated 14:02` /
   offline sentence).
+- **Search = three filters in one box (author's ruling 2026-11-09).** `#tag` keeps entries carrying
+  that tag; `@login` keeps that sharer's entries; any other word matches the collection name or
+  listing name (case-insensitive, invariant). Terms combine with AND (`@someone #props chest`).
+  Parsing is Core's `CommunitySearch.Parse` so the rule is one function. The tag tray shows the
+  gallery's fixed tag list (`tags.json`); picking a chip writes `#tag` into the box (one source of
+  truth: the box). Every `#tag` and `@owner` shown on a tile or the rail is a link that writes the
+  same token into the box.
+- **Tags are a real feature.** `tags.json` (`{schemaVersion, tags: [...]}`) lives in
+  `nfty-gallery`, `publish.yml` publishes it beside `index.json`, `ICommunityCache` fetches it
+  token-free with the index (capped, cached, schema-gated), the share card offers its chips (≤ 5),
+  and the Action refuses any other tag. Starting list: characters, creatures, props, items,
+  scenery, effects, ui, abstract.
 - **Grid:** fixed-size tiles — preview cell (nearest-neighbour, `BitmapInterpolationMode="None"`),
   name, `@owner`, `600 · 32 x 32 · 4.0 MB`, badge slots for **3D** and **Book** (reserved, inked
   only when true). The grid **pages** with the page size measured off the real row, the CookBook
@@ -495,7 +507,7 @@ error card.
 3. **Account age 30 days and one new share a day** — right numbers?
 4. **Image screening.** Accept "report and delist" as the only defense, or require manual approval
    for an account's first share after all?
-5. **Tags.** The starting list for `tags.json`.
+5. **Tags.** Resolved 2026-11-09: characters, creatures, props, items, scenery, effects, ui, abstract (editable in `nfty-gallery/tags.json`).
 6. **License field.** Should a share state a license (e.g. CC BY 4.0 / all rights reserved) shown
    on the rail? Without one, "download" says nothing about reuse.
 8. **Near-duplicates.** The fingerprint catches the same Set re-shared, not an extended or trimmed
