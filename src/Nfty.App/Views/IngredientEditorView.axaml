@@ -57,7 +57,7 @@
                           <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Spacing="2">
-                          <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
                           <TextBlock Text="{Binding Weight, StringFormat='weight {0}'}" Classes="rmeta" />
                         </StackPanel>
                       </Grid>
@@ -799,7 +799,7 @@
                   <Border Classes="kroot" HorizontalAlignment="Left" IsVisible="{Binding HasKitchen}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <Path Classes="ico xs" Data="{StaticResource IconKitchen}" />
-                      <TextBlock Classes="kroot-txt" FontSize="11" Text="{Binding KitchenName}" />
+                      <TextBlock Classes="kroot-txt" FontSize="12" Text="{Binding KitchenName}" />
                     </StackPanel>
                   </Border>
 

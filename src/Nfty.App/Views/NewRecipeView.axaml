@@ -40,7 +40,7 @@
                    is shorter, the height is a line rather than a band, and the reader can see the
                    id change as they type. -->
               <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,3,0,0">
-                <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="10.5" /></Border>
+                <Border Classes="idchip"><TextBlock Text="{Binding DerivedIdText}" Classes="mono" FontSize="11" /></Border>
                 <TextBlock Text="— the identifier, derived from the name" Classes="derived"
                            Opacity="0.9" VerticalAlignment="Center" />
               </StackPanel>

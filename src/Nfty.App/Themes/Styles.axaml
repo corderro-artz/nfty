@@ -34,7 +34,7 @@
   </Style>
   <Style Selector="TextBlock.cseg">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Padding" Value="7,3" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -45,7 +45,7 @@
   </Style>
   <Style Selector="TextBlock.kind-txt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
   </Style>
   <Style Selector="TextBlock.kind-txt.kdyn"><Setter Property="Foreground" Value="{DynamicResource KindDynamicBrush}" /></Style>
   <Style Selector="TextBlock.kind-txt.kstat"><Setter Property="Foreground" Value="{DynamicResource KindStaticBrush}" /></Style>
@@ -56,7 +56,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12,8" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMd}" />
     <!-- Centered, like every other button in the app. Left only ever looked right because these
          buttons are content-sized in most rows, where the two are indistinguishable; the moment one
@@ -191,7 +191,7 @@
          Fluent's 14 while every outline button next to it was 12.5, so "Add recipe" measured 37px
          tall against Delete and Import at 35 and read as a size larger - a difference of two pixels
          that the eye reads as a mistake because the three are in one row. -->
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
   </Style>
   <!-- FluentTheme's ControlTheme for Button defines its own nested "^.accent" style that paints
@@ -379,7 +379,7 @@
     <Setter Property="Padding" Value="12,9" />
   </Style>
   <Style Selector="Button.landing TextBlock.lbl">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- landing.html .subrow .tbtn: the secondary Create tier is two SMALLER side-by-side buttons,
@@ -389,7 +389,7 @@
     <Setter Property="Padding" Value="10,7" />
   </Style>
   <Style Selector="Button.landing.sub TextBlock.lbl">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
   </Style>
 
   <!-- landing.html .learn: a bare text link, not a bordered button. -->
@@ -398,7 +398,7 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Margin" Value="0,6,0,0" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
@@ -444,11 +444,11 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
   </Style>
   <Style Selector="TextBlock.rname">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="TextBlock.rmeta">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Margin" Value="0,1,0,0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -459,7 +459,7 @@
        real information a user reads, not decoration, so it has to clear 4.5. This is a deliberate,
        measured divergence from the mockup's number, not a transcription slip. -->
   <Style Selector="TextBlock.rpath">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Opacity" Value="0.85" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -483,14 +483,14 @@
     <Setter Property="RadiusY" Value="6" />
   </Style>
   <Style Selector="TextBlock.zh">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.zp">
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="LineHeight" Value="19.2" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="21" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="TextWrapping" Value="Wrap" />
@@ -533,7 +533,7 @@
   </Style>
   <Style Selector="Button.landing TextBlock.hk">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -556,14 +556,14 @@
        one app. Stated on the class now, not inherited from whatever card hosts it. -->
   <Style Selector="TextBlock.slbl">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.4" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Margin" Value="0,0,0,8" />
   </Style>
   <Style Selector="TextBlock.pane-h">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.47" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -611,7 +611,7 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="CornerRadius" Value="0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.47" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Stretch" />
@@ -647,7 +647,7 @@
   </Style>
   <Style Selector="Border.tabcount > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -665,14 +665,14 @@
   </Style>
   <Style Selector="Border.vtag > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <!-- .hcount: the right-aligned count that trails a pane header. -->
   <Style Selector="TextBlock.hcount">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -699,7 +699,7 @@
   </Style>
   <Style Selector="Border.kbd > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
@@ -726,12 +726,12 @@
   </Style>
   <Style Selector="Border.keycap TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <Style Selector="Border.keycap.sm TextBlock"><Setter Property="FontSize" Value="10" /></Style>
+  <Style Selector="Border.keycap.sm TextBlock"><Setter Property="FontSize" Value="11" /></Style>
   <Style Selector="Border.keycap Path.ico.keyink"><Setter Property="Stroke" Value="{DynamicResource FgBrush}" /></Style>
   <!-- The highlighted mouse button: the fill glyph, FILLED (never stroked) in the accent inside the
        body. The glyphs are drawn inset from the body's outline and seams; a 2-unit stroke on them
@@ -742,7 +742,7 @@
     <Setter Property="Fill" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="TextBlock.keyjoin">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -769,7 +769,7 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBox.bare /template/ Border#PART_BorderElement">
@@ -1074,7 +1074,7 @@
   </Style>
   <Style Selector="Button.preset TextBlock.pn">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
@@ -1082,7 +1082,7 @@
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="Button.preset TextBlock.pd">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
@@ -1117,7 +1117,7 @@
   </Style>
   <Style Selector="Border.ship TextBlock.part">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <!-- The Rise EXPORT tab's size while it is being counted again: the last exact figure stays, in fainter
@@ -1143,13 +1143,13 @@
   </Style>
   <Style Selector="TextBlock.pkgname">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.pkgdetail">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -1166,7 +1166,7 @@
   </Style>
   <Style Selector="Border.ship TextBlock.fn">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
@@ -1185,7 +1185,7 @@
   </Style>
   <!-- The honest-limits sentence. Warning ink, because what it says is what the seal does NOT do. -->
   <Style Selector="TextBlock.caveat">
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
@@ -1216,14 +1216,14 @@
   </Style>
   <Style Selector="Button.pathstrip TextBlock.leaf">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <!-- The parent is what gets trimmed, never the leaf: a path is read from its end, so a trailing
        ellipsis on the whole thing would eat the only part that identifies the folder. -->
   <Style Selector="Button.pathstrip TextBlock.parent">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
@@ -1280,14 +1280,14 @@
        above, where the number is large and the label is muted. -->
   <Style Selector="TextBlock.statn">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
   <Style Selector="TextBlock.statw">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
@@ -1423,7 +1423,7 @@
   <!-- Card title / subtitle. These live in the RadioButton's Content, so they are matched by a
        plain descendant selector - no /template/ hop, which would be a second one and throw. -->
   <Style Selector="RadioButton.choice TextBlock.ct">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="RadioButton.choice:checked TextBlock.ct">
@@ -1431,9 +1431,9 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="RadioButton.choice TextBlock.csub">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="13.5" />
+    <Setter Property="LineHeight" Value="15" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,2,0,0" />
   </Style>
@@ -1459,7 +1459,7 @@
        keys, re-inked in Tokens.axaml; only the type size is a property, and Fluent's 14 sat a size above
        every other row in the app. -->
   <Style Selector="MenuItem">
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
   </Style>
 
   <!-- The "?" help badge: the drawn help glyph (circle + mark, one geometry, centered by
@@ -1504,26 +1504,26 @@
        drew at Fluent's 13px in full ink, beside a confirm card whose same-role sentence was 11.5
        muted. Two cards of one shape, two sizes of body copy. -->
   <Style Selector="TextBlock.m-sub, SelectableTextBlock.m-sub">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,4,0,0" />
   </Style>
   <!-- .derived: dashed rule above, then "Identifier <code>" -->
   <Style Selector="TextBlock.derived">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.keyhint">
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <Style Selector="TextBlock.plabel">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Margin" Value="0,0,0,8" />
@@ -1534,12 +1534,12 @@
     <Setter Property="Margin" Value="0" />
   </Style>
   <Style Selector="TextBlock.tagline">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.sub-h">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.26" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -1623,17 +1623,17 @@
        inside the 240px rail. An exact-type selector, so it names SelectableTextBlock itself. -->
   <Style Selector="SelectableTextBlock.factval">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="17.5" />
     <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <!-- Its label: the same 16px line box as the value beside it, so the two sit on one baseline
        (Avalonia centers a glyph inside a stated LineHeight; equal boxes line two sizes up). -->
   <Style Selector="TextBlock.factlbl">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.0" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="LineHeight" Value="17.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Border.idchip">
@@ -1661,7 +1661,7 @@
   </Style>
   <Style Selector="Button.idchip TextBlock.ck">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <!-- Fluent paints the wash on the presenter, not the button - and it must be TRANSPARENT at rest,
@@ -1679,19 +1679,19 @@
        The label carries the meaning, so it must not read at the same weight as the value. -->
   <Style Selector="Border.idchip TextBlock.ck">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Border.idchip TextBlock.cvl">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <!-- The same value run inside the one idchip that is a Button; see Button.idchip above. -->
   <Style Selector="Button.idchip TextBlock.cvl">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
@@ -1700,7 +1700,7 @@
   <Style Selector="TextBlock.kmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Width" Value="13" />
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -1797,7 +1797,7 @@
     <Setter Property="LetterSpacing" Value="-0.19" />
   </Style>
   <Style Selector="TextBlock.ml">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Margin" Value="0,3,0,0" />
@@ -1836,7 +1836,7 @@
   <Style Selector="TextBlock.data-h">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Medium" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.05" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -1855,7 +1855,7 @@
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
   </Style>
   <Style Selector="TextBlock.data-row">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="14" />
     <!-- A TextBlock in a Grid cell stretches and draws its line at the TOP, which put every one of
          these a couple of pixels above the middle of the bar behind it. Nothing else in the row is
          centered either, so the whole line read as sitting slightly high. -->
@@ -1877,7 +1877,7 @@
        between class selectors, so the shared values are restated. -->
   <Style Selector="TextBlock.hint">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -2057,7 +2057,7 @@
     <Setter Property="Height" Value="30" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
@@ -2121,7 +2121,7 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="Padding" Value="4,7" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -2144,7 +2144,7 @@
        because a font size and its line box travel together. -->
   <Style Selector="TextBlock.seglbl">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -2159,7 +2159,7 @@
   </Style>
   <Style Selector="Button.seg-b.tiny">
     <Setter Property="Padding" Value="7,1" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
@@ -2191,7 +2191,7 @@
   </Style>
   <!-- .vlock: the dashed "value comes from the grayscale map" notice -->
   <Style Selector="TextBlock.vlock">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
@@ -2243,7 +2243,7 @@
   </Style>
   <Style Selector="TextBlock.editmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="LetterSpacing" Value="0.6" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
@@ -2252,7 +2252,7 @@
 
   <!-- the row's name. Muted and lighter while switched off, so the on-rows read as the composite. -->
   <Style Selector="TextBlock.vname">
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -2266,7 +2266,7 @@
        has no canonical depth in this recipe at all. Fixed width in both cases. -->
   <Style Selector="TextBlock.dpt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontFeatures" Value="+tnum" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Width" Value="15" />
@@ -2323,7 +2323,7 @@
   </Style>
   <Style Selector="Border.tagx > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="0.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -2335,7 +2335,7 @@
        file's file name. Shares its box with the tag, which is what keeps the row one height. -->
   <Style Selector="TextBlock.tlabel">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -2353,7 +2353,7 @@
   </Style>
   <Style Selector="Border.kchip TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="0.4" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -2392,7 +2392,7 @@
        what lets a placement leave every sibling's numbering exactly where it was. -->
   <Style Selector="TextBlock.sv">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -2414,7 +2414,7 @@
     <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
     <Setter Property="Padding" Value="4,0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="TextAlignment" Value="Center" />
   </Style>
@@ -2428,7 +2428,7 @@
     <Setter Property="Height" Value="{DynamicResource FieldHeightSm}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -2455,7 +2455,7 @@
        an Auto column and correct in a star one. -->
   <Style Selector="TextBlock.cv">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Right" />
@@ -2535,24 +2535,24 @@
     <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
   </Style>
   <Style Selector="TextBlock.probline">
-    <Setter Property="FontSize" Value="11.5" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <!-- The same line, SELECTABLE, in the validation dialog. A separate rule because an Avalonia type
        selector matches the EXACT type: SelectableTextBlock derives from TextBlock and the rule above
        does not reach it, so without this the dialog's problems drew at the inherited size. -->
   <Style Selector="SelectableTextBlock.probline">
-    <Setter Property="FontSize" Value="11.5" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <!-- The position `validate` lists a problem at, so a reader can talk about "the third one" across
        the dialog, the card and the CLI. Mono and muted: it is an index, not a finding. -->
   <Style Selector="TextBlock.probnum">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="17.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <!-- The clean half of the validation kicker. Declared after Ellipse.kdot so it wins at equal
@@ -2631,7 +2631,7 @@
   </Style>
   <Style Selector="Border.wincount TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
@@ -2643,7 +2643,7 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="10,6" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
   </Style>
   <Style Selector="Button.winrow:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource LineBrush}" />
@@ -2740,7 +2740,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.cwmodel > TextBlock">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
@@ -2750,7 +2750,7 @@
     <Setter Property="FontSize" Value="20" />
   </Style>
   <Style Selector="TextBlock.rlabel">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
@@ -2783,8 +2783,8 @@
        run and a 10.5px run share a line. -->
   <Style Selector="TextBlock.mintname">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
-    <Setter Property="LineHeight" Value="19" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="20" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <!-- The identity card's title as a BUTTON. It must be indistinguishable from the bare TextBlock it
@@ -2866,7 +2866,7 @@
   </Style>
 
   <Style Selector="TextBlock.iddesc">
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxWidth" Value="460" />
@@ -2896,8 +2896,8 @@
   </Style>
   <Style Selector="TextBlock.cname">
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="FontSize" Value="13" />
-    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="LineHeight" Value="18.5" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- .cbar: the per-recipe share track -->
@@ -2925,8 +2925,8 @@
        variant table and the rarity table, in a third table of the same family. -->
   <Style Selector="TextBlock.cshare">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="18.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -2960,8 +2960,8 @@
        INK off a frame, since a test reading these setters back would only restate them. -->
   <Style Selector="Border.fchip > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="TextAlignment" Value="Center" />
   </Style>
@@ -2983,16 +2983,16 @@
   <!-- the x and = that separate the factors -->
   <Style Selector="TextBlock.ftimes">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Opacity" Value="0.5" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.ceq">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="18.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Margin" Value="3,0" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -3000,8 +3000,8 @@
   <Style Selector="TextBlock.cnum">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="FontSize" Value="13.5" />
-    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="LineHeight" Value="17.5" />
     <!-- See .cshare: the header states Right and so must the figure under it. -->
     <Setter Property="TextAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -3055,7 +3055,7 @@
   </Style>
   <Style Selector="Border.hflag.absent > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
 
@@ -3151,7 +3151,7 @@
        unmistakable through the accent wash and border rather than through the off state being dim. -->
   <Style Selector="Button.chip">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="0.3" />
     <Setter Property="Padding" Value="7,3" />
     <Setter Property="MinHeight" Value="0" />
@@ -3177,19 +3177,19 @@
 
   <Style Selector="TextBlock.rmark">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="8.5" />
+    <Setter Property="FontSize" Value="9" />
     <Setter Property="LetterSpacing" Value="0.3" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.rcl">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="0.38" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
   <Style Selector="TextBlock.rcv">
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
@@ -3203,7 +3203,7 @@
     <Setter Property="Padding" Value="10,8" />
   </Style>
   <Style Selector="TextBlock.share-h">
-    <Setter Property="FontSize" Value="9.5" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="0.95" />   <!-- .1em at 9.5px -->
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -3231,7 +3231,7 @@
     <Setter Property="Background" Value="{DynamicResource GuideHiBrush}" />
   </Style>
   <Style Selector="TextBlock.lgn">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.lgn.cur">
@@ -3258,7 +3258,7 @@
   </Style>
   <Style Selector="Button.hflag TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="Button.hflag Path.ico">
@@ -3277,9 +3277,9 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.cwnote">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="18" />   <!-- 1.5 -->
+    <Setter Property="LineHeight" Value="19.5" />   <!-- 1.5 -->
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
@@ -3298,13 +3298,13 @@
   </Style>
   <Style Selector="TextBlock.ax">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.1" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.av">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="TextBlock.av.der">
@@ -3345,7 +3345,7 @@
   </Style>
   <Style Selector="TextBlock.kroot-txt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
@@ -3380,7 +3380,7 @@
   </Style>
   <Style Selector="TextBlock.lockflag-txt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <!-- AFTER TextBlock.lockflag-txt, not before it. Avalonia is last-one-wins at equal specificity,
@@ -3397,7 +3397,7 @@
   <!-- status bar text (explorer.html .statusbar: mono 11.5px, tabular numerals) -->
   <Style Selector="TextBlock.sbar">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontFeatures" Value="+tnum" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -3417,7 +3417,7 @@
        address on its tooltip. SelectableTextBlock, so it takes its own selector (exact type match). -->
   <Style Selector="SelectableTextBlock.uri">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -3552,7 +3552,7 @@
        header and second-in-column labels override inline, mirroring the mockup's `.slbl + .slbl`. -->
   <Style Selector="TextBlock.slbl.sh">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="LetterSpacing" Value="1.54" />   <!-- .14em at 11px -->
     <Setter Property="Margin" Value="0,0,0,14" />
@@ -3567,7 +3567,7 @@
   <Style Selector="Button.seg-b.hl">
     <Setter Property="Height" Value="24" />
     <Setter Property="Padding" Value="8,0" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.0" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Left" />
@@ -3623,7 +3623,7 @@
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
   </Style>
   <Style Selector="TextBlock.sh-t.rlead">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
@@ -3656,7 +3656,7 @@
        the button - a plain Content string now tracks correctly. -->
   <Style Selector="Button.esc">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1.0" />   <!-- .1em at 10px -->
   </Style>
 
@@ -3703,21 +3703,21 @@
 
   <!-- .t / .t.plain / .s — the term, the weight-400 rules variant, and the explanatory line. -->
   <Style Selector="TextBlock.sh-t">
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LineHeight" Value="15.6" />   <!-- 1.25 -->
+    <Setter Property="LineHeight" Value="16" />   <!-- 1.25 -->
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="TextBlock.sh-t.plain">
     <Setter Property="FontWeight" Value="Normal" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="Padding" Value="0,1,0,0" />
   </Style>
   <Style Selector="TextBlock.sh-s">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="16.5" />   <!-- 1.43: tightened from 1.5 to buy the sheet its slack back -->
+    <Setter Property="LineHeight" Value="17" />   <!-- 1.43: tightened from 1.5 to buy the sheet its slack back -->
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,3,0,0" />
   </Style>
@@ -3726,9 +3726,9 @@
        reads as part of the header rather than as a first entry. -->
   <Style Selector="TextBlock.sh-chain">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,-5,0,13" />
   </Style>
@@ -3880,7 +3880,7 @@
        grid is looking for exactly this. Mono, because it is a number read against other numbers. -->
   <Style Selector="TextBlock.combo">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 
@@ -3907,7 +3907,7 @@
   </Style>
   <Style Selector="Border.rtag > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
 
@@ -3923,9 +3923,9 @@
   </Style>
   <Style Selector="Border.dnabox TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="1" />
-    <Setter Property="LineHeight" Value="18" />
+    <Setter Property="LineHeight" Value="20" />
     <Setter Property="TextAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -4044,7 +4044,7 @@
   </Style>
   <Style Selector="TextBlock.ins-dna">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4071,21 +4071,21 @@
   </Style>
   <Style Selector="TextBlock.ins-zv">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Width" Value="42" />
     <Setter Property="TextAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.ins-hint">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <Style Selector="TextBlock.sh-kdesc">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="TextWrapping" Value="Wrap" />   <!-- a long description wraps; clipped at the card edge it read as a truncated word -->
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -4094,16 +4094,16 @@
   <!-- .cs / .fine — the color-spec rows and the note under them. -->
   <Style Selector="TextBlock.sh-cs">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.sh-cs.pre">
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <Style Selector="TextBlock.sh-fine">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="15.75" />   <!-- 1.5 -->
+    <Setter Property="LineHeight" Value="16.5" />   <!-- 1.5 -->
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="Margin" Value="0,10,0,0" />
   </Style>
@@ -4120,9 +4120,9 @@
     <Setter Property="Padding" Value="20,9" />
   </Style>
   <Style Selector="TextBlock.sh-dna">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
-    <Setter Property="LineHeight" Value="17.25" />   <!-- 1.5 -->
+    <Setter Property="LineHeight" Value="18" />   <!-- 1.5 -->
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4179,7 +4179,7 @@
   </Style>
   <Style Selector="SelectableTextBlock.reporttext">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="TextWrapping" Value="NoWrap" />
   </Style>
@@ -4257,7 +4257,7 @@
   </Style>
   <Style Selector="Button.seg-b.mini">
     <Setter Property="Padding" Value="8,4" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
   </Style>
@@ -4334,12 +4334,12 @@
        1.25-1.5 every other line box in this file keeps. The band stays 52 - all three shelf states
        share one grid row, and growing it for this one would restyle every Kitchen card too. -->
   <Style Selector="Border.kshelf TextBlock.zh">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
   <Style Selector="Border.kshelf TextBlock.zp">
-    <Setter Property="FontSize" Value="10.5" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14.5" />
     <Setter Property="TextAlignment" Value="Left" />
     <Setter Property="Margin" Value="0" />
   </Style>
@@ -4463,7 +4463,7 @@
   </Style>
   <Style Selector="TextBlock.th">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="LetterSpacing" Value="1.1" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
@@ -4475,14 +4475,14 @@
        changes the page count moves nothing beside it. -->
   <Style Selector="TextBlock.pglabel">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Button.pgbtn">
     <Setter Property="Width" Value="20" />
     <Setter Property="Height" Value="20" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="Transparent" />
@@ -4524,7 +4524,7 @@
        proportion - and a thin pill beside a 16px rounded rectangle read as two unrelated controls. -->
   <Style Selector="TextBlock.raill">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="0.6" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -4535,7 +4535,7 @@
   </Style>
   <Style Selector="TextBlock.railpct">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
@@ -4683,7 +4683,7 @@
   </Style>
   <Style Selector="TextBlock.twodcount">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4698,19 +4698,19 @@
   </Style>
   <Style Selector="Border.twodflag > TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
   </Style>
   <Style Selector="TextBlock.twodink">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.twodnote">
-    <Setter Property="FontSize" Value="9" />
+    <Setter Property="FontSize" Value="10" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="TextAlignment" Value="Center" />
@@ -4726,7 +4726,7 @@
   </Style>
   <Style Selector="TextBlock.rhint">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4742,7 +4742,7 @@
   </Style>
   <Style Selector="TextBlock.readtxt">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4751,7 +4751,7 @@
        foot. 10px, because both sit in a row whose width is a budget. -->
   <Style Selector="TextBlock.smallmono">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4780,7 +4780,7 @@
   </Style>
 
   <Style Selector="TextBlock.tilecap">
-    <Setter Property="FontSize" Value="7.5" />
+    <Setter Property="FontSize" Value="8" />
     <Setter Property="Margin" Value="0" />
     <Setter Property="TextTrimming" Value="None" />
     <Setter Property="ClipToBounds" Value="False" />
@@ -4854,7 +4854,7 @@
   </Style>
   <!-- Why export is off, on the EXPORT heading's own line: warning ink, right-aligned. -->
   <Style Selector="TextBlock.sealnote">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="HorizontalAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -4871,7 +4871,7 @@
   <Style Selector="Button.seg-b.bar">
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Padding" Value="8,3" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
   </Style>
@@ -4905,8 +4905,8 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
   </Style>
   <Style Selector="SelectableTextBlock.factval.wide">
-    <Setter Property="FontSize" Value="10.5" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14.5" />
     <Setter Property="TextWrapping" Value="NoWrap" />
     <Setter Property="MaxLines" Value="2" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -4914,8 +4914,8 @@
   </Style>
   <!-- A sentence-length value: the reading face, under its label, three lines at most. -->
   <Style Selector="SelectableTextBlock.factprose">
-    <Setter Property="FontSize" Value="11.5" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxLines" Value="3" />
     <Setter Property="TextTrimming" Value="WordEllipsis" />
@@ -4930,7 +4930,7 @@
     <Setter Property="Margin" Value="0,8,0,4" />
   </Style>
   <Style Selector="Border.factbanner TextBlock">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -4973,8 +4973,8 @@
   </Style>
 
   <Style Selector="TextBlock.canvaswarn">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="15.5" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
     <Setter Property="MaxLines" Value="2" />
@@ -5025,7 +5025,7 @@
   <!-- Four tabs and their counts share the rail's 260px: a hair smaller and tighter than the editor's
        two. Declared after Button.railtab, which it narrows (last declared wins at equal specificity). -->
   <Style Selector="Button.railtab.facttab">
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="0.8" />
   </Style>
   <!-- The more line under the facts: a quiet mono link, right-aligned, one fixed height so its text
@@ -5041,7 +5041,7 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="Button.factmore /template/ ContentPresenter#PART_ContentPresenter">
@@ -5063,7 +5063,7 @@
   </Style>
   <Style Selector="TextBlock.infotitle">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="6,0,0,0" />
@@ -5072,13 +5072,13 @@
        the reading face for a sentence. -->
   <Style Selector="SelectableTextBlock.factfull">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="LineHeight" Value="17.5" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="SelectableTextBlock.factfull.prose">
     <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
   </Style>
   <!-- Export rows open with the pane they take from, in the footer's own 2D / 3D chip, one stated
        width so the two trays after them start on one line. -->
@@ -5184,15 +5184,15 @@
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
   <Style Selector="TextBlock.cname">
-    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontSize" Value="13" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LineHeight" Value="16" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <Style Selector="TextBlock.cmeta">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
@@ -5208,8 +5208,8 @@
   </Style>
   <Style Selector="Border.cbadge TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="15.5" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
@@ -5225,8 +5225,8 @@
   </Style>
   <Style Selector="Border.cchip TextBlock">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="9.5" />
-    <Setter Property="LineHeight" Value="12" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LineHeight" Value="12.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -5235,8 +5235,8 @@
   <!-- The reserved line under the header. Warning ink only when it is a notice. -->
   <Style Selector="TextBlock.cstatus">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -5245,15 +5245,15 @@
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
   </Style>
   <Style Selector="TextBlock.cwarn">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="15.5" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Button.cmarkall">
     <Setter Property="Padding" Value="8,2" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -5270,7 +5270,7 @@
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Height" Value="14" />
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -5328,16 +5328,16 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
   </Style>
   <Style Selector="TextBlock.ctagname">
-    <Setter Property="FontSize" Value="11.5" />
-    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="15.5" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
   <Style Selector="TextBlock.ctagcount">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
-    <Setter Property="LineHeight" Value="15" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="16.5" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="HorizontalAlignment" Value="Right" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
@@ -5382,13 +5382,13 @@
   </Style>
   <!-- A line of the card's small print: limits, the manifest, notes. Font size and line box travel together. -->
   <Style Selector="TextBlock.sline">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="15.5" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.swarn">
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="15.5" />
     <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
   </Style>
   <!-- The ONE reserved block. Its height is stated once, so every state is the same card. -->
@@ -5412,7 +5412,7 @@
   </Style>
   <Style Selector="TextBlock.destrepo">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
@@ -5439,7 +5439,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="TextBlock.steplbl">
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
 
@@ -5468,7 +5468,7 @@
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Height" Value="26" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <!-- A row of the GALLERY LIMITS table: mark, label, figure (+ fix), limit. One height, a hairline under each. -->
@@ -5480,20 +5480,20 @@
   </Style>
   <Style Selector="TextBlock.slabel">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="LetterSpacing" Value="0.8" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.svalue">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBlock.svalue.pending">
     <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.svalue.over">
@@ -5501,7 +5501,7 @@
   </Style>
   <Style Selector="TextBlock.slimit">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
-    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
@@ -5513,7 +5513,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Padding" Value="8,0" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Height" Value="24" />

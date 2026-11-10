@@ -249,8 +249,8 @@
                 <DataTemplate x:DataType="vm:SettingsAssociationRow">
                   <Grid ColumnDefinitions="70,*" Height="22" Margin="0,0,12,0" ToolTip.Tip="{Binding Detail}">
                     <CheckBox Content="{Binding Extension}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                              MinHeight="0" VerticalAlignment="Center" FontSize="12" />
-                    <TextBlock Grid.Column="1" Classes="m-sub" Margin="0" FontSize="10" Text="{Binding Status}"
+                              MinHeight="0" VerticalAlignment="Center" FontSize="13" />
+                    <TextBlock Grid.Column="1" Classes="m-sub" Margin="0" FontSize="11" Text="{Binding Status}"
                                VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                   </Grid>
                 </DataTemplate>
@@ -258,7 +258,7 @@
             </ItemsControl>
             <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <TextBlock x:Name="AssociationChip" Classes="m-sub" Margin="0" Text="{Binding AssociationSummary}"
-                         ToolTip.Tip="{Binding AssociationDetail}" VerticalAlignment="Center" TextWrapping="NoWrap" FontSize="11" />
+                         ToolTip.Tip="{Binding AssociationDetail}" VerticalAlignment="Center" TextWrapping="NoWrap" FontSize="12" />
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                 <Button x:Name="ApplyAssociations" Classes="tbtn cellbtn" Content="Register" Command="{Binding ApplyAssociationsCommand}"
                         ToolTip.Tip="Register only the selected file types for this user. No administrator rights required." />

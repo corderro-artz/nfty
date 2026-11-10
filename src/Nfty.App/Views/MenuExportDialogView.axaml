@@ -7,8 +7,8 @@
     <!-- The reserved line: muted when it only informs, warning ink when it refuses. Font size and
          line box travel together, stated as the pair every other problem line uses. -->
     <Style Selector="TextBlock.msg">
-      <Setter Property="FontSize" Value="11.5" />
-      <Setter Property="LineHeight" Value="16" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="LineHeight" Value="16.5" />
       <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.msg.problem">

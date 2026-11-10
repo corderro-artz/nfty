@@ -74,7 +74,7 @@
       <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
           <Path Classes="ico sm" Data="{StaticResource IconPopout}" VerticalAlignment="Center" />
-          <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+          <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold"
                      VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
         </StackPanel>
         <views:ViewerLiveBadge Grid.Column="1" VerticalAlignment="Center" />
@@ -152,7 +152,7 @@
                           <Image Source="{Binding Thumbnail}" Width="120" Height="120" Stretch="UniformToFill" />
                         </Panel>
                       </Border>
-                      <TextBlock Classes="mono tcap" FontSize="11" HorizontalAlignment="Center" MaxWidth="120"
+                      <TextBlock Classes="mono tcap" FontSize="12" HorizontalAlignment="Center" MaxWidth="120"
                                  TextTrimming="CharacterEllipsis" Text="{Binding Caption}" />
                     </StackPanel>
                   </Button>

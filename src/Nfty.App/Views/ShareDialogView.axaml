@@ -97,7 +97,7 @@
                 <TextBlock Text="NAME" Classes="plabel" Margin="0" />
                 <TextBox Text="{Binding Name}" MaxLength="64" />
                 <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,2,0,0">
-                  <Border Classes="idchip"><TextBlock Text="{Binding Slug}" Classes="mono" FontSize="10.5" /></Border>
+                  <Border Classes="idchip"><TextBlock Text="{Binding Slug}" Classes="mono" FontSize="11" /></Border>
                   <TextBlock Text="— the identifier, derived from the collection" Classes="derived" Opacity="0.9" VerticalAlignment="Center" />
                 </StackPanel>
               </StackPanel>

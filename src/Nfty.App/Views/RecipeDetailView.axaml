@@ -87,7 +87,7 @@
                     ToolTip.Tip="Paint depth on the roll shown above and turn it into a 3D model">
               <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
                 <Path Classes="ico sm" Data="{StaticResource IconRise}" />
-                <TextBlock Text="Rise" FontSize="11.5" VerticalAlignment="Center" />
+                <TextBlock Text="Rise" FontSize="12" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
             </StackPanel>

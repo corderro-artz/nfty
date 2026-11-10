@@ -37,7 +37,7 @@
         <ctl:HelpGlyph Grid.Column="0" Classes="sh-g" Width="20" Margin="0,0,10,0"
                        Glyph="{Binding Glyph}" IsVisible="{Binding HasGlyph}" />
         <StackPanel Grid.Column="1">
-          <TextBlock Classes="sh-t" Classes.plain="{Binding IsPlain}"><Run Text="{Binding Term}" /><Run Text="{Binding ExtText}" FontFamily="{DynamicResource MonoFontFamily}" FontSize="9.5" FontWeight="Normal" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+          <TextBlock Classes="sh-t" Classes.plain="{Binding IsPlain}"><Run Text="{Binding Term}" /><Run Text="{Binding ExtText}" FontFamily="{DynamicResource MonoFontFamily}" FontSize="10" FontWeight="Normal" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
           <ctl:RichText Classes="sh-s" Markup="{Binding Description}" IsVisible="{Binding HasDescription}" />
         </StackPanel>
       </Grid>

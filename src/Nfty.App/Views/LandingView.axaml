@@ -183,7 +183,7 @@
         <Button Classes="landing tbtn" Command="{Binding BrowseCommunityCommand}">
           <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconCommunity}" /><TextBlock Classes="lbl" Text="Browse the community gallery" /></StackPanel></Grid>
         </Button>
-        <TextBlock FontFamily="{DynamicResource MonoFontFamily}" Foreground="{DynamicResource FgMutedBrush}" FontSize="10" LineHeight="12" Height="12" HorizontalAlignment="Right" Margin="0,2,13,0" Text="{Binding CommunityChip}" Opacity="{Binding CommunityChipOpacity}" />
+        <TextBlock FontFamily="{DynamicResource MonoFontFamily}" Foreground="{DynamicResource FgMutedBrush}" FontSize="11" LineHeight="13" Height="12" HorizontalAlignment="Right" Margin="0,2,13,0" Text="{Binding CommunityChip}" Opacity="{Binding CommunityChipOpacity}" />
       </StackPanel>
 
       </StackPanel>

@@ -179,7 +179,7 @@
                              overrides it, which renders identically to binding both and halves the
                              per-tile binding count — and a tile is the unit this grid realizes
                              hundreds of. -->
-                        <TextBlock Classes="mono tcap" FontSize="11" HorizontalAlignment="Center"
+                        <TextBlock Classes="mono tcap" FontSize="12" HorizontalAlignment="Center"
                                    Classes.accent="{Binding IsSelected}"
                                    Text="{Binding Number, StringFormat='#{0:D4}'}" />
                       </StackPanel>

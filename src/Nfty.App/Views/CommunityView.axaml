@@ -332,7 +332,7 @@
                   ToolTip.Tip="{Binding DescriptionText}">
             <StackPanel Spacing="1">
               <TextBlock Classes="zp" Text="{Binding DescriptionText}" TextWrapping="Wrap" TextAlignment="Left"
-                         TextTrimming="WordEllipsis" MaxLines="2" FontSize="11" LineHeight="14" />
+                         TextTrimming="WordEllipsis" MaxLines="2" FontSize="12" LineHeight="15.5" />
               <!-- Wrapping does not draw an ellipsis, so a long description says it goes on. Reserved, inked only when long. -->
               <TextBlock x:Name="RailMore" Classes="cmeta" Height="14" Text="... hover for the full text"
                          Opacity="{Binding DescriptionMoreOpacity}" />

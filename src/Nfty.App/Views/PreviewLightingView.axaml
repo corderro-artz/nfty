@@ -49,7 +49,7 @@
                         BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
                         Background="{Binding LightColorSwatch, Converter={x:Static conv:HexBrushConverter.Instance}}" />
               </Grid>
-              <TextBlock Text="View only · saved stills include the light" FontSize="10"
+              <TextBlock Text="View only · saved stills include the light" FontSize="11"
                          Foreground="{DynamicResource FgMutedBrush}" />
             </StackPanel>
           </Flyout>

@@ -108,7 +108,7 @@
                         Command="{Binding ApplyGridCommand}"
                         ToolTip.Tip="Cut the picture this way and record the grid in the file" />
               </Grid>
-              <TextBlock Classes="caveat" Height="28" FontSize="10.5" MaxLines="2" TextTrimming="CharacterEllipsis"
+              <TextBlock Classes="caveat" Height="28" FontSize="11" MaxLines="2" TextTrimming="CharacterEllipsis"
                          Text="{Binding GridProblem}" />
             </StackPanel>
           </Border>
@@ -135,7 +135,7 @@
                           <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-                          <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
                           <TextBlock Text="{Binding Caption}" Classes="rmeta" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Border Grid.Column="3" Classes="idchip dchip inkslot"
@@ -220,7 +220,7 @@
                                   <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                                 </Panel>
                               </Border>
-                              <TextBlock Classes="mono tcap" FontSize="10.5" HorizontalAlignment="Center"
+                              <TextBlock Classes="mono tcap" FontSize="11" HorizontalAlignment="Center"
                                          Classes.accent="{Binding IsSelected}" Text="{Binding Name}" />
                             </StackPanel>
                           </Button>
@@ -372,8 +372,8 @@
               </StackPanel.IsVisible>
               <Path Classes="ico ti" Data="{StaticResource Icon2dOnly}" Stroke="{DynamicResource WarningBrush}"
                     HorizontalAlignment="Center" />
-              <TextBlock Classes="twodink" FontSize="14" Text="2D only" />
-              <TextBlock Classes="twodnote" FontSize="11" Text="partial alpha cannot rise" />
+              <TextBlock Classes="twodink" FontSize="15" Text="2D only" />
+              <TextBlock Classes="twodnote" FontSize="12" Text="partial alpha cannot rise" />
             </StackPanel>
 
             <!-- Read-only pill, top centre. Constant per page: a source is read-only or it is not. -->
