@@ -410,6 +410,14 @@ public class DarkModeContrastTests
             DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
                 publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true))) { Tab = SettingsTab.Publishing },
         }, null);
+        // PUBLISHING with a GitHub sign-in waiting: the large mono code, three buttons, the waiting note - and
+        // Connect disabled (0.38) beside them. The riskiest ink the GITHUB row carries.
+        var waitingAccount = new GitHubAccountService(StateStore.InMemory(), new InMemorySecretStore(),
+            Nfty.Core.Publish.Community.CommunityEndpoints.Default with { ClientId = "x" });
+        var settingsGitHub = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+            publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)), github: waitingAccount)
+        { Tab = SettingsTab.Publishing, UserCode = "ABCD-1234", IsGitHubWaiting = true };
+        yield return ("settings-publishing-github-waiting", new Views.SettingsDialogView { DataContext = settingsGitHub }, null);
         var dataStore = StateStore.InMemory();
         var settingsData = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(dataStore, () => null),
             recents: new RecentsService(dataStore), store: dataStore) { Tab = SettingsTab.Data };

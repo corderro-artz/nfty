@@ -99,7 +99,7 @@
           </Grid>
 
           <!-- ============================= PUBLISHING ============================= -->
-          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10"
+          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10"
                 IsVisible="{Binding IsPublishingTab}">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="UPLOAD TO" />
             <Border Grid.Row="0" Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Left">
@@ -148,6 +148,34 @@
             <!-- Two lines reserved: the longest "not reachable" sentence wraps once. -->
             <TextBlock Grid.Row="5" Grid.Column="1" Classes="m-sub" Margin="0" MinHeight="32"
                        Text="{Binding StatusDetail}" />
+
+            <!-- GITHUB: who is connected, or the Connect button. The token is never shown; only the login. -->
+            <TextBlock Grid.Row="6" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="GITHUB" />
+            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <Border x:Name="GitHubChip" Classes="idchip" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="vdot"
+                           Classes.ok="{Binding IsGitHubConnected}" Classes.idle="{Binding !IsGitHubConnected}" />
+                  <TextBlock Classes="cvl" Text="{Binding GitHubLine}" />
+                </StackPanel>
+              </Border>
+              <Button x:Name="ConnectGitHub" Classes="tbtn" Content="Connect GitHub…" Command="{Binding ConnectGitHubCommand}"
+                      ToolTip.Tip="Sign in on github.com to share Sets with the community gallery. nfty never sees your password." />
+              <Button x:Name="DisconnectGitHub" Classes="tbtn" Content="Disconnect" Command="{Binding DisconnectGitHubCommand}"
+                      ToolTip.Tip="Forget the connection on this machine." />
+            </StackPanel>
+            <!-- The sign-in code. Always laid out, only the ink toggles, so connecting moves nothing. -->
+            <StackPanel x:Name="GitHubCode" Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8" Height="34"
+                        Opacity="{Binding CodeOpacity}" IsHitTestVisible="{Binding IsGitHubWaiting}">
+              <TextBlock x:Name="UserCodeText" Classes="mono" FontSize="22" FontWeight="SemiBold" LetterSpacing="2"
+                         VerticalAlignment="Center" Margin="0,0,6,0" Text="{Binding UserCode}" />
+              <Button Classes="tbtn" VerticalAlignment="Center" Content="Copy code" Command="{Binding CopyCodeCommand}" />
+              <Button Classes="tbtn" VerticalAlignment="Center" Content="Open GitHub" Command="{Binding OpenGitHubCommand}"
+                      ToolTip.Tip="Open github.com/login/device in your browser, then type the code." />
+              <Button Classes="tbtn" VerticalAlignment="Center" Content="Cancel" Command="{Binding CancelGitHubCommand}" />
+            </StackPanel>
+            <TextBlock Grid.Row="8" Grid.Column="1" Classes="m-sub" Margin="0" MinHeight="16" TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis" Text="{Binding GitHubNote}" ToolTip.Tip="{Binding GitHubNote}" />
           </Grid>
 
           <!-- ================================ DATA ================================ -->

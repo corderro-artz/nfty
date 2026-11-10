@@ -1543,6 +1543,24 @@ public partial class VisualCapture
                 DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
                     publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true))) { Tab = SettingsTab.Publishing },
             }, variant, $"zz-dialog-settings-publishing-connected-{key}.png");
+            var ghStore = StateStore.InMemory();
+            var ghSecrets = new InMemorySecretStore();
+            ghSecrets.Write(GitHubAccountService.Target, "gho_capture");
+            SettingsJson.Set(ghStore, GitHubAccountService.LoginKey, "octo-artist");
+            var ghEndpoints = Nfty.Core.Publish.Community.CommunityEndpoints.Default with { ClientId = "x" };
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)),
+                    github: new GitHubAccountService(ghStore, ghSecrets, ghEndpoints)) { Tab = SettingsTab.Publishing },
+            }, variant, $"zz-dialog-settings-github-connected-{key}.png");
+            Capture(new Views.SettingsDialogView
+            {
+                DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),
+                    publishing: ExportUploadTests.Publishing(new ExportUploadTests.FakePinning(true)),
+                    github: new GitHubAccountService(StateStore.InMemory(), new InMemorySecretStore(), ghEndpoints))
+                { Tab = SettingsTab.Publishing, UserCode = "ABCD-1234", IsGitHubWaiting = true },
+            }, variant, $"zz-dialog-settings-github-waiting-{key}.png");
             Capture(new Views.SettingsDialogView
             {
                 DataContext = new SettingsDialogViewModel(dialogs, new ParallelismSettingService(StateStore.InMemory(), () => null),

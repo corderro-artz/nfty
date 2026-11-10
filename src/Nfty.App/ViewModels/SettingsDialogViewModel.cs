@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
 using Nfty.Core;
+using Nfty.Core.Publish.Community;
 using Nfty.Core.Publish.Ipfs;
 
 namespace Nfty.App.ViewModels;
@@ -69,6 +70,11 @@ public partial class SettingsDialogViewModel : ViewModelBase
     private readonly IViewerWindowState? _viewerState;
     private readonly IEditorViewState? _editorState;
     private readonly IFileAssociations? _associations;
+    private readonly IGitHubAccount _github;
+    private readonly IUrlOpener _opener;
+    private readonly IClipboardService _clipboard;
+    private DeviceCode? _deviceCode;
+    private CancellationTokenSource? _githubCts;
     private bool _syncing;
     private CancellationTokenSource? _checkCts;
 
@@ -85,11 +91,15 @@ public partial class SettingsDialogViewModel : ViewModelBase
     /// <param name="editorState">The editor's remembered view, which DATA can reset.</param>
     /// <param name="associations">The machine's file associations; SYSTEM is shown only when these
     /// are supported (Windows), and is absent otherwise.</param>
+    /// <param name="github">The GitHub connection; a session-only one that cannot connect when null.</param>
+    /// <param name="opener">Opens GitHub's verification page; a recording stub when null.</param>
+    /// <param name="clipboard">Copies the sign-in code; a recording stub when null.</param>
     public SettingsDialogViewModel(IDialogService dialogs, IParallelismSetting setting,
         IAppSettings? general = null, IThemeService? theme = null, IPublishingSettings? publishing = null,
         IRecentsService? recents = null, IStateStore? store = null, IFolderRevealer? revealer = null,
         IViewerWindowState? viewerState = null, IEditorViewState? editorState = null,
-        IFileAssociations? associations = null)
+        IFileAssociations? associations = null, IGitHubAccount? github = null, IUrlOpener? opener = null,
+        IClipboardService? clipboard = null)
     {
         _dialogs = dialogs;
         _setting = setting;
@@ -102,6 +112,9 @@ public partial class SettingsDialogViewModel : ViewModelBase
         _revealer = revealer;
         _viewerState = viewerState;
         _editorState = editorState;
+        _github = github ?? new GitHubAccountService(StateStore.InMemory(), new InMemorySecretStore());
+        _opener = opener ?? new NoopUrlOpener();
+        _clipboard = clipboard ?? new NoopClipboardService();
         _associations = associations is { IsSupported: true } ? associations : null;
 
         _threads = setting.Current.Effective;
@@ -136,6 +149,7 @@ public partial class SettingsDialogViewModel : ViewModelBase
     [RelayCommand] private void Close()
     {
         _checkCts?.Cancel();
+        _githubCts?.Cancel();
         _dialogs.Close(this, null);
     }
 
@@ -423,6 +437,113 @@ public partial class SettingsDialogViewModel : ViewModelBase
         Connection = state;
         StatusSummary = summary;
         StatusDetail = detail;
+    }
+
+    // ================================================================ GITHUB
+
+    /// <summary>Whether an account is connected.</summary>
+    public bool IsGitHubConnected => _github.IsConnected;
+
+    /// <summary>The account line: who is connected, or that nobody is. Never the token.</summary>
+    public string GitHubLine => _github.Login is { } login ? $"Connected as @{login}" : "not connected";
+
+    /// <summary>Whether a sign-in is waiting for the person to approve it on GitHub.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CodeOpacity))]
+    private bool _isGitHubWaiting;
+
+    /// <summary>The short code to type on GitHub; empty unless a sign-in is waiting.</summary>
+    [ObservableProperty] private string _userCode = "";
+
+    /// <summary>Ink for the code line, which is always laid out so showing it moves nothing.</summary>
+    public double CodeOpacity => IsGitHubWaiting ? 1 : 0;
+
+    /// <summary>Whether Connect can be pressed: nothing connected, nothing waiting, nothing in the way.</summary>
+    public bool CanConnectGitHub => !_github.IsConnected && !IsGitHubWaiting && _github.UnavailableReason is null;
+
+    /// <summary>The line under the GitHub row: why it cannot connect, what is happening, or what went wrong.</summary>
+    public string GitHubNote =>
+        _githubProblem ?? (IsGitHubWaiting ? "Waiting for you to approve nfty on GitHub…"
+            : !_github.IsConnected ? _github.UnavailableReason ?? "Connect to share Sets with the community gallery."
+            : "Sharing uses this account.");
+
+    private string? _githubProblem;
+
+    private void GitHubChanged()
+    {
+        OnPropertyChanged(nameof(IsGitHubConnected));
+        OnPropertyChanged(nameof(GitHubLine));
+        OnPropertyChanged(nameof(CanConnectGitHub));
+        OnPropertyChanged(nameof(GitHubNote));
+        ConnectGitHubCommand.NotifyCanExecuteChanged();
+        DisconnectGitHubCommand.NotifyCanExecuteChanged();
+        CopyCodeCommand.NotifyCanExecuteChanged();
+        OpenGitHubCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsGitHubWaitingChanged(bool value) => GitHubChanged();
+
+    /// <summary>The connection in flight, for a test to await. Never faults.</summary>
+    public Task PendingGitHub { get; private set; } = Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanConnectGitHub))]
+    private Task ConnectGitHub() => PendingGitHub = ConnectGitHubCoreAsync();
+
+    private async Task ConnectGitHubCoreAsync()
+    {
+        using var cts = new CancellationTokenSource();
+        _githubCts = cts;
+        _githubProblem = null;
+        try
+        {
+            _deviceCode = await _github.BeginAsync(cts.Token);
+            UserCode = _deviceCode.UserCode;
+            IsGitHubWaiting = true;
+            await _github.ConnectAsync(_deviceCode, cts.Token);
+        }
+        catch (OperationCanceledException) { /* the person canceled, or closed the card */ }
+        catch (InvalidOperationException ex) { _githubProblem = ErrorText.For(ex); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { _githubProblem = ErrorText.For(ex); }
+        finally
+        {
+            if (ReferenceEquals(_githubCts, cts)) _githubCts = null;
+            _deviceCode = null;
+            UserCode = "";
+            IsGitHubWaiting = false;
+            GitHubChanged();
+        }
+    }
+
+    [RelayCommand]
+    private void CancelGitHub() => _githubCts?.Cancel();
+
+    private bool CanCopyCode() => IsGitHubWaiting;
+
+    [RelayCommand(CanExecute = nameof(CanCopyCode))]
+    private async Task CopyCodeAsync()
+    {
+        if (UserCode.Length > 0) await _clipboard.SetTextAsync(UserCode);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyCode))]
+    private void OpenGitHub()
+    {
+        if (_deviceCode is { } code) _opener.Open(code.VerificationUri);
+    }
+
+    private bool CanDisconnectGitHub() => _github.IsConnected;
+
+    [RelayCommand(CanExecute = nameof(CanDisconnectGitHub))]
+    private async Task DisconnectGitHubAsync()
+    {
+        try { _github.Disconnect(); }
+        catch (InvalidOperationException ex)
+        {
+            await _dialogs.ShowErrorAsync("Could not disconnect GitHub", ErrorText.For(ex));
+            return;
+        }
+        _githubProblem = null;
+        GitHubChanged();
     }
 
     // ================================================================ DATA

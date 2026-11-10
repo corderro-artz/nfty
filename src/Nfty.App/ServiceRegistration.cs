@@ -45,6 +45,10 @@ public static class ServiceRegistration
         services.AddSingleton<ISecretStore>(_ => SecretStores.ForThisMachine());
         services.AddSingleton<IPublishingSettings>(sp => new PublishingSettingsService(
             sp.GetRequiredService<IStateStore>(), sp.GetRequiredService<ISecretStore>()));
+        // The GitHub token lives in the same credential store; only the login is in settings.json.
+        services.AddSingleton<IGitHubAccount>(sp => new GitHubAccountService(
+            sp.GetRequiredService<IStateStore>(), sp.GetRequiredService<ISecretStore>()));
+        services.AddSingleton<IUrlOpener, NoopUrlOpener>();
         // Which files Windows opens with nfty: the registrar on Windows, a refusal elsewhere (the
         // Settings card hides its SYSTEM tab then). Reads only until the user presses Apply.
         services.AddSingleton<IFileAssociations>(_ => FileAssociations.ForThisMachine());
@@ -62,7 +66,9 @@ public static class ServiceRegistration
                 sp.GetRequiredService<IThemeService>(), sp.GetRequiredService<IPublishingSettings>(),
                 sp.GetRequiredService<IRecentsService>(), sp.GetRequiredService<IStateStore>(),
                 sp.GetRequiredService<IFolderRevealer>(), sp.GetRequiredService<IViewerWindowState>(),
-                sp.GetRequiredService<IEditorViewState>(), sp.GetRequiredService<IFileAssociations>()),
+                sp.GetRequiredService<IEditorViewState>(), sp.GetRequiredService<IFileAssociations>(),
+                sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<IUrlOpener>(),
+                sp.GetRequiredService<IClipboardService>()),
             general: sp.GetRequiredService<IAppSettings>()));
         services.AddTransient<HelpViewModel>();
         services.AddTransient<NewCookBookViewModel>();

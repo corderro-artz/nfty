@@ -211,6 +211,9 @@ public static class ShareRules
     /// <summary>The sign-in code ran out before it was used.</summary>
     public static string SignInExpired => "The sign-in code expired. Try again.";
 
+    /// <summary>This build has no GitHub OAuth app to sign in with.</summary>
+    public static string NotSetUp => "GitHub sharing isn't set up in this build.";
+
     /// <summary>GitHub answered the sign-in in a way nfty doesn't expect.</summary>
     public static string SignInFailed => "GitHub sign-in failed. Try again.";
 

@@ -35,6 +35,7 @@ public partial class App : Application
             .AddNftyApp()
             .AddSingleton<IFilePickerService, DesktopFilePicker>()
             .AddSingleton<IFolderRevealer, DesktopFolderRevealer>()
+            .AddSingleton<IUrlOpener, DesktopUrlOpener>()
             .AddSingleton<IClipboardService, DesktopClipboard>();
         // A head with a second window opens a viewer in one; a single-view head draws it over the shell.
         if (ApplicationLifetime is ISingleViewApplicationLifetime) services.AddOverlayViewerHost();
