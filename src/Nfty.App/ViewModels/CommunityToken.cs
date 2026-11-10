@@ -31,6 +31,14 @@ public sealed partial class CommunityToken : ObservableObject
     [ObservableProperty]
     private bool _isOn;
 
+    /// <summary>How many collections in the gallery carry this tag (tag chips only; 0 elsewhere).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CountText))]
+    private int _count;
+
+    /// <summary>The count as the chip prints it, invariant and thousands-separated.</summary>
+    public string CountText => Count.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>Adds the token to the search box, or removes it when it is already there.</summary>
     [RelayCommand]
     private void Toggle() => _toggle(Token);

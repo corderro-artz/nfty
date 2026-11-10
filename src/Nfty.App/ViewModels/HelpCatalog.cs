@@ -135,6 +135,7 @@ public static class HelpCatalog
         HelpTab.Basics => "BASICS",
         HelpTab.Editor => "EDITOR",
         HelpTab.Rise => "RISE & 3D",
+        HelpTab.Community => "COMMUNITY",
         _ => "VIEWER & RUNTIME",
     };
 
@@ -162,7 +163,7 @@ public static class HelpCatalog
 
     private static IReadOnlyList<HelpEntry> Build()
     {
-        const HelpTab B = HelpTab.Basics, E = HelpTab.Editor, R = HelpTab.Rise, V = HelpTab.Viewer;
+        const HelpTab B = HelpTab.Basics, E = HelpTab.Editor, R = HelpTab.Rise, V = HelpTab.Viewer, C2 = HelpTab.Community;
         var list = new List<HelpEntry>
         {
             // ---------------- BASICS ----------------
@@ -287,6 +288,32 @@ public static class HelpCatalog
             C("nfty serve --seed", "Rolls and renders one asset."),
             C("nfty serve --ticket", "Renders an asset already rolled."),
             N(V, 3, "COMMANDS", "Manual, Reference: Ticket API."),
+
+            // ---------------- COMMUNITY ----------------
+            // No entry on this page says "gallery": the Basics sentence naming the Landing button is the one
+            // hit a search for it should find. Every key is bound in CommunityView.OnShortcut (F5 refreshes
+            // too, unprinted) or, for the picker, in its filter box's handler.
+            T(C2, 0, "SHARED SETS", "Browse", "Collections other people shared. Browsing and downloading need *no GitHub account*.", "icon:IconCommunity"),
+            T(C2, 0, "SHARED SETS", "Search", "*#tag*, *@user* and plain words. Every term must match.", "icon:IconSearch"),
+            T(C2, 0, "SHARED SETS", "Tags", "A chip adds its #tag to the search, and counts who wears it. *+N more* lists every tag, with a filter.", "icon:IconTag"),
+            T(C2, 0, "SHARED SETS", "Download", "Checks the Set is the one listed, then opens it in the *Set browser*.", "icon:IconDownload"),
+
+            K(C2, 1, "KEYS · FIND", KeyHints.CommunitySearch, "search"),
+            K(C2, 1, "KEYS · FIND", KeyHints.CommunityTags, "pick tags"),
+            K(C2, 1, "KEYS · FIND", KeyHints.DropSelection, "clear the search"),
+            K(C2, 1, "KEYS · TAG PICKER", "Enter", "add the first match"),
+            K(C2, 1, "KEYS · TAG PICKER", KeyHints.DropSelection, "clear the filter, then close"),
+
+            K(C2, 2, "KEYS · GRID", KeyHints.Arrows, "move the selection"),
+            K(C2, 2, "KEYS · GRID", KeyHints.CommunityPage, "previous / next page"),
+            K(C2, 2, "KEYS · GRID", KeyHints.CommunityEnds, "first / last page"),
+            K(C2, 2, "KEYS · GRID", KeyHints.CommunityDownload, "download the selected"),
+            K(C2, 2, "KEYS · GRID", KeyHints.CommunityRefresh, "fetch the list again"),
+
+            K(C2, 3, "KEYS · LEAVE", KeyHints.DropSelection, "back, once the search is clear"),
+            K(C2, 3, "KEYS · LEAVE", KeyHints.CommunityBack, "back"),
+            K(C2, 3, "KEYS · LEAVE", KeyHints.CloseDocument, "back to the start screen"),
+            N(C2, 3, "KEYS · LEAVE", "The *nfty* mark in the titlebar goes home too."),
         };
 
         // Each COLUMN's cap column is as wide as its widest cap, so the actions line up down the whole

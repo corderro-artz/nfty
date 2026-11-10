@@ -122,8 +122,12 @@ public partial class ShellViewModel : ViewModelBase
     /// <para>The shell had no such notion, and that is why neither could be closed: navigation only
     /// ever pushed, <c>ICookBookSession.Close</c> and <c>IKitchenSession.Close</c> had no callers at
     /// all, and opening a second CookBook meant restarting the application.</para>
+    ///
+    /// <para>The Community page counts too, though it holds no document: it is a page pushed over Landing like
+    /// the other two, and with the brand mark (and Ctrl+W) dead on it, it was the one page in the app the logo
+    /// did not lead out of.</para>
     /// </summary>
-    public bool HasOpenDocument => CurrentPage is ExplorerViewModel or SetBrowserViewModel;
+    public bool HasOpenDocument => CurrentPage is ExplorerViewModel or SetBrowserViewModel or CommunityViewModel;
 
     partial void OnCurrentPageChanged(ViewModelBase? value)
     {

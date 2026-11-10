@@ -993,6 +993,7 @@ public partial class VisualCapture
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "zoom" } }, variant, $"help-search-{key}.png");
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "qzxv" } }, variant, $"help-search-empty-{key}.png");
             Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } }, variant, $"help-viewer-{key}.png");
+            Capture(new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Community } }, variant, $"help-community-{key}.png");
 
             // The card the window close, the editor's Back and Rise's Back all raise over unsaved work.
             Capture(new Views.LeaveDialogView { DataContext = new LeaveDialogViewModel(dialogs, "Leave the editor?", "Aura has unsaved changes. Leaving discards them.", canSave: true) }, variant, $"leave-editor-{key}.png");
@@ -1527,6 +1528,65 @@ public partial class VisualCapture
             searched.Query = "#scenery @alice";
             CaptureSettled(new Views.CommunityView { DataContext = searched }, searched, variant, $"community-search-{key}.png", area);
         }
+    }
+
+    /// <summary>
+    /// Every kind of popup surface the app opens, OPEN, in both themes: the Community tag picker (a Flyout,
+    /// with a tag in the search so the on state shows), a ComboBox drop-down with a hovered and a selected
+    /// row's states, and a context menu. Each popup is its own top level, so the picture is taken of the
+    /// popup's root, not of the window under it.
+    /// </summary>
+    [AvaloniaFact]
+    public void Capture_popups()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        var area = CommunityLayoutTests.PageArea;
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+
+            using var vm = CommunityLayoutTests.RiskyPage(online: true);
+            vm.Query = "#effects";
+            var view = new Views.CommunityView { DataContext = vm };
+            var window = new Window { RequestedThemeVariant = variant, Content = view, Width = area.Width, Height = area.Height };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            view.OpenTagPicker();
+            Dispatcher.UIThread.RunJobs();
+            var picker = ((Flyout)view.FindControl<Button>("TagPickerButton")!.Flyout!).Content as Control;
+            SavePopup(picker!, $"popup-tagpicker-{key}.png");
+            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"popup-tagpicker-page-{key}.png"), PngBitmapEncoderOptions.Default);
+            window.Close();
+
+            var combo = new ComboBox { Width = 220, ItemsSource = new[] { "Chest", "Strongbox", "Barrel" }, SelectedIndex = 1 };
+            var menuHost = new Border { Width = 220, Height = 40, Background = Brushes.Transparent };
+            menuHost.ContextMenu = new ContextMenu
+            {
+                ItemsSource = new object[] { new MenuItem { Header = "Forget swatch" }, new MenuItem { Header = "Open in viewer" } },
+            };
+            var host = new StackPanel { Spacing = 20, Margin = new Thickness(20), Children = { combo, menuHost } };
+            var w2 = new Window { RequestedThemeVariant = variant, Content = host, Width = 400, Height = 300 };
+            w2.Show();
+            Dispatcher.UIThread.RunJobs();
+            w2.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"popup-combo-closed-{key}.png"), PngBitmapEncoderOptions.Default);
+            combo.IsDropDownOpen = true;
+            Dispatcher.UIThread.RunJobs();
+            var drop = combo.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.Popup>().FirstOrDefault()?.Child;
+            if (drop is not null) SavePopup(drop, $"popup-combo-{key}.png");
+            combo.IsDropDownOpen = false;
+            menuHost.ContextMenu.Open(menuHost);
+            Dispatcher.UIThread.RunJobs();
+            if (menuHost.ContextMenu.GetVisualDescendants().Any() || true) SavePopup(menuHost.ContextMenu, $"popup-contextmenu-{key}.png");
+            menuHost.ContextMenu.Close();
+            w2.Close();
+        }
+    }
+
+    private static void SavePopup(Visual inPopup, string fileName)
+    {
+        if (TopLevel.GetTopLevel(inPopup) is { } root && root.CaptureRenderedFrame() is { } frame)
+            frame.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
     }
 
     private static void CaptureSettled(Control view, CommunityViewModel vm, ThemeVariant variant, string fileName, Avalonia.Size area)

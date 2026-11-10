@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconSeen</title>
+  <desc>Two ticks, one behind the other: count everything as seen. Not IconCheck's single tick, which confirms one thing.</desc>
+  <path d="M2.5 12.5l4.5 4.5L16.5 7.5M12 16l1 1 9.5-9.5"/>
+</svg>

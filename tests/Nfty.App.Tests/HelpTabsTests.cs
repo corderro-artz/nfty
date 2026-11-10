@@ -24,8 +24,8 @@ namespace Nfty.App.Tests;
 /// </remarks>
 public class HelpTabsTests
 {
-    private static readonly HelpTab[] All = [HelpTab.Basics, HelpTab.Editor, HelpTab.Rise, HelpTab.Viewer];
-    private static readonly string[] Labels = ["BASICS", "EDITOR", "RISE & 3D", "VIEWER & RUNTIME"];
+    private static readonly HelpTab[] All = [HelpTab.Basics, HelpTab.Editor, HelpTab.Rise, HelpTab.Viewer, HelpTab.Community];
+    private static readonly string[] Labels = ["BASICS", "EDITOR", "RISE & 3D", "VIEWER & RUNTIME", "COMMUNITY"];
 
     internal static (Window window, Views.HelpView view, HelpViewModel vm) Render(bool smallest = false, string query = "")
     {
@@ -77,6 +77,29 @@ public class HelpTabsTests
                     Assert.Equal(p == t ? 1.0 : 0.0, g.Opacity);
                     Assert.Equal(p == t, g.IsHitTestVisible);
                 }
+            }
+        }
+        finally { w.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Every_tab_is_drawn_whole_and_clear_of_the_search_box()
+    {
+        // The fifth tab first shipped arranged UNDER the search box: the tray's star column was narrower
+        // than the tray, so the last segment was clipped to its icon while every Bounds looked fine.
+        var (w, view, _) = Render(smallest: true);
+        try
+        {
+            var search = view.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("search"));
+            var searchLeft = search.TranslatePoint(default, view)!.Value.X;
+            var tray = view.FindControl<Border>("TabTray")!;
+            var trayRight = tray.TranslatePoint(new Point(tray.Bounds.Width, 0), view)!.Value.X;
+            Assert.True(trayRight <= searchLeft, $"the tab tray ends at {trayRight:0}, the search box begins at {searchLeft:0}");
+            foreach (var l in Labels)
+            {
+                var b = Tab(view, l);
+                var right = b.TranslatePoint(new Point(b.Bounds.Width, 0), view)!.Value.X;
+                Assert.True(right <= trayRight + 0.5, $"{l} ends at {right:0.0}, the tray at {trayRight:0.0}");
             }
         }
         finally { w.Close(); }

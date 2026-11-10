@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <title>IconUnshare</title>
+  <desc>Two nodes whose link is cut by a slash: take a collection out of the gallery. The undoing of IconShare, drawn so the two never read alike.</desc>
+  <path d="M8 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0M22 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0M8 12h2M14 12h2M9.5 18.5l5-13"/>
+</svg>

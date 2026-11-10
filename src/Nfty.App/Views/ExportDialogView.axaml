@@ -326,8 +326,13 @@
                 <TextBlock Grid.Column="2" Classes="m-sub" Margin="0" VerticalAlignment="Center" TextWrapping="NoWrap"
                            TextTrimming="CharacterEllipsis" Text="{Binding UploadProviderLabel}"
                            ToolTip.Tip="Change where uploads go in Settings, under Publishing." />
-                <Button Grid.Column="3" Classes="tbtn" Content="Recheck" Command="{Binding RecheckUploadCommand}"
-                        IsEnabled="{Binding ShowForm}" />
+                <Button Grid.Column="3" Classes="tbtn" Command="{Binding RecheckUploadCommand}"
+                        IsEnabled="{Binding ShowForm}" ToolTip.Tip="Ask the pinning service again whether it can be reached.">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Classes="ico sm" Data="{StaticResource IconRefresh}" />
+                    <TextBlock Text="Recheck" />
+                  </StackPanel>
+                </Button>
               </Grid>
               <!-- Two lines reserved: the longest "not reachable" sentence wraps once. -->
               <TextBlock Classes="m-sub" Margin="0" MinHeight="32" Text="{Binding UploadStatusDetail}" />

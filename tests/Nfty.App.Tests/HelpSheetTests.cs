@@ -152,7 +152,7 @@ public class HelpSheetTests
     {
         var grids = Sheet().GetVisualDescendants().OfType<Grid>()
             .Where(g => g.Classes.Contains("helppage") && g.DataContext is HelpPage).ToList();
-        Assert.Equal(4, grids.Count);
+        Assert.Equal(Enum.GetValues<HelpTab>().Length, grids.Count);
         foreach (var body in grids)
         {
             Assert.Equal(4, body.ColumnDefinitions.Count);

@@ -293,7 +293,12 @@
             <TextBlock Classes="m-h" Margin="0" Text="Not shared" />
             <TextBlock Classes="swarn" TextWrapping="Wrap" Text="{Binding Failure}" />
             <TextBlock Classes="sline" TextWrapping="Wrap" Text="Nothing was left on GitHub by this attempt." />
-            <Button Classes="tbtn" HorizontalAlignment="Left" Content="Back to the form" Command="{Binding TryAgainCommand}" />
+            <Button Classes="tbtn" HorizontalAlignment="Left" Command="{Binding TryAgainCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconArrowLeft}" />
+                <TextBlock Text="Back to the form" />
+              </StackPanel>
+            </Button>
           </StackPanel>
         </StackPanel>
         </Panel>
