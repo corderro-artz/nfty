@@ -61,6 +61,8 @@ Reads everything the scan needs. Returns `null` when the repository does not exi
 - `protectedTags` (`IReadOnlyCollection<string>`) - Release tags that are never extras: every one the gallery lists for the account, and every one an open pull request names (the live version while an update waits, and the new one). Pass an empty set only when nothing is pending.
 - `ct` (`CancellationToken`) - Cancellation.
 
+**Returns.** The snapshot, or null when the repository does not exist.
+
 ### RemoveAsync(GitHubShareClient, string, IReadOnlyList&lt;RepoExtra&gt;, IReadOnlyCollection&lt;string&gt;, CancellationToken) { #m-removeasync-nfty-core-publish-community-githubsharecli-634eab }
 
 ```csharp
@@ -93,3 +95,5 @@ Applies the 3.3 table to a snapshot.
 **Parameters**
 
 - `snapshot` (`RepoSnapshot`) - What was read from the repository.
+
+**Returns.** The extra releases to remove and the blocker that stops sharing, if any.

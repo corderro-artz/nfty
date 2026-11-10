@@ -125,6 +125,7 @@ public sealed record CommunityEntry(
     /// <summary>True when every shared field is equal; <see cref="Updated"/> is ignored and <see cref="Tags"/> compare as a sequence.</summary>
     /// <param name="a">One entry.</param>
     /// <param name="b">The other.</param>
+    /// <returns>True when the two entries share the same fields.</returns>
     public static bool SameShare(CommunityEntry a, CommunityEntry b) =>
         a.SchemaVersion == b.SchemaVersion && a.Slug == b.Slug && a.Owner == b.Owner && a.Repo == b.Repo
         && a.Release == b.Release && a.Name == b.Name && a.Collection == b.Collection
@@ -140,6 +141,7 @@ public static class CommunityDuplicates
     /// <summary>The sentence that refuses <paramref name="candidate"/> as a duplicate of something listed, or null.</summary>
     /// <param name="candidate">The entry about to be added or updated.</param>
     /// <param name="listed">Everything already in the gallery.</param>
+    /// <returns>The refusing sentence, or null when the entry is not a duplicate.</returns>
     public static string? Problem(CommunityEntry candidate, IEnumerable<CommunityEntry> listed)
     {
         string? ownOtherSlug = null, ownSameSlug = null;
@@ -167,6 +169,7 @@ public static class CommunityDates
     /// <param name="candidate">The entry being added or updated.</param>
     /// <param name="previous">The entry it replaces, if any.</param>
     /// <param name="prCreated">When the pull request was opened.</param>
+    /// <returns>The refusing sentence, or null when the dates are acceptable.</returns>
     public static string? Problem(CommunityEntry candidate, CommunityEntry? previous, DateTimeOffset prCreated)
     {
         if (previous is not null && (candidate.Created != previous.Created || candidate.Updated <= previous.Updated))

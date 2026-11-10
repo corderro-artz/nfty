@@ -55,6 +55,8 @@ Reads the file, refusing a newer schema by name.
 
 - `stream` (`Stream`) - The JSON.
 
+**Returns.** The manifest read.
+
 ### Write(PublicRepoManifest) { #m-write-nfty-core-publish-community-publicrepomanifest }
 
 ```csharp
@@ -66,3 +68,5 @@ Writes the file in the order given.
 **Parameters**
 
 - `manifest` (`PublicRepoManifest`) - The manifest.
+
+**Returns.** The manifest as UTF-8 JSON, shares in the order given.

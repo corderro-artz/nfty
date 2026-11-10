@@ -12,6 +12,7 @@ namespace Nfty.Core.Publish.Community;
 public sealed record DeviceCode(string Device, string UserCode, Uri VerificationUri, TimeSpan ExpiresIn, TimeSpan Interval);
 
 /// <summary>A GitHub sign-in that did not finish; the message is a <see cref="ShareRules"/> sentence, safe to show.</summary>
+/// <param name="message">The <see cref="ShareRules"/> sentence shown to the person.</param>
 public sealed class GitHubAuthException(string message) : Exception(message);
 
 /// <summary>
@@ -30,6 +31,8 @@ public sealed class GitHubDeviceFlow(HttpClient http, string clientId, Func<Time
 
     /// <summary>Asks GitHub for a device code (scope <c>public_repo</c>).</summary>
     /// <exception cref="GitHubAuthException">GitHub refused or answered in a way nfty doesn't understand.</exception>
+    /// <param name="cancellationToken">Stops the request.</param>
+    /// <returns>The device code and where the person enters it.</returns>
     public async Task<DeviceCode> StartAsync(CancellationToken cancellationToken)
     {
         using var doc = await PostAsync(CodeUrl, [("client_id", clientId), ("scope", "public_repo")], cancellationToken).ConfigureAwait(false);
@@ -45,6 +48,9 @@ public sealed class GitHubDeviceFlow(HttpClient http, string clientId, Func<Time
     /// <summary>Polls until the person approves, returning the access token.</summary>
     /// <exception cref="GitHubAuthException">Canceled on GitHub, expired, or an unexpected answer.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <param name="code">The device code from <see cref="StartAsync"/>.</param>
+    /// <param name="cancellationToken">Stops the polling.</param>
+    /// <returns>The access token GitHub issued.</returns>
     public async Task<string> WaitForTokenAsync(DeviceCode code, CancellationToken cancellationToken)
     {
         var interval = code.Interval;

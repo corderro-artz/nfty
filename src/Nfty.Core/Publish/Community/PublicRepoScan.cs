@@ -74,6 +74,7 @@ public static partial class PublicRepoScan
 
     /// <summary>Applies the 3.3 table to a snapshot.</summary>
     /// <param name="snapshot">What was read from the repository.</param>
+    /// <returns>The extra releases to remove and the blocker that stops sharing, if any.</returns>
     public static RepoScan Scan(RepoSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -153,6 +154,7 @@ public static partial class PublicRepoScan
     /// <param name="protectedTags">Release tags that are never extras: every one the gallery lists for the account, and every one an
     /// open pull request names (the live version while an update waits, and the new one). Pass an empty set only when nothing is pending.</param>
     /// <param name="ct">Cancellation.</param>
+    /// <returns>The snapshot, or null when the repository does not exist.</returns>
     public static async Task<RepoSnapshot?> FetchAsync(GitHubShareClient client, string login,
         IReadOnlyCollection<string> protectedTags, CancellationToken ct)
     {

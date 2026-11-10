@@ -24,3 +24,5 @@ The sentence that refuses `candidate` as a duplicate of something listed, or nul
 
 - `candidate` (`CommunityEntry`) - The entry about to be added or updated.
 - `listed` (`IEnumerable<CommunityEntry>`) - Everything already in the gallery.
+
+**Returns.** The refusing sentence, or null when the entry is not a duplicate.

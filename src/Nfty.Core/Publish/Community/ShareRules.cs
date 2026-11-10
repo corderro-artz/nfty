@@ -49,14 +49,22 @@ public static class ShareRules
     }
 
     /// <summary>The canvas is past the limit.</summary>
+    /// <param name="width">The canvas width in pixels.</param>
+    /// <param name="height">The canvas height in pixels.</param>
+    /// <returns>The sentence shown to the person, naming both canvas sizes and the limit.</returns>
     public static string CanvasTooLarge(int width, int height) =>
         $"The canvas is {N(width)} x {N(height)}; the gallery takes up to {MaxCanvas} x {MaxCanvas}.";
 
     /// <summary>The Set has too many assets.</summary>
+    /// <param name="count">The number of assets in the Set.</param>
+    /// <returns>The sentence shown to the person, naming the count and the limit.</returns>
     public static string TooManyAssets(int count) =>
         $"This Set has {N(count)} assets; the gallery takes up to {N(MaxAssets)}.";
 
     /// <summary>The packed Set is too big; names the 3D models' share when leaving them out would help.</summary>
+    /// <param name="bytes">The packed Set size in bytes.</param>
+    /// <param name="modelsBytes">The part of it that is 3D models, in bytes; 0 when there are none.</param>
+    /// <returns>The sentence shown to the person, naming the size and, when it applies, the models share.</returns>
     public static string SetTooLarge(long bytes, long modelsBytes)
     {
         var head = $"{Size(bytes)} — the gallery takes up to {Size(MaxSetBytes)}.";
@@ -72,6 +80,8 @@ public static class ShareRules
     public static string NotASet => "This file isn't a Set nfty can open.";
 
     /// <summary>The archive is unsafe to open.</summary>
+    /// <param name="reason">What makes the archive unsafe, as a phrase.</param>
+    /// <returns>The sentence shown to the person, naming the reason.</returns>
     public static string UnsafeArchive(string reason) => $"This Set's archive is unsafe to open: {reason}.";
 
     /// <summary>Reason: too many entries.</summary>
@@ -89,6 +99,8 @@ public static class ShareRules
     public static string FileChanged => "The file changed while it was being checked.";
 
     /// <summary>An entry no Set holds.</summary>
+    /// <param name="path">The path of the entry no Set holds.</param>
+    /// <returns>The sentence shown to the person, naming that path.</returns>
     public static string UnexpectedFile(string path) => $"'{path}' isn't part of a Set.";
 
     /// <summary>The CookBook inside is not the one that made the Set.</summary>
@@ -98,9 +110,13 @@ public static class ShareRules
     public static string RenamedExport => "This is a marketplace export with renamed files, not a Set.";
 
     /// <summary>An asset picture can't be read.</summary>
+    /// <param name="file">The picture file name.</param>
+    /// <returns>The sentence shown to the person, naming the picture.</returns>
     public static string ImageUnreadable(string file) => $"The picture '{file}' is missing or can't be read.";
 
     /// <summary>An asset picture is not the canvas size.</summary>
+    /// <param name="file">The picture file name.</param>
+    /// <returns>The sentence shown to the person, naming the picture.</returns>
     public static string ImageWrongSize(string file) => $"The picture '{file}' isn't the size of the canvas.";
 
     /// <summary>The Set's asset count disagrees with its files.</summary>
@@ -118,10 +134,12 @@ public static class ShareRules
     /// <summary>A link in a name or description.</summary>
     public static string NoLinks => "Names and descriptions can't contain links.";
 
-    /// <summary>Too many tags.</summary>
+    /// <summary>The sentence refusing a share that carries more tags than the limit.</summary>
     public static string TooManyTags => $"A share takes up to {MaxTags} tags.";
 
     /// <summary>A tag outside the list.</summary>
+    /// <param name="tag">The tag that is not on the list.</param>
+    /// <returns>The sentence shown to the person, naming that tag.</returns>
     public static string UnknownTag(string tag) => $"'{tag}' isn't one of the gallery's tags.";
 
     /// <summary>The preview picture is unusable.</summary>
@@ -131,9 +149,13 @@ public static class ShareRules
     public static string HashMismatch => "The download doesn't match what the gallery lists, so it was not opened.";
 
     /// <summary>Someone already shares this Set.</summary>
+    /// <param name="login">The GitHub login of the account that already shares the Set.</param>
+    /// <returns>The sentence shown to the person, naming that account.</returns>
     public static string AlreadyListed(string login) => $"This Set is already in the gallery, shared by @{login}.";
 
     /// <summary>The user already shares this Set.</summary>
+    /// <param name="name">The name the person already shares the Set under.</param>
+    /// <returns>The sentence shown to the person, naming that name.</returns>
     public static string AlreadySharedAs(string name) => $"You already share this Set as \"{name}\".";
 
     /// <summary>The card's note that the account already shares the collection being looked at.</summary>
@@ -146,6 +168,9 @@ public static class ShareRules
     public static string UnshareUnavailable => "Unsharing isn't available here.";
 
     /// <summary>The share would change nothing.</summary>
+    /// <param name="name">The name the Set is shared as.</param>
+    /// <param name="date">When it was last shared.</param>
+    /// <returns>The sentence shown to the person, naming the share and the date.</returns>
     public static string NothingChanged(string name, DateTimeOffset date) =>
         $"Nothing changed since you shared \"{name}\" on {date.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}.";
 
@@ -156,6 +181,8 @@ public static class ShareRules
     public static string AtShareLimit => "You share 3 collections, the most the gallery takes. Pick one to replace.";
 
     /// <summary>The slug is taken by a different collection of the user's.</summary>
+    /// <param name="name">The name of the different collection already using the slug.</param>
+    /// <returns>The sentence shown to the person, naming that name.</returns>
     public static string SlugTaken(string name) =>
         $"You already share a different collection as \"{name}\". Rename this one to share it too.";
 
@@ -170,9 +197,13 @@ public static class ShareRules
     public static string RepoExtras => "Your nfty-public holds things the gallery doesn't allow. Remove them to share.";
 
     /// <summary>A submodule sits in nfty-public; nfty can't delete it.</summary>
+    /// <param name="path">The submodule path.</param>
+    /// <returns>The sentence shown to the person, naming that path.</returns>
     public static string RepoSubmodule(string path) => $"'{path}' is a submodule; remove it on GitHub, then share again.";
 
     /// <summary>Two releases carry one tag the repository lists.</summary>
+    /// <param name="tag">The tag two releases carry.</param>
+    /// <returns>The sentence shown to the person, naming that tag.</returns>
     public static string RepoDuplicateRelease(string tag) =>
         $"Your nfty-public has two releases for \"{tag}\". Remove one on GitHub, then share again.";
 
@@ -186,6 +217,8 @@ public static class ShareRules
     public static string RepoNewerNfty => "Your nfty-public was written by a newer nfty. Update nfty to share.";
 
     /// <summary>The repository history is past the limit.</summary>
+    /// <param name="kb">The repository size in kilobytes.</param>
+    /// <returns>The sentence shown to the person, naming the history size in megabytes.</returns>
     public static string HistoryTooLarge(long kb) =>
         $"Your nfty-public's history holds about {N((kb + 512) / 1024)} MB of deleted files. Delete the repository on GitHub and share again; nfty will make a fresh one.";
 
@@ -201,10 +234,14 @@ public static class ShareRules
     public static string Reconnect => "Reconnect GitHub to share.";
 
     /// <summary>GitHub can't be reached; a cached list is shown.</summary>
+    /// <param name="time">When the cached list was saved.</param>
+    /// <returns>The sentence shown to the person, naming the time of the cached list.</returns>
     public static string Offline(DateTime time) =>
         $"GitHub can't be reached. Showing the list from {time.ToString("HH:mm", CultureInfo.InvariantCulture)}.";
 
     /// <summary>GitHub is limiting requests; says how long to wait.</summary>
+    /// <param name="minutes">How long to wait, in minutes.</param>
+    /// <returns>The sentence shown to the person, naming the wait in minutes.</returns>
     public static string RateLimited(int minutes) =>
         $"GitHub is limiting requests. Try again in {minutes} {(minutes == 1 ? "minute" : "minutes")}.";
 
@@ -279,6 +316,8 @@ public static class ShareRules
     public static string ManifestMismatch => "Your nfty-public.json doesn't list this share as it was submitted.";
 
     /// <summary>A file the entry points at is not attached to the release.</summary>
+    /// <param name="file">The file the entry points at.</param>
+    /// <returns>The sentence shown to the person, naming the missing file.</returns>
     public static string ReleaseFileMissing(string file) => $"'{file}' is missing from the share's release.";
 
     /// <summary>The entry's facts differ from what the Set says about itself.</summary>
@@ -288,6 +327,8 @@ public static class ShareRules
     public static string ListDamaged => "The community gallery list is damaged.";
 
     /// <summary>The list is older than this nfty reads.</summary>
+    /// <param name="version">The schema version the list was written against.</param>
+    /// <returns>The sentence shown to the person, naming the list as too old for this nfty.</returns>
     public static string ListTooOld(int version) =>
         $"The community gallery list is in an old format (version {version}) this nfty no longer reads.";
 }

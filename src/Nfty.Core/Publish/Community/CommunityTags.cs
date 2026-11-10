@@ -19,6 +19,7 @@ public sealed partial record CommunityTags(int SchemaVersion, IReadOnlyList<stri
     /// <param name="stream">The JSON.</param>
     /// <exception cref="UnsupportedSchemaVersionException">The schema is newer than this build reads.</exception>
     /// <exception cref="InvalidDataException">The file is damaged: bad JSON, a bad or repeated tag, too many tags.</exception>
+    /// <returns>The tag list read.</returns>
     public static CommunityTags Read(Stream stream)
     {
         var tags = CommunitySchema.Load<CommunityTags>(stream, "tags");

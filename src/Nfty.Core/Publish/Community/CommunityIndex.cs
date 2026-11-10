@@ -13,6 +13,7 @@ public sealed record CommunityIndex(int SchemaVersion, DateTimeOffset Generated,
 {
     /// <summary>Reads a list, refusing a newer schema by name.</summary>
     /// <param name="stream">The JSON.</param>
+    /// <returns>The list read.</returns>
     public static CommunityIndex Read(Stream stream)
     {
         var index = CommunitySchema.Load<CommunityIndex>(stream, "entries");
@@ -22,6 +23,7 @@ public sealed record CommunityIndex(int SchemaVersion, DateTimeOffset Generated,
 
     /// <summary>Writes a list with entries sorted ordinally: owner id ascending, then slug.</summary>
     /// <param name="index">The list.</param>
+    /// <returns>The list as UTF-8 JSON, entries sorted.</returns>
     public static byte[] Write(CommunityIndex index)
     {
         var sorted = index.Entries
@@ -39,6 +41,7 @@ public sealed record PublicRepoManifest(int SchemaVersion, IReadOnlyList<Communi
 {
     /// <summary>Reads the file, refusing a newer schema by name.</summary>
     /// <param name="stream">The JSON.</param>
+    /// <returns>The manifest read.</returns>
     public static PublicRepoManifest Read(Stream stream)
     {
         var m = CommunitySchema.Load<PublicRepoManifest>(stream, "shares");
@@ -48,6 +51,7 @@ public sealed record PublicRepoManifest(int SchemaVersion, IReadOnlyList<Communi
 
     /// <summary>Writes the file in the order given.</summary>
     /// <param name="manifest">The manifest.</param>
+    /// <returns>The manifest as UTF-8 JSON, shares in the order given.</returns>
     public static byte[] Write(PublicRepoManifest manifest) =>
         JsonSerializer.SerializeToUtf8Bytes(manifest, Json.Options);
 }

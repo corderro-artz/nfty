@@ -87,6 +87,7 @@ public static class CommunityShare
 
     /// <summary>The export the card plans and the run performs: the Asset pack, one archive, never sealed.</summary>
     /// <param name="request">What the person asked for.</param>
+    /// <returns>The export options the share uses.</returns>
     public static ExportOptions Options(ShareRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);

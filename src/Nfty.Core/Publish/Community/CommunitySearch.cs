@@ -16,6 +16,7 @@ public static class CommunitySearch
 {
     /// <summary>Splits the box's text on whitespace into tags, owners and words. A lone <c>#</c> or <c>@</c> is ignored.</summary>
     /// <param name="text">What the user typed; null reads as empty.</param>
+    /// <returns>The tags, owners and words the text names.</returns>
     public static CommunityQuery Parse(string? text)
     {
         var tags = new List<string>();
@@ -39,6 +40,7 @@ public static class CommunitySearch
     /// <summary>Whether an entry satisfies every term of the query. An empty query matches everything.</summary>
     /// <param name="entry">The entry.</param>
     /// <param name="query">The parsed search.</param>
+    /// <returns>True when the entry satisfies every term.</returns>
     public static bool Matches(CommunityEntry entry, CommunityQuery query)
     {
         foreach (var t in query.Tags)
@@ -54,6 +56,7 @@ public static class CommunitySearch
     /// <summary>Adds <paramref name="token"/> to the text when it is not there, removes it when it is, and leaves single spaces.</summary>
     /// <param name="text">The box's text.</param>
     /// <param name="token">The token, such as <c>#pets</c> or <c>@alice</c>. Compared ignoring case.</param>
+    /// <returns>The text with the token added or removed.</returns>
     public static string Toggle(string? text, string token)
     {
         var parts = Split(text).ToList();
@@ -65,6 +68,7 @@ public static class CommunitySearch
     /// <summary>Whether the text carries <paramref name="token"/> as one of its terms (ignoring case).</summary>
     /// <param name="text">The box's text.</param>
     /// <param name="token">The token.</param>
+    /// <returns>True when the token is one of the terms.</returns>
     public static bool Has(string? text, string token) =>
         Split(text).Any(p => string.Equals(p, token, StringComparison.OrdinalIgnoreCase));
 

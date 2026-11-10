@@ -225,3 +225,5 @@ True when every shared field is equal; [`CommunityEntry.Updated`](Nfty.Core.Publ
 
 - `a` (`CommunityEntry`) - One entry.
 - `b` (`CommunityEntry`) - The other.
+
+**Returns.** True when the two entries share the same fields.

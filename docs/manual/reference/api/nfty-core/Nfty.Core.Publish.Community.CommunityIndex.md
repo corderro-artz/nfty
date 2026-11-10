@@ -64,6 +64,8 @@ Reads a list, refusing a newer schema by name.
 
 - `stream` (`Stream`) - The JSON.
 
+**Returns.** The list read.
+
 ### Write(CommunityIndex) { #m-write-nfty-core-publish-community-communityindex }
 
 ```csharp
@@ -75,3 +77,5 @@ Writes a list with entries sorted ordinally: owner id ascending, then slug.
 **Parameters**
 
 - `index` (`CommunityIndex`) - The list.
+
+**Returns.** The list as UTF-8 JSON, entries sorted.

@@ -548,7 +548,7 @@ GitHub did not answer in time.
 public static string TooManyTags { get; }
 ```
 
-Too many tags.
+The sentence refusing a share that carries more tags than the limit.
 
 ### Unreachable { #p-unreachable }
 
@@ -586,7 +586,9 @@ Someone already shares this Set.
 
 **Parameters**
 
-- `login` (`string`)
+- `login` (`string`) - The GitHub login of the account that already shares the Set.
+
+**Returns.** The sentence shown to the person, naming that account.
 
 ### AlreadySharedAs(string) { #m-alreadysharedas-system-string }
 
@@ -598,7 +600,9 @@ The user already shares this Set.
 
 **Parameters**
 
-- `name` (`string`)
+- `name` (`string`) - The name the person already shares the Set under.
+
+**Returns.** The sentence shown to the person, naming that name.
 
 ### CanvasTooLarge(int, int) { #m-canvastoolarge-system-int32-system-int32 }
 
@@ -610,8 +614,10 @@ The canvas is past the limit.
 
 **Parameters**
 
-- `width` (`int`)
-- `height` (`int`)
+- `width` (`int`) - The canvas width in pixels.
+- `height` (`int`) - The canvas height in pixels.
+
+**Returns.** The sentence shown to the person, naming both canvas sizes and the limit.
 
 ### HistoryTooLarge(long) { #m-historytoolarge-system-int64 }
 
@@ -623,7 +629,9 @@ The repository history is past the limit.
 
 **Parameters**
 
-- `kb` (`long`)
+- `kb` (`long`) - The repository size in kilobytes.
+
+**Returns.** The sentence shown to the person, naming the history size in megabytes.
 
 ### ImageUnreadable(string) { #m-imageunreadable-system-string }
 
@@ -635,7 +643,9 @@ An asset picture can't be read.
 
 **Parameters**
 
-- `file` (`string`)
+- `file` (`string`) - The picture file name.
+
+**Returns.** The sentence shown to the person, naming the picture.
 
 ### ImageWrongSize(string) { #m-imagewrongsize-system-string }
 
@@ -647,7 +657,9 @@ An asset picture is not the canvas size.
 
 **Parameters**
 
-- `file` (`string`)
+- `file` (`string`) - The picture file name.
+
+**Returns.** The sentence shown to the person, naming the picture.
 
 ### ListTooOld(int) { #m-listtooold-system-int32 }
 
@@ -659,7 +671,9 @@ The list is older than this nfty reads.
 
 **Parameters**
 
-- `version` (`int`)
+- `version` (`int`) - The schema version the list was written against.
+
+**Returns.** The sentence shown to the person, naming the list as too old for this nfty.
 
 ### NothingChanged(string, DateTimeOffset) { #m-nothingchanged-system-string-system-datetimeoffset }
 
@@ -671,8 +685,10 @@ The share would change nothing.
 
 **Parameters**
 
-- `name` (`string`)
-- `date` (`DateTimeOffset`)
+- `name` (`string`) - The name the Set is shared as.
+- `date` (`DateTimeOffset`) - When it was last shared.
+
+**Returns.** The sentence shown to the person, naming the share and the date.
 
 ### Offline(DateTime) { #m-offline-system-datetime }
 
@@ -684,7 +700,9 @@ GitHub can't be reached; a cached list is shown.
 
 **Parameters**
 
-- `time` (`DateTime`)
+- `time` (`DateTime`) - When the cached list was saved.
+
+**Returns.** The sentence shown to the person, naming the time of the cached list.
 
 ### RateLimited(int) { #m-ratelimited-system-int32 }
 
@@ -696,7 +714,9 @@ GitHub is limiting requests; says how long to wait.
 
 **Parameters**
 
-- `minutes` (`int`)
+- `minutes` (`int`) - How long to wait, in minutes.
+
+**Returns.** The sentence shown to the person, naming the wait in minutes.
 
 ### ReleaseFileMissing(string) { #m-releasefilemissing-system-string }
 
@@ -708,7 +728,9 @@ A file the entry points at is not attached to the release.
 
 **Parameters**
 
-- `file` (`string`)
+- `file` (`string`) - The file the entry points at.
+
+**Returns.** The sentence shown to the person, naming the missing file.
 
 ### RepoDuplicateRelease(string) { #m-repoduplicaterelease-system-string }
 
@@ -720,7 +742,9 @@ Two releases carry one tag the repository lists.
 
 **Parameters**
 
-- `tag` (`string`)
+- `tag` (`string`) - The tag two releases carry.
+
+**Returns.** The sentence shown to the person, naming that tag.
 
 ### RepoSubmodule(string) { #m-reposubmodule-system-string }
 
@@ -732,7 +756,9 @@ A submodule sits in nfty-public; nfty can't delete it.
 
 **Parameters**
 
-- `path` (`string`)
+- `path` (`string`) - The submodule path.
+
+**Returns.** The sentence shown to the person, naming that path.
 
 ### SetTooLarge(long, long) { #m-settoolarge-system-int64-system-int64 }
 
@@ -744,8 +770,10 @@ The packed Set is too big; names the 3D models' share when leaving them out woul
 
 **Parameters**
 
-- `bytes` (`long`)
-- `modelsBytes` (`long`)
+- `bytes` (`long`) - The packed Set size in bytes.
+- `modelsBytes` (`long`) - The part of it that is 3D models, in bytes; 0 when there are none.
+
+**Returns.** The sentence shown to the person, naming the size and, when it applies, the models share.
 
 ### SizeWords(long) { #m-sizewords-system-int64 }
 
@@ -771,7 +799,9 @@ The slug is taken by a different collection of the user's.
 
 **Parameters**
 
-- `name` (`string`)
+- `name` (`string`) - The name of the different collection already using the slug.
+
+**Returns.** The sentence shown to the person, naming that name.
 
 ### TooManyAssets(int) { #m-toomanyassets-system-int32 }
 
@@ -783,7 +813,9 @@ The Set has too many assets.
 
 **Parameters**
 
-- `count` (`int`)
+- `count` (`int`) - The number of assets in the Set.
+
+**Returns.** The sentence shown to the person, naming the count and the limit.
 
 ### UnexpectedFile(string) { #m-unexpectedfile-system-string }
 
@@ -795,7 +827,9 @@ An entry no Set holds.
 
 **Parameters**
 
-- `path` (`string`)
+- `path` (`string`) - The path of the entry no Set holds.
+
+**Returns.** The sentence shown to the person, naming that path.
 
 ### UnknownTag(string) { #m-unknowntag-system-string }
 
@@ -807,7 +841,9 @@ A tag outside the list.
 
 **Parameters**
 
-- `tag` (`string`)
+- `tag` (`string`) - The tag that is not on the list.
+
+**Returns.** The sentence shown to the person, naming that tag.
 
 ### UnsafeArchive(string) { #m-unsafearchive-system-string }
 
@@ -819,4 +855,6 @@ The archive is unsafe to open.
 
 **Parameters**
 
-- `reason` (`string`)
+- `reason` (`string`) - What makes the archive unsafe, as a phrase.
+
+**Returns.** The sentence shown to the person, naming the reason.

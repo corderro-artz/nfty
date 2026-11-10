@@ -36,7 +36,9 @@ Asks GitHub for a device code (scope `public_repo`).
 
 **Parameters**
 
-- `cancellationToken` (`CancellationToken`)
+- `cancellationToken` (`CancellationToken`) - Stops the request.
+
+**Returns.** The device code and where the person enters it.
 
 **Exceptions**
 
@@ -52,8 +54,10 @@ Polls until the person approves, returning the access token.
 
 **Parameters**
 
-- `code` (`DeviceCode`)
-- `cancellationToken` (`CancellationToken`)
+- `code` (`DeviceCode`) - The device code from [`GitHubDeviceFlow.StartAsync()`](Nfty.Core.Publish.Community.GitHubDeviceFlow.md#m-startasync-system-threading-cancellationtoken).
+- `cancellationToken` (`CancellationToken`) - Stops the polling.
+
+**Returns.** The access token GitHub issued.
 
 **Exceptions**
 

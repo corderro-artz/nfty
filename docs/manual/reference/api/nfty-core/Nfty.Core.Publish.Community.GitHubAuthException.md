@@ -20,4 +20,4 @@ public GitHubAuthException(string message);
 
 **Parameters**
 
-- `message` (`string`)
+- `message` (`string`) - The [`ShareRules`](Nfty.Core.Publish.Community.ShareRules.md) sentence shown to the person.

@@ -25,3 +25,5 @@ The sentence that refuses the entry's dates, or null.
 - `candidate` (`CommunityEntry`) - The entry being added or updated.
 - `previous` (`CommunityEntry?`) - The entry it replaces, if any.
 - `prCreated` (`DateTimeOffset`) - When the pull request was opened.
+
+**Returns.** The refusing sentence, or null when the dates are acceptable.

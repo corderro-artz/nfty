@@ -25,6 +25,8 @@ Whether the text carries `token` as one of its terms (ignoring case).
 - `text` (`string?`) - The box's text.
 - `token` (`string`) - The token.
 
+**Returns.** True when the token is one of the terms.
+
 ### Matches(CommunityEntry, CommunityQuery) { #m-matches-nfty-core-publish-community-communityentry-nft-900683 }
 
 ```csharp
@@ -38,6 +40,8 @@ Whether an entry satisfies every term of the query. An empty query matches every
 - `entry` (`CommunityEntry`) - The entry.
 - `query` (`CommunityQuery`) - The parsed search.
 
+**Returns.** True when the entry satisfies every term.
+
 ### Parse(string?) { #m-parse-system-string }
 
 ```csharp
@@ -49,6 +53,8 @@ Splits the box's text on whitespace into tags, owners and words. A lone `#` or `
 **Parameters**
 
 - `text` (`string?`) - What the user typed; null reads as empty.
+
+**Returns.** The tags, owners and words the text names.
 
 ### Toggle(string?, string) { #m-toggle-system-string-system-string }
 
@@ -62,3 +68,5 @@ Adds `token` to the text when it is not there, removes it when it is, and leaves
 
 - `text` (`string?`) - The box's text.
 - `token` (`string`) - The token, such as `#pets` or `@alice`. Compared ignoring case.
+
+**Returns.** The text with the token added or removed.

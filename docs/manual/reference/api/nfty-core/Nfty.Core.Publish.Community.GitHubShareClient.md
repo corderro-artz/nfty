@@ -38,11 +38,11 @@ Makes a branch at a commit.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `branch` (`string`)
-- `fromSha` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `branch` (`string`) - The new branch name.
+- `fromSha` (`string`) - The commit the branch starts at.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### CreateReleaseAsync(string, string, string, string, CancellationToken) { #m-createreleaseasync-system-string-system-string-system-a3e7e9 }
 
@@ -54,11 +54,13 @@ Makes a published release on a new tag.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `tag` (`string`)
-- `name` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `tag` (`string`) - The new tag the release is made on.
+- `name` (`string`) - The release title.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The release GitHub made.
 
 ### CreateRepoAsync(string, string, CancellationToken) { #m-createrepoasync-system-string-system-string-system-thr-ab480f }
 
@@ -70,9 +72,11 @@ Makes a public repository for the signed-in account, with a first commit so it h
 
 **Parameters**
 
-- `name` (`string`)
-- `description` (`string`)
-- `ct` (`CancellationToken`)
+- `name` (`string`) - The new repository name.
+- `description` (`string`) - The repository description.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The repository GitHub made.
 
 ### DeleteAssetAsync(string, string, long, CancellationToken) { #m-deleteassetasync-system-string-system-string-system-in-4d8138 }
 
@@ -84,10 +88,10 @@ Deletes one file attached to a release.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `assetId` (`long`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `assetId` (`long`) - The id of the attached file.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### DeleteBranchAsync(string, string, string, CancellationToken) { #m-deletebranchasync-system-string-system-string-system-s-d1bab2 }
 
@@ -99,10 +103,10 @@ Deletes a branch.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `branch` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `branch` (`string`) - The branch to delete.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### DeleteFileAsync(string, string, string, string, string, string, CancellationToken) { #m-deletefileasync-system-string-system-string-system-str-68e4fd }
 
@@ -114,13 +118,13 @@ Deletes a file at the blob SHA given.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `path` (`string`)
-- `sha` (`string`)
-- `message` (`string`)
-- `branch` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `path` (`string`) - The file path inside the repository.
+- `sha` (`string`) - The blob SHA being deleted.
+- `message` (`string`) - The commit message.
+- `branch` (`string`) - The branch to commit to.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### DeleteReleaseAsync(string, string, long, CancellationToken) { #m-deletereleaseasync-system-string-system-string-system-ec022a }
 
@@ -132,10 +136,10 @@ Deletes a release (its tag stays; see [`GitHubShareClient.DeleteTagAsync()`](Nft
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `id` (`long`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `id` (`long`) - The release id.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### DeleteRepoAsync(string, string, CancellationToken) { #m-deleterepoasync-system-string-system-string-system-thr-84f6b9 }
 
@@ -147,9 +151,9 @@ Deletes a repository. Needs the `delete_repo` scope, which sharing does not ask 
 
 **Parameters**
 
-- `owner` (`string`)
-- `name` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `name` (`string`) - The repository name.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### DeleteTagAsync(string, string, string, CancellationToken) { #m-deletetagasync-system-string-system-string-system-stri-314ec8 }
 
@@ -161,10 +165,10 @@ Deletes a tag.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `tag` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `tag` (`string`) - The tag to delete.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### ForkAsync(string, CancellationToken) { #m-forkasync-system-string-system-threading-cancellationtoken }
 
@@ -176,8 +180,10 @@ Forks the gallery into the signed-in account. GitHub answers with the existing f
 
 **Parameters**
 
-- `galleryRepo` (`string`)
-- `ct` (`CancellationToken`)
+- `galleryRepo` (`string`) - The gallery as `owner/name`.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The fork, which is the existing one when the account already has it.
 
 ### GetBranchShaAsync(string, string, string, CancellationToken) { #m-getbranchshaasync-system-string-system-string-system-s-cee067 }
 
@@ -189,10 +195,12 @@ The tip commit of a branch.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `branch` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `branch` (`string`) - The branch to look up.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The SHA of the branch tip commit.
 
 ### GetFileAsync(string, string, string, string, CancellationToken) { #m-getfileasync-system-string-system-string-system-string-6ca7bc }
 
@@ -204,11 +212,13 @@ A file's bytes and blob SHA on a branch, or `null` when it is not there.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `path` (`string`)
-- `branch` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `path` (`string`) - The file path inside the repository.
+- `branch` (`string`) - The branch to read from.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The file bytes and blob SHA, or null when the file is not there.
 
 ### GetIndexAsync(CancellationToken) { #m-getindexasync-system-threading-cancellationtoken }
 
@@ -220,7 +230,9 @@ The published list, fetched from the gallery's site WITHOUT the token.
 
 **Parameters**
 
-- `ct` (`CancellationToken`)
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The gallery list as published.
 
 **Exceptions**
 
@@ -237,9 +249,11 @@ A pull request's state.
 
 **Parameters**
 
-- `galleryRepo` (`string`)
-- `number` (`int`)
-- `ct` (`CancellationToken`)
+- `galleryRepo` (`string`) - The gallery as `owner/name`.
+- `number` (`int`) - The pull request number.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The state of the pull request and whether it was merged.
 
 ### GetPullCommentsAsync(string, int, CancellationToken) { #m-getpullcommentsasync-system-string-system-int32-system-c879a2 }
 
@@ -251,9 +265,11 @@ The text of a pull request's conversation comments written by the gallery's chec
 
 **Parameters**
 
-- `galleryRepo` (`string`)
-- `number` (`int`)
-- `ct` (`CancellationToken`)
+- `galleryRepo` (`string`) - The gallery as `owner/name`.
+- `number` (`int`) - The pull request number.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The comment texts written by the checks bot.
 
 ### GetRepoAsync(string, string, CancellationToken) { #m-getrepoasync-system-string-system-string-system-thread-3c78a0 }
 
@@ -265,9 +281,11 @@ A repository, or `null` when it does not exist.
 
 **Parameters**
 
-- `owner` (`string`)
-- `name` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `name` (`string`) - The repository name.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The repository, or null when it does not exist.
 
 ### GetTreeAsync(string, string, string, CancellationToken) { #m-gettreeasync-system-string-system-string-system-string-116bd2 }
 
@@ -279,10 +297,12 @@ Every item of a branch's tree, recursively.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `branch` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `branch` (`string`) - The branch whose tree is read.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** Every file and folder item in the tree.
 
 ### GetViewerAsync(CancellationToken) { #m-getviewerasync-system-threading-cancellationtoken }
 
@@ -294,7 +314,9 @@ The signed-in account.
 
 **Parameters**
 
-- `ct` (`CancellationToken`)
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The account the token signs in.
 
 ### ListBranchesAsync(string, string, CancellationToken) { #m-listbranchesasync-system-string-system-string-system-t-126260 }
 
@@ -306,9 +328,11 @@ Branch names.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The branch names.
 
 ### ListOpenPullEntriesAsync(CancellationToken) { #m-listopenpullentriesasync-system-threading-cancellationtoken }
 
@@ -320,7 +344,9 @@ The entries carried by the gallery's open pull requests (added or changed `entri
 
 **Parameters**
 
-- `ct` (`CancellationToken`)
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The entries the open pull requests carry.
 
 ### ListReleasesAsync(string, string, CancellationToken) { #m-listreleasesasync-system-string-system-string-system-t-35cd16 }
 
@@ -332,9 +358,11 @@ The repository's releases with their files.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The releases, each with its attached files.
 
 ### ListTagsAsync(string, string, CancellationToken) { #m-listtagsasync-system-string-system-string-system-threa-9c87a8 }
 
@@ -346,9 +374,11 @@ Tag names.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The tag names.
 
 ### OpenPullAsync(string, string, string, string, CancellationToken) { #m-openpullasync-system-string-system-string-system-strin-83eb81 }
 
@@ -360,11 +390,13 @@ Opens a pull request into the gallery's default branch; `head` is `owner:branch`
 
 **Parameters**
 
-- `galleryRepo` (`string`)
-- `head` (`string`)
-- `title` (`string`)
-- `body` (`string`)
-- `ct` (`CancellationToken`)
+- `galleryRepo` (`string`) - The gallery as `owner/name`.
+- `head` (`string`) - The branch to merge, as `owner:branch`.
+- `title` (`string`) - The pull request title.
+- `body` (`string`) - The pull request description.
+- `ct` (`CancellationToken`) - Cancels the request.
+
+**Returns.** The number of the pull request opened.
 
 ### PutFileAsync(string, string, string, byte\[], string, string?, string, CancellationToken) { #m-putfileasync-system-string-system-string-system-string-05f410 }
 
@@ -376,14 +408,14 @@ Creates a file, or replaces it when `sha` names the version being replaced.
 
 **Parameters**
 
-- `owner` (`string`)
-- `repo` (`string`)
-- `path` (`string`)
-- `content` (`byte[]`)
-- `message` (`string`)
-- `sha` (`string?`)
-- `branch` (`string`)
-- `ct` (`CancellationToken`)
+- `owner` (`string`) - The account that owns the repository.
+- `repo` (`string`) - The repository name.
+- `path` (`string`) - The file path inside the repository.
+- `content` (`byte[]`) - The file bytes to write.
+- `message` (`string`) - The commit message.
+- `sha` (`string?`) - The blob SHA being replaced, or null to create a new file.
+- `branch` (`string`) - The branch to commit to.
+- `ct` (`CancellationToken`) - Cancels the request.
 
 ### UploadAssetAsync(GitHubRelease, string, Stream, long, IProgress&lt;long&gt;?, CancellationToken) { #m-uploadassetasync-nfty-core-publish-community-githubrel-c37eba }
 
@@ -395,9 +427,9 @@ Attaches a file to a release, streamed: the content is read from `content` as it
 
 **Parameters**
 
-- `release` (`GitHubRelease`)
-- `name` (`string`)
-- `content` (`Stream`)
-- `length` (`long`)
-- `progress` (`IProgress<long>?`)
-- `ct` (`CancellationToken`)
+- `release` (`GitHubRelease`) - The release to attach the file to.
+- `name` (`string`) - The file name the asset is given.
+- `content` (`Stream`) - The stream the bytes are read from.
+- `length` (`long`) - The exact number of bytes to send.
+- `progress` (`IProgress<long>?`) - Receives the bytes sent so far; may be null.
+- `ct` (`CancellationToken`) - Cancels the request.

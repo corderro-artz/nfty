@@ -36,6 +36,8 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     // ---- identity and repositories ----------------------------------------------------------------------------
 
     /// <summary>The signed-in account.</summary>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The account the token signs in.</returns>
     public async Task<GitHubUser> GetViewerAsync(CancellationToken ct)
     {
         var reply = await SendAsync(HttpMethod.Get, Api("user"), null, ct).ConfigureAwait(false);
@@ -44,6 +46,10 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>A repository, or <see langword="null"/> when it does not exist.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="name">The repository name.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The repository, or null when it does not exist.</returns>
     public async Task<GitHubRepo?> GetRepoAsync(string owner, string name, CancellationToken ct)
     {
         var reply = await SendAsync(HttpMethod.Get, Api("repos", owner, name), null, ct, HttpStatusCode.NotFound).ConfigureAwait(false);
@@ -51,6 +57,10 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Makes a public repository for the signed-in account, with a first commit so it has a branch.</summary>
+    /// <param name="name">The new repository name.</param>
+    /// <param name="description">The repository description.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The repository GitHub made.</returns>
     public async Task<GitHubRepo> CreateRepoAsync(string name, string description, CancellationToken ct)
     {
         var body = new JsonObject { ["name"] = name, ["description"] = description, ["private"] = false, ["auto_init"] = true };
@@ -62,10 +72,18 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// Deletes a repository. Needs the <c>delete_repo</c> scope, which sharing does not ask for, so GitHub usually
     /// refuses; the only caller is a rollback that already treats a refusal as best effort.
     /// </summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="name">The repository name.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task DeleteRepoAsync(string owner, string name, CancellationToken ct) =>
         await SendAsync(HttpMethod.Delete, Api("repos", owner, name), null, ct).ConfigureAwait(false);
 
     /// <summary>Every item of a branch's tree, recursively.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="branch">The branch whose tree is read.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>Every file and folder item in the tree.</returns>
     public async Task<IReadOnlyList<GitHubTreeItem>> GetTreeAsync(string owner, string repo, string branch, CancellationToken ct)
     {
         var reply = await SendAsync(HttpMethod.Get, Api(Join("repos", owner, repo, "git", "trees") + "/" + Seg(branch) + "?recursive=1"), null, ct).ConfigureAwait(false);
@@ -76,14 +94,27 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Branch names.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The branch names.</returns>
     public Task<IReadOnlyList<string>> ListBranchesAsync(string owner, string repo, CancellationToken ct) =>
         PagedAsync(Join("repos", owner, repo, "branches"), e => Str(e, "name"), ct);
 
     /// <summary>Deletes a branch.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="branch">The branch to delete.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task DeleteBranchAsync(string owner, string repo, string branch, CancellationToken ct) =>
         await SendAsync(HttpMethod.Delete, Api(Join("repos", owner, repo, "git", "refs", "heads") + "/" + Ref(branch)), null, ct).ConfigureAwait(false);
 
     /// <summary>The tip commit of a branch.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="branch">The branch to look up.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The SHA of the branch tip commit.</returns>
     public async Task<string> GetBranchShaAsync(string owner, string repo, string branch, CancellationToken ct)
     {
         var reply = await SendAsync(HttpMethod.Get, Api(Join("repos", owner, repo, "git", "ref", "heads") + "/" + Ref(branch)), null, ct).ConfigureAwait(false);
@@ -91,6 +122,11 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Makes a branch at a commit.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="branch">The new branch name.</param>
+    /// <param name="fromSha">The commit the branch starts at.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task CreateBranchAsync(string owner, string repo, string branch, string fromSha, CancellationToken ct)
     {
         var body = new JsonObject { ["ref"] = "refs/heads/" + branch, ["sha"] = fromSha };
@@ -100,6 +136,12 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     // ---- files -------------------------------------------------------------------------------------------------
 
     /// <summary>A file's bytes and blob SHA on a branch, or <see langword="null"/> when it is not there.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="path">The file path inside the repository.</param>
+    /// <param name="branch">The branch to read from.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The file bytes and blob SHA, or null when the file is not there.</returns>
     public async Task<(byte[] Content, string Sha)?> GetFileAsync(string owner, string repo, string path, string branch, CancellationToken ct)
     {
         var url = Api(Join("repos", owner, repo, "contents") + "/" + FilePath(path) + "?ref=" + Uri.EscapeDataString(branch));
@@ -109,6 +151,14 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Creates a file, or replaces it when <paramref name="sha"/> names the version being replaced.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="path">The file path inside the repository.</param>
+    /// <param name="content">The file bytes to write.</param>
+    /// <param name="message">The commit message.</param>
+    /// <param name="sha">The blob SHA being replaced, or null to create a new file.</param>
+    /// <param name="branch">The branch to commit to.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task PutFileAsync(string owner, string repo, string path, byte[] content, string message, string? sha, string branch, CancellationToken ct)
     {
         var body = new JsonObject { ["message"] = message, ["content"] = Convert.ToBase64String(content), ["branch"] = branch };
@@ -117,6 +167,13 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Deletes a file at the blob SHA given.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="path">The file path inside the repository.</param>
+    /// <param name="sha">The blob SHA being deleted.</param>
+    /// <param name="message">The commit message.</param>
+    /// <param name="branch">The branch to commit to.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task DeleteFileAsync(string owner, string repo, string path, string sha, string message, string branch, CancellationToken ct)
     {
         var body = new JsonObject { ["message"] = message, ["sha"] = sha, ["branch"] = branch };
@@ -126,10 +183,20 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     // ---- releases and tags -------------------------------------------------------------------------------------
 
     /// <summary>The repository's releases with their files.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The releases, each with its attached files.</returns>
     public Task<IReadOnlyList<GitHubRelease>> ListReleasesAsync(string owner, string repo, CancellationToken ct) =>
         PagedAsync(Join("repos", owner, repo, "releases"), e => Release(e, owner, repo), ct);
 
     /// <summary>Makes a published release on a new tag.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="tag">The new tag the release is made on.</param>
+    /// <param name="name">The release title.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The release GitHub made.</returns>
     public async Task<GitHubRelease> CreateReleaseAsync(string owner, string repo, string tag, string name, CancellationToken ct)
     {
         var body = new JsonObject { ["tag_name"] = tag, ["name"] = name, ["draft"] = false, ["prerelease"] = false };
@@ -141,6 +208,12 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// Attaches a file to a release, streamed: the content is read from <paramref name="content"/> as it is sent, never
     /// buffered, with <c>Content-Length</c> stated up front. Progress is the number of bytes sent so far.
     /// </summary>
+    /// <param name="release">The release to attach the file to.</param>
+    /// <param name="name">The file name the asset is given.</param>
+    /// <param name="content">The stream the bytes are read from.</param>
+    /// <param name="length">The exact number of bytes to send.</param>
+    /// <param name="progress">Receives the bytes sent so far; may be null.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task UploadAssetAsync(GitHubRelease release, string name, Stream content, long length, IProgress<long>? progress, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(release);
@@ -155,18 +228,34 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Deletes a release (its tag stays; see <see cref="DeleteTagAsync"/>).</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="id">The release id.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task DeleteReleaseAsync(string owner, string repo, long id, CancellationToken ct) =>
         await SendAsync(HttpMethod.Delete, Api("repos", owner, repo, "releases", id.ToString(CultureInfo.InvariantCulture)), null, ct).ConfigureAwait(false);
 
     /// <summary>Deletes one file attached to a release.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="assetId">The id of the attached file.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task DeleteAssetAsync(string owner, string repo, long assetId, CancellationToken ct) =>
         await SendAsync(HttpMethod.Delete, Api("repos", owner, repo, "releases", "assets", assetId.ToString(CultureInfo.InvariantCulture)), null, ct).ConfigureAwait(false);
 
     /// <summary>Tag names.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The tag names.</returns>
     public Task<IReadOnlyList<string>> ListTagsAsync(string owner, string repo, CancellationToken ct) =>
         PagedAsync(Join("repos", owner, repo, "tags"), e => Str(e, "name"), ct);
 
     /// <summary>Deletes a tag.</summary>
+    /// <param name="owner">The account that owns the repository.</param>
+    /// <param name="repo">The repository name.</param>
+    /// <param name="tag">The tag to delete.</param>
+    /// <param name="ct">Cancels the request.</param>
     public async Task DeleteTagAsync(string owner, string repo, string tag, CancellationToken ct) =>
         await SendAsync(HttpMethod.Delete, Api(Join("repos", owner, repo, "git", "refs", "tags") + "/" + Ref(tag)), null, ct).ConfigureAwait(false);
 
@@ -176,6 +265,9 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// Forks the gallery into the signed-in account. GitHub answers with the existing fork when there already is one;
     /// a new fork may take a moment to become readable.
     /// </summary>
+    /// <param name="galleryRepo">The gallery as <c>owner/name</c>.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The fork, which is the existing one when the account already has it.</returns>
     public async Task<GitHubRepo> ForkAsync(string galleryRepo, CancellationToken ct)
     {
         var (owner, name) = SplitFullName(galleryRepo);
@@ -184,6 +276,12 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>Opens a pull request into the gallery's default branch; <paramref name="head"/> is <c>owner:branch</c>.</summary>
+    /// <param name="galleryRepo">The gallery as <c>owner/name</c>.</param>
+    /// <param name="head">The branch to merge, as <c>owner:branch</c>.</param>
+    /// <param name="title">The pull request title.</param>
+    /// <param name="body">The pull request description.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The number of the pull request opened.</returns>
     public async Task<int> OpenPullAsync(string galleryRepo, string head, string title, string body, CancellationToken ct)
     {
         var (owner, name) = SplitFullName(galleryRepo);
@@ -194,6 +292,10 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     }
 
     /// <summary>A pull request's state.</summary>
+    /// <param name="galleryRepo">The gallery as <c>owner/name</c>.</param>
+    /// <param name="number">The pull request number.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The state of the pull request and whether it was merged.</returns>
     public async Task<GitHubPull> GetPullAsync(string galleryRepo, int number, CancellationToken ct)
     {
         var (owner, name) = SplitFullName(galleryRepo);
@@ -206,6 +308,10 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// The text of a pull request's conversation comments written by the gallery's checks bot
     /// (<see cref="CommunityEndpoints.ActionsBot"/>); anyone else's comment is dropped, since anyone may comment on a pull request.
     /// </summary>
+    /// <param name="galleryRepo">The gallery as <c>owner/name</c>.</param>
+    /// <param name="number">The pull request number.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The comment texts written by the checks bot.</returns>
     public async Task<IReadOnlyList<string>> GetPullCommentsAsync(string galleryRepo, int number, CancellationToken ct)
     {
         var (owner, name) = SplitFullName(galleryRepo);
@@ -222,6 +328,8 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// <summary>The published list, fetched from the gallery's site WITHOUT the token.</summary>
     /// <exception cref="InvalidDataException">The list is damaged.</exception>
     /// <exception cref="UnsupportedSchemaVersionException">The list is newer or older than this build reads.</exception>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The gallery list as published.</returns>
     public async Task<CommunityIndex> GetIndexAsync(CancellationToken ct)
     {
         var reply = await SendAsync(HttpMethod.Get, endpoints.IndexUrl, null, ct, maxBody: IndexBodyCap).ConfigureAwait(false);
@@ -233,6 +341,8 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
     /// The entries carried by the gallery's open pull requests (added or changed <c>entries/**/*.json</c> files, read at
     /// each request's head commit through the API). Files that don't parse as an entry are skipped.
     /// </summary>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The entries the open pull requests carry.</returns>
     public async Task<IReadOnlyList<CommunityEntry>> ListOpenPullEntriesAsync(CancellationToken ct)
     {
         var (galleryOwner, galleryName) = SplitFullName(endpoints.GalleryRepo);

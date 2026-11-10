@@ -65,6 +65,8 @@ Reads the list, refusing a newer schema by name and anything malformed as damage
 
 - `stream` (`Stream`) - The JSON.
 
+**Returns.** The tag list read.
+
 **Exceptions**
 
 - [`UnsupportedSchemaVersionException`](Nfty.Core.Formats.UnsupportedSchemaVersionException.md) - The schema is newer than this build reads.

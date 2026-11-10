@@ -68,6 +68,8 @@ The export the card plans and the run performs: the Asset pack, one archive, nev
 
 - `request` (`ShareRequest`) - What the person asked for.
 
+**Returns.** The export options the share uses.
+
 ### RunAsync(GitHubShareClient, GitHubUser, ShareRequest, CommunityEndpoints, string, IProgress&lt;ShareProgress&gt;?, CancellationToken, IReadOnlyCollection&lt;string&gt;, Func&lt;DateTimeOffset&gt;?, Func&lt;TimeSpan, CancellationToken, Task&gt;?) { #m-runasync-nfty-core-publish-community-githubshareclient-566364 }
 
 ```csharp
