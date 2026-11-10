@@ -15,7 +15,7 @@ permissions:
 env:
   # Set both for the real gallery (see README.md). NFTY_VERSION is the nfty release whose CLI runs `share check`.
   NFTY_VERSION: "2.5.0"
-  NFTY_REPO: "nfty-art/nfty"
+  NFTY_REPO: "corderro-artz/nfty"
 
 jobs:
   check:

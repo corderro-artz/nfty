@@ -26,7 +26,7 @@ that test once with `NFTY_WRITE_FIXTURE=1`.
 1. Create the `nfty-gallery` repository. Copy the contents of `repo/` into it (including `.github/`).
 2. Copy `check.py`, `fetch.py`, `gather.sh`, `build_index.py`, `health.py` and `gallerylib.py` into the new
    repository's `scripts/`.
-3. In `.github/workflows/check.yml` set `NFTY_REPO` (the nfty repository, `nfty-art/nfty` is a placeholder)
+3. In `.github/workflows/check.yml` set `NFTY_REPO` (the nfty repository: `corderro-artz/nfty`, already set)
    and `NFTY_VERSION` (the release whose CLI runs `share check`; the check expects the release `v<version>`
    to carry `nfty-<version>-linux-x64-portable.tar.gz`, which `tools/release/build.py` makes). Bump
    `NFTY_VERSION` when a release changes what a legal Set is.

@@ -85,7 +85,7 @@ public class SettingsGitHubTests
     [AvaloniaFact]
     public void A_build_without_an_oauth_app_says_sharing_is_not_set_up()
     {
-        var vm = Card(new GitHubAccountService(StateStore.InMemory(), new InMemorySecretStore()));
+        var vm = Card(new GitHubAccountService(StateStore.InMemory(), new InMemorySecretStore(), CommunityEndpoints.Default with { ClientId = "" }));
         Assert.False(vm.ConnectGitHubCommand.CanExecute(null));
         Assert.Equal("GitHub sharing isn't set up in this build.", vm.GitHubNote);
     }

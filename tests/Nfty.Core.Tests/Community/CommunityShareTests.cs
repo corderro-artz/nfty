@@ -23,7 +23,7 @@ public class CommunityShareTests : IDisposable
     private static readonly DateTimeOffset OldCreated = DateTimeOffset.Parse("2026-10-01T08:00:00Z");
 
     private const string Mine = "/repos/me/nfty-public";
-    private const string Gallery = "/repos/nfty-art/nfty-gallery";
+    private const string Gallery = "/repos/vaporsoft-dev/nfty-gallery";
     private const string Fork = "/repos/me/nfty-gallery";
 
     public void Dispose() => _dir.Delete(recursive: true);
@@ -133,8 +133,8 @@ public class CommunityShareTests : IDisposable
     {
         fake.On(Post, Gallery + "/forks", HttpStatusCode.Accepted, RepoJson("me/nfty-gallery"))
             .Ok(Get, Fork, RepoJson("me/nfty-gallery"))
-            .Ok(Get, Gallery, RepoJson("nfty-art/nfty-gallery"))
-            .Ok(Get, Gallery, RepoJson("nfty-art/nfty-gallery"))
+            .Ok(Get, Gallery, RepoJson("vaporsoft-dev/nfty-gallery"))
+            .Ok(Get, Gallery, RepoJson("vaporsoft-dev/nfty-gallery"))
             .Ok(Get, Gallery + "/git/ref/heads/main", "{\"object\":{\"sha\":\"base\"}}")
             .Ok(Get, Fork + "/branches", "[]")
             .On(Post, Fork + "/git/refs", HttpStatusCode.Created, "{}");
@@ -175,7 +175,7 @@ public class CommunityShareTests : IDisposable
         Assert.Equal(5, result.PullNumber);
         Assert.Equal("chest-demo", result.Slug);
         Assert.Equal("chest-demo-v1", result.Tag);
-        Assert.Equal("https://github.com/nfty-art/nfty-gallery/pull/5", result.PullUrl.ToString());
+        Assert.Equal("https://github.com/vaporsoft-dev/nfty-gallery/pull/5", result.PullUrl.ToString());
         Assert.Equal(
         [
             $"POST /user/repos", $"POST {Mine}/releases", $"POST {Mine}/releases/11/assets", $"POST {Mine}/releases/11/assets",
@@ -505,8 +505,8 @@ public class CommunityShareTests : IDisposable
             .Ok(Get, Mine + "/contents/nfty-public.json", FileJson(ManifestJson(mine, other)))
             .On(Post, Gallery + "/forks", HttpStatusCode.Accepted, RepoJson("me/nfty-gallery"))
             .Ok(Get, Fork, RepoJson("me/nfty-gallery"))
-            .Ok(Get, Gallery, RepoJson("nfty-art/nfty-gallery"))
-            .Ok(Get, Gallery, RepoJson("nfty-art/nfty-gallery"))
+            .Ok(Get, Gallery, RepoJson("vaporsoft-dev/nfty-gallery"))
+            .Ok(Get, Gallery, RepoJson("vaporsoft-dev/nfty-gallery"))
             .Ok(Get, Gallery + "/git/ref/heads/main", "{\"object\":{\"sha\":\"base\"}}")
             .Ok(Get, Fork + "/branches", "[]")
             .On(Post, Fork + "/git/refs", HttpStatusCode.Created, "{}")

@@ -59,7 +59,7 @@ The OAuth app's public client id.
 public static CommunityEndpoints Default { get; }
 ```
 
-The shipped gallery. The client id is filled in when the OAuth app exists.
+The shipped gallery: `vaporsoft-dev/nfty-gallery`, signed in through the vaporsoft-dev OAuth app (device flow, no client secret — the id is public by design).
 
 ### GalleryRepo { #p-galleryrepo }
 

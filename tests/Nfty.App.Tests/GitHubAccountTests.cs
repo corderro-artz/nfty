@@ -135,7 +135,7 @@ public class GitHubAccountTests
         Assert.Equal("Secure storage is unavailable: no keyring.", noStore.UnavailableReason);
         await Assert.ThrowsAsync<GitHubAuthException>(() => noStore.BeginAsync(CancellationToken.None));
 
-        var noApp = Account(StateStore.InMemory(), new InMemorySecretStore(), handler, CommunityEndpoints.Default);
+        var noApp = Account(StateStore.InMemory(), new InMemorySecretStore(), handler, CommunityEndpoints.Default with { ClientId = "" });
         Assert.Equal(ShareRules.NotSetUp, noApp.UnavailableReason);
         await Assert.ThrowsAsync<GitHubAuthException>(() => noApp.BeginAsync(CancellationToken.None));
 

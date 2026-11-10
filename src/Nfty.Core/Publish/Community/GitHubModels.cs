@@ -17,13 +17,14 @@ internal sealed class RateLimitedException(string message) : CommunityException(
 public sealed record CommunityEndpoints(string GalleryRepo, Uri IndexUrl, Uri ApiBase, Uri UploadsBase, string ClientId,
     string ActionsBot = "github-actions[bot]")
 {
-    /// <summary>The shipped gallery. The client id is filled in when the OAuth app exists.</summary>
+    /// <summary>The shipped gallery: <c>vaporsoft-dev/nfty-gallery</c>, signed in through the vaporsoft-dev OAuth app
+    /// (device flow, no client secret — the id is public by design).</summary>
     public static CommunityEndpoints Default { get; } = new(
-        "nfty-art/nfty-gallery",
-        new Uri("https://nfty-art.github.io/nfty-gallery/index.json"),
+        "vaporsoft-dev/nfty-gallery",
+        new Uri("https://vaporsoft-dev.github.io/nfty-gallery/index.json"),
         new Uri("https://api.github.com/"),
         new Uri("https://uploads.github.com/"),
-        "");
+        "Ov23li8dFCHIMEhlN6SG");
 }
 
 /// <summary>The signed-in GitHub account.</summary>

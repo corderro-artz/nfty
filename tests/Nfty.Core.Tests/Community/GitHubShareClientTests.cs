@@ -226,7 +226,7 @@ public class GitHubShareClientTests
     [Fact]
     public async Task Fork_posts_to_the_gallery_and_returns_the_repo()
     {
-        var fake = new FakeGitHub().On(HttpMethod.Post, "/repos/nfty-art/nfty-gallery/forks", HttpStatusCode.Accepted,
+        var fake = new FakeGitHub().On(HttpMethod.Post, "/repos/vaporsoft-dev/nfty-gallery/forks", HttpStatusCode.Accepted,
             "{\"full_name\":\"me/nfty-gallery\",\"private\":false,\"default_branch\":\"main\",\"size\":1}");
         var fork = await Client(fake).ForkAsync(Ends.GalleryRepo, default);
         Assert.Equal("me/nfty-gallery", fork.FullName);
@@ -250,8 +250,8 @@ public class GitHubShareClientTests
     public async Task Open_pull_targets_the_gallery_default_branch_and_returns_the_number()
     {
         var fake = new FakeGitHub()
-            .Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery", "{\"full_name\":\"nfty-art/nfty-gallery\",\"private\":false,\"default_branch\":\"trunk\",\"size\":1}")
-            .On(HttpMethod.Post, "/repos/nfty-art/nfty-gallery/pulls", HttpStatusCode.Created, "{\"number\":42}");
+            .Ok(HttpMethod.Get, "/repos/vaporsoft-dev/nfty-gallery", "{\"full_name\":\"vaporsoft-dev/nfty-gallery\",\"private\":false,\"default_branch\":\"trunk\",\"size\":1}")
+            .On(HttpMethod.Post, "/repos/vaporsoft-dev/nfty-gallery/pulls", HttpStatusCode.Created, "{\"number\":42}");
         int n = await Client(fake).OpenPullAsync(Ends.GalleryRepo, "me:share/cat", "Add cat", "body text", default);
         var body = Body(fake.Requests[1]);
         Assert.Equal(42, n);
@@ -265,8 +265,8 @@ public class GitHubShareClientTests
     public async Task Pull_state_and_comments()
     {
         var fake = new FakeGitHub()
-            .Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/pulls/42", "{\"state\":\"closed\",\"merged\":true}")
-            .Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/issues/42/comments", "[{\"body\":\"one\",\"user\":{\"login\":\"github-actions[bot]\"}},{\"body\":\"two\",\"user\":{\"login\":\"github-actions[bot]\"}}]");
+            .Ok(HttpMethod.Get, "/repos/vaporsoft-dev/nfty-gallery/pulls/42", "{\"state\":\"closed\",\"merged\":true}")
+            .Ok(HttpMethod.Get, "/repos/vaporsoft-dev/nfty-gallery/issues/42/comments", "[{\"body\":\"one\",\"user\":{\"login\":\"github-actions[bot]\"}},{\"body\":\"two\",\"user\":{\"login\":\"github-actions[bot]\"}}]");
         var c = Client(fake);
         Assert.Equal(new GitHubPull("closed", true), await c.GetPullAsync(Ends.GalleryRepo, 42, default));
         Assert.Equal(["one", "two"], await c.GetPullCommentsAsync(Ends.GalleryRepo, 42, default));
@@ -275,7 +275,7 @@ public class GitHubShareClientTests
     [Fact]
     public async Task Only_the_gallery_bots_comments_are_returned()
     {
-        var fake = new FakeGitHub().Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/issues/42/comments",
+        var fake = new FakeGitHub().Ok(HttpMethod.Get, "/repos/vaporsoft-dev/nfty-gallery/issues/42/comments",
             "[{\"body\":\"fake reason\",\"user\":{\"login\":\"stranger\"}},{\"body\":\"real\",\"user\":{\"login\":\"github-actions[bot]\"}},{\"body\":\"no user\"},{\"body\":\"null user\",\"user\":null}]");
         Assert.Equal(["real"], await Client(fake).GetPullCommentsAsync(Ends.GalleryRepo, 42, default));
     }
@@ -362,7 +362,7 @@ public class GitHubShareClientTests
             "{\"schemaVersion\":1,\"generated\":\"2026-11-09T00:00:00Z\",\"entries\":[]}");
         var index = await Client(fake).GetIndexAsync(default);
         var r = Assert.Single(fake.Requests);
-        Assert.Equal("nfty-art.github.io", r.Url.Host);
+        Assert.Equal("vaporsoft-dev.github.io", r.Url.Host);
         Assert.False(r.Headers.ContainsKey("Authorization"));
         Assert.Equal("nfty", r.Headers["User-Agent"]);
         Assert.Empty(index.Entries);
@@ -380,7 +380,7 @@ public class GitHubShareClientTests
     [Fact]
     public async Task Open_pull_entries_reads_added_entry_files_and_skips_the_rest()
     {
-        const string gallery = "/repos/nfty-art/nfty-gallery";
+        const string gallery = "/repos/vaporsoft-dev/nfty-gallery";
         var fake = new FakeGitHub()
             .Ok(HttpMethod.Get, gallery + "/pulls", "[{\"number\":3,\"head\":{\"sha\":\"h3\",\"repo\":{\"full_name\":\"me/nfty-gallery\"}}}]")
             .Ok(HttpMethod.Get, gallery + "/pulls/3/files",
@@ -573,7 +573,7 @@ public class GitHubShareClientTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Client(fake, bodyTimeout: TimeSpan.FromSeconds(30)).GetViewerAsync(cts.Token));
     }
 
-    private const string Gallery = "/repos/nfty-art/nfty-gallery";
+    private const string Gallery = "/repos/vaporsoft-dev/nfty-gallery";
 
     private static string PullsJson(int n) =>
         "[" + string.Join(",", Enumerable.Range(1, n).Select(i => "{\"number\":" + i + ",\"head\":{\"sha\":\"h" + i + "\",\"repo\":{\"full_name\":\"me/nfty-gallery\"}}}")) + "]";
