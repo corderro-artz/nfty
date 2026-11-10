@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
-using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
@@ -86,11 +85,10 @@ public partial class ShellChromeView : UserControl
         var animation = new Animation
         {
             Duration = TimeSpan.FromMilliseconds(900),
-            Easing = new CubicEaseOut(),
             Children =
             {
-                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(OpacityProperty, 0d) } },
-                new KeyFrame { Cue = new Cue(0.15), Setters = { new Setter(OpacityProperty, 0.28d) } },
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter(OpacityProperty, 0.28d) } },
+                new KeyFrame { Cue = new Cue(0.25), Setters = { new Setter(OpacityProperty, 0.28d) } },
                 new KeyFrame { Cue = new Cue(1), Setters = { new Setter(OpacityProperty, 0d) } },
             },
         };

@@ -37,13 +37,20 @@ public class FooterAttentionTests
 
     private static async Task PumpUntil(Window window, Func<bool> ready)
     {
-        for (int i = 0; i < 100 && !ready(); i++)
+        // Sample on the same dispatcher as the animation. A thread-pool delay can resume after
+        // the entire brief cue has finished on a loaded CI worker.
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        int ticks = 0;
+        timer.Tick += (_, _) =>
         {
-            await Task.Delay(20);
-            Dispatcher.UIThread.RunJobs();
             using var frame = window.CaptureRenderedFrame();
-        }
-        Assert.True(ready());
+            if (ready()) done.TrySetResult();
+            else if (++ticks >= 200) done.TrySetException(new TimeoutException("Footer cue did not reach the requested frame."));
+        };
+        timer.Start();
+        try { await done.Task; }
+        finally { timer.Stop(); }
     }
 
     [AvaloniaTheory]
@@ -69,6 +76,8 @@ public class FooterAttentionTests
             Save(baseline, $"footer-normal-{dark}");
             Assert.Equal(0, shell.StatusAttention);
             status.Warn(warning);
+            Assert.Equal(1, shell.StatusAttention);
+            Assert.False(view.PendingStatusAttention.IsCompleted, "Cue completed before its first frame.");
             await PumpUntil(window, () => wash.Opacity > 0.05);
             using var alert = Frame(window);
             Save(alert, $"footer-alert-{dark}");
