@@ -13,9 +13,13 @@ permissions:
   contents: read
 
 env:
-  # Set both for the real gallery (see README.md). NFTY_VERSION is the nfty release whose CLI runs `share check`.
-  NFTY_VERSION: "2.5.0"
+  # The nfty CLI that runs `share check` is resolved on EVERY run: the newest published (non-draft, non-pre)
+  # release of NFTY_REPO that carries the linux-x64 portable build and is at least NFTY_MIN_VERSION (the first
+  # release with `share check`). So a new nfty release reaches the gallery with nothing to edit here. To hold the
+  # gallery on one release instead, set the repository VARIABLE NFTY_VERSION (Settings, Variables); empty = latest.
+  NFTY_MIN_VERSION: "2.6.0"
   NFTY_REPO: "corderro-artz/nfty"
+  NFTY_PINNED: ${{ vars.NFTY_VERSION }}
 
 jobs:
   check:
@@ -30,22 +34,30 @@ jobs:
       OUT: ${{ github.workspace }}/work
     steps:
       # The BASE commit: trusted scripts, blocked.json, tags.json and the entries already listed. Never the PR.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
-      - name: Get the nfty CLI
+      - name: Get the nfty CLI (newest release, or the pinned one)
         run: |
           set -euo pipefail
           mkdir -p cli
-          gh release download "v${NFTY_VERSION}" --repo "${NFTY_REPO}" \
-            --pattern "nfty-${NFTY_VERSION}-linux-x64-portable.tar.gz" --dir cli
-          tar -xzf "cli/nfty-${NFTY_VERSION}-linux-x64-portable.tar.gz" -C cli
+          gh release list --repo "${NFTY_REPO}" --exclude-drafts --exclude-pre-releases --limit 30 \
+            --json tagName --jq '.[].tagName' > cli/tags.txt
+          version=$(python scripts/nfty_version.py --tags cli/tags.txt --min "${NFTY_MIN_VERSION}" --pinned "${NFTY_PINNED:-}")
+          asset="nfty-${version}-linux-x64-portable.tar.gz"
+          if ! gh release download "v${version}" --repo "${NFTY_REPO}" --pattern "$asset" --dir cli; then
+            echo "::error::nfty v${version} has no ${asset}; publish it or set the NFTY_VERSION variable" >&2
+            exit 1
+          fi
+          echo "Checking with nfty ${version}"
+          echo "NFTY_VERSION=${version}" >> "$GITHUB_ENV"
+          tar -xzf "cli/${asset}" -C cli
           cli_bin=$(find cli -type f -name Nfty.Cli | head -n 1)
           chmod +x "$cli_bin"
           echo "NFTY_CLI=$GITHUB_WORKSPACE/$cli_bin" >> "$GITHUB_ENV"
@@ -79,7 +91,7 @@ jobs:
           # 1 = the share was refused: that is a verdict, not a failure of this job. Anything else is a failure.
           [ "$code" -le 1 ]
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: verdict
           path: |

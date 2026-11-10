@@ -13,6 +13,7 @@ sections 3 to 5). It lives here so it is versioned with the code it mirrors; the
 | `gather.sh` | check.yml's data gathering: the PR's files, the author, their `nfty-public`, other open PRs' entries. |
 | `build_index.py` | `entries/` to `index.json`, byte-identical to `CommunityIndex.Write`. |
 | `health.py` | The nightly HEAD check and the 3-misses `gone` marker. |
+| `nfty_version.py` | Picks the nfty release whose CLI checks a share: the newest published one at or above `NFTY_MIN_VERSION`, or the `NFTY_VERSION` repository variable when set. |
 | `gallerylib.py` | Shared: the `ShareRules` sentences this repo speaks, entry reading and writing, duplicate/date/scan rules. |
 
 Tests: `python -m unittest tools.tests.test_gallery -v` from the repository root. They read `ShareRules.cs`
@@ -24,22 +25,22 @@ that test once with `NFTY_WRITE_FIXTURE=1`.
 ## Setting up the real repository
 
 1. Create the `nfty-gallery` repository. Copy the contents of `repo/` into it (including `.github/`).
-2. Copy `check.py`, `fetch.py`, `gather.sh`, `build_index.py`, `health.py` and `gallerylib.py` into the new
+2. Copy `check.py`, `fetch.py`, `gather.sh`, `build_index.py`, `health.py`, `nfty_version.py` and `gallerylib.py` into the new
    repository's `scripts/`.
-3. In `.github/workflows/check.yml` set `NFTY_REPO` (the nfty repository: `corderro-artz/nfty`, already set)
-   and `NFTY_VERSION` (the release whose CLI runs `share check`; the check expects the release `v<version>`
-   to carry `nfty-<version>-linux-x64-portable.tar.gz`, which `tools/release/build.py` makes). Bump
-   `NFTY_VERSION` when a release changes what a legal Set is.
+3. Nothing to set for the nfty version. `check.yml` resolves it on every run: the newest published nfty
+   release (`NFTY_REPO`, `corderro-artz/nfty`) at or above `NFTY_MIN_VERSION` that carries
+   `nfty-<version>-linux-x64-portable.tar.gz` (`tools/release/build.py` makes it). A new nfty release reaches
+   the gallery on its next check. To hold the gallery on one release (a release that changes what a legal Set
+   is before the gallery is ready for it), set the repository variable `NFTY_VERSION`; clear it to follow
+   releases again. Raise `NFTY_MIN_VERSION` only when an older CLI must never check a share again.
 4. Settings, Pages: source **GitHub Actions**. Settings, Actions, General: workflow permissions
    **Read repository contents** by default (each workflow states what it needs), and allow Actions to
    create and approve pull requests off. Branch protection on `main`: none that needs a review or a status
    the Action can't give; the checks are the gate. Allow squash merging.
 5. Fork pull requests from first-time contributors wait for approval by default. Leave "require approval for
    all outside collaborators" **off**, or no share merges by itself.
-6. Pin the actions. `actions/checkout`, `setup-python`, `upload-artifact`, `download-artifact`,
-   `upload-pages-artifact` and `deploy-pages` are referenced by major tag; replace each with the full commit
-   SHA of the release you trust (`gh api repos/actions/checkout/git/ref/tags/v4 --jq .object.sha`) before the
-   gallery opens, and let Dependabot keep them current.
+6. The actions are pinned to full commit SHAs (the trailing comment names the tag). Refresh them with Dependabot
+   for `github-actions` in the real repository, or by hand: `gh api repos/actions/<name>/commits/<tag> --jq .sha`.
 
 ## How the workflows stay safe
 
@@ -56,14 +57,8 @@ that test once with `NFTY_WRITE_FIXTURE=1`.
 * Account age, rates and duplicates are decided from GitHub's answers and the entries already merged, never
   from claims in the entry.
 
-## Before release
+## Live values
 
-`CommunityEndpoints.Default` (`src/Nfty.Core/Publish/Community/CommunityEndpoints.cs`) still holds placeholders.
-Two values must be filled in, and then the `Default_endpoints_are_filled` test added to
-`tests/Nfty.Core.Tests/Community/CommunityEndpointsTests.cs` (non-empty `GalleryRepo` matching
-`^[\w.-]+/nfty-gallery$`, non-empty `ClientId`, an https `IndexUrl`):
-
-1. `GalleryRepo`: the owner of the real `nfty-gallery` repository (`<owner>/nfty-gallery`).
-2. `ClientId`: the client id of the GitHub OAuth app (device flow enabled) nfty signs in through.
-
-Also replace the `NFTY_REPO` placeholder in `check.yml` and pin the actions (see Setting up, steps 3 and 6).
+The shipped gallery is `vaporsoft-dev/nfty-gallery` (Pages: `https://vaporsoft-dev.github.io/nfty-gallery/`), signed in
+through the vaporsoft-dev OAuth app; `CommunityEndpoints.Default` in
+`src/Nfty.Core/Publish/Community/GitHubModels.cs` holds both, pinned by `Default_endpoints_are_filled`.

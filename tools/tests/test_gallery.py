@@ -26,6 +26,7 @@ import check  # noqa: E402
 import fetch  # noqa: E402
 import gallerylib as g  # noqa: E402
 import health  # noqa: E402
+import nfty_version  # noqa: E402
 
 RULES_CS = ROOT / "src" / "Nfty.Core" / "Publish" / "Community" / "ShareRules.cs"
 
@@ -830,6 +831,38 @@ class HealthTests(unittest.TestCase):
 
     def test_head_refuses_other_hosts(self):
         self.assertEqual("unknown", health.head("https://evil.example/x"))
+
+
+class NftyVersionTests(unittest.TestCase):
+    """check.yml resolves the CLI per run, so a new nfty release reaches the gallery untouched."""
+
+    TAGS = ["v2.7.1", "v2.7.0", "v2.6.0", "v2.5.0", "v2.7.2-beta", "nightly"]
+
+    def test_latest_release_at_or_above_the_floor_wins(self):
+        self.assertEqual("2.7.1", nfty_version.choose(self.TAGS, "2.6.0"))
+
+    def test_order_of_the_list_does_not_matter(self):
+        self.assertEqual("2.7.1", nfty_version.choose(list(reversed(self.TAGS)), "2.6.0"))
+
+    def test_pre_releases_and_odd_tags_are_ignored(self):
+        self.assertEqual("2.6.0", nfty_version.choose(["v2.7.2-beta", "nightly", "v2.6.0"], "2.6.0"))
+
+    def test_nothing_new_enough_is_an_error(self):
+        with self.assertRaises(ValueError):
+            nfty_version.choose(["v2.5.0", "v2.4.14"], "2.6.0")
+
+    def test_a_pin_holds_the_gallery_on_one_release(self):
+        self.assertEqual("2.6.0", nfty_version.choose(self.TAGS, "2.6.0", pinned="v2.6.0"))
+
+    def test_a_pin_older_than_the_floor_is_refused(self):
+        with self.assertRaises(ValueError):
+            nfty_version.choose(self.TAGS, "2.6.0", pinned="2.5.0")
+
+    def test_check_workflow_resolves_the_version_and_stores_none(self):
+        text = (ROOT / "tools" / "gallery" / "repo" / ".github" / "workflows" / "check.yml").read_text(encoding="utf-8")
+        self.assertIn("scripts/nfty_version.py", text)
+        self.assertIn("vars.NFTY_VERSION", text)
+        self.assertNotRegex(text, r"(?m)^\s*NFTY_VERSION:\s*\"")
 
 
 if __name__ == "__main__":
