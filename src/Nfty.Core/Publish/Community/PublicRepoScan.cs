@@ -60,8 +60,6 @@ public static partial class PublicRepoScan
     /// <summary>The preview asset every Release holds.</summary>
     public const string PreviewAsset = "preview.png";
 
-    /// <summary>The most protected tags one scan honors: three shares, each with a live and a pending version, with room to spare.</summary>
-    public const int MaxProtectedTags = ShareRules.MaxShares * 4;
 
     [GeneratedRegex(@"-v\d+$")]
     private static partial Regex VersionSuffix();
@@ -103,7 +101,7 @@ public static partial class PublicRepoScan
         var shares = snapshot.Manifest?.Shares ?? [];
         var listed = shares.Select(s => s.Release).Distinct(StringComparer.Ordinal).Take(ShareRules.MaxShares).ToList();
         var allowedTags = new HashSet<string>(listed, StringComparer.Ordinal);
-        foreach (var kept in (snapshot.ProtectedTags ?? []).Distinct(StringComparer.Ordinal).Take(MaxProtectedTags)) allowedTags.Add(kept);
+        foreach (var kept in (snapshot.ProtectedTags ?? []).Distinct(StringComparer.Ordinal)) allowedTags.Add(kept);
 
         // A share whose Release tag is not <slug>-v<N> is a manifest nfty did not write; what its files are is unknowable.
         var damaged = shares.Where(s => !IsVersionTag(s.Release, s.Slug)).Select(s => s.Release).ToHashSet(StringComparer.Ordinal);

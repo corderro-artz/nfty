@@ -20,14 +20,6 @@ public const string ManifestFile = "nfty-public.json";
 
 The manifest file at its root.
 
-### MaxProtectedTags { #f-maxprotectedtags }
-
-```csharp
-public const int MaxProtectedTags = 12;
-```
-
-The most protected tags one scan honors: three shares, each with a live and a pending version, with room to spare.
-
 ### PreviewAsset { #f-previewasset }
 
 ```csharp
