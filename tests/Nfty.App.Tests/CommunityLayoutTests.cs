@@ -290,6 +290,77 @@ public class CommunityLayoutTests
     }
 
     [AvaloniaFact]
+    public void A_pointer_click_on_a_tile_selects_it()
+    {
+        // The tile template reaches the page's command through $parent[UserControl]; no earlier test
+        // pressed a real tile, so nothing proved that binding resolves.
+        var dir = TempSheetDir();
+        using var vm = Page(CommunityFixtures.Listing([
+            CommunityFixtures.Entry("a", "Dragons"),
+            CommunityFixtures.Entry("b", "Robots", updated: CommunityFixtures.T0.AddDays(1))]), dir);
+        var (window, view) = Show(vm);
+        try
+        {
+            Assert.Null(vm.Selected);
+            var tile = view.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("ctile")).ToList()[1];
+            var center = tile.TranslatePoint(new Point(tile.Bounds.Width / 2, tile.Bounds.Height / 2), window)!.Value;
+
+            window.MouseDown(center, MouseButton.Left);
+            window.MouseUp(center, MouseButton.Left);
+            Settle(vm);
+
+            Assert.Same(tile.DataContext, vm.Selected);
+            Assert.True(vm.HasSelection);
+            Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == vm.Selected!.Name);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Starting_a_download_moves_nothing_in_the_rail()
+    {
+        var dir = TempSheetDir();
+        var body = new StallingBody();
+        var http = new ScriptedHttp((_, _) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            { Content = new StreamContent(body) }));
+        var cache = new FakeCommunityCache
+        {
+            Next = CommunityFixtures.Listing([CommunityFixtures.Entry("a", "Dragons")]),
+            PreviewPath = CommunityFixtures.Sheet(dir),
+            SetsDir = Path.Combine(dir, "sets"),
+        };
+        using var vm = new CommunityViewModel(cache, new CommunitySeen(Directory.CreateTempSubdirectory("nfty-seen-").FullName),
+            new FakeGitHubAccount(), new FakeNav(), new FakeDialogs(), new StatusService(), _ => Task.CompletedTask,
+            http: http.Client());
+        UiThreadWait.For(vm.PendingRefresh);
+        var (window, view) = Show(vm);
+        try
+        {
+            vm.SelectCommand.Execute(vm.Tiles[0]);
+            Settle(vm);
+            var stop = view.GetVisualDescendants().OfType<Button>().First(b => ReferenceEquals(b.Command, vm.StopDownloadCommand));
+            var download = view.GetVisualDescendants().OfType<Button>().First(b => ReferenceEquals(b.Command, vm.DownloadCommand));
+            var row = stop.GetVisualAncestors().OfType<Grid>().First();
+            var before = (RectIn(download, window), RectIn(stop, window));
+            Assert.Contains(row.Classes, c => c == "cgone");                  // reserved, not inked
+
+            _ = vm.DownloadCommand.ExecuteAsync(null);
+            UiThreadWait.For(body.Started.Task);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.DoesNotContain(row.Classes, c => c == "cgone");            // inked
+            Assert.Equal(before, (RectIn(download, window), RectIn(stop, window)));
+
+            vm.StopDownloadCommand.Execute(null);
+            UiThreadWait.For(vm.PendingDownload);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(row.Classes, c => c == "cgone");
+            Assert.Equal(before, (RectIn(download, window), RectIn(stop, window)));
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void The_wheel_steps_the_rail_through_the_preview_cells()
     {
         var dir = TempSheetDir();

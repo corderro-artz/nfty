@@ -15,7 +15,7 @@ internal sealed class FakeCommunityCache : ICommunityCache
     public CommunityListing? Cached { get; set; }
     public string? PreviewPath { get; set; }
     public HashSet<string> MissingPreviews { get; } = [];
-    public string SetsDir { get; } = Path.Combine(Path.GetTempPath(), "nfty-fake-community-sets");
+    public string SetsDir { get; set; } = Path.Combine(Path.GetTempPath(), "nfty-fake-community-sets");
 
     public Task<CommunityListing> RefreshAsync(CancellationToken ct)
     {
@@ -362,29 +362,12 @@ public class CommunityPageTests
     }
 
     [Fact]
-    public async Task Download_calls_the_handler_with_the_selected_entry()
+    public async Task Download_needs_a_selection()
     {
-        var got = new List<string>();
         using var vm = await CommunityFixtures.Opened(CommunityFixtures.Listing([E("a")]));
-        vm.DownloadHandler = e => { got.Add(e.Id); return Task.CompletedTask; };
-
         Assert.False(vm.DownloadCommand.CanExecute(null));          // nothing selected
         vm.SelectCommand.Execute(vm.Tiles[0]);
-        await vm.DownloadCommand.ExecuteAsync(null);
-
-        Assert.Equal(["7/a"], got);
-    }
-
-    [Fact]
-    public async Task The_default_download_says_it_is_not_available_yet()
-    {
-        var status = new StatusService();
-        using var vm = await CommunityFixtures.Opened(CommunityFixtures.Listing([E("a")]), status: status);
-        vm.SelectCommand.Execute(vm.Tiles[0]);
-
-        await vm.DownloadCommand.ExecuteAsync(null);
-
-        Assert.Contains("isn't available yet", status.Last);
+        Assert.True(vm.DownloadCommand.CanExecute(null));
     }
 
     [Fact]

@@ -187,6 +187,15 @@
           <StackPanel Grid.Row="2" Spacing="6">
             <!-- Why Download is off. Reserved two lines, so the buttons never move. -->
             <TextBlock Classes="cwarn" Height="30" Text="{Binding DownloadNote}" />
+            <!-- The download's progress and its Stop. Always laid out; inked only while the selected
+                 collection is the one downloading, so starting one moves nothing. -->
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Height="24"
+                  Classes.cgone="{Binding !ShowsDownloadProgress}">
+              <ProgressBar Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding DownloadFraction}"
+                           VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="tbtn" Content="Stop" Command="{Binding StopDownloadCommand}"
+                      ToolTip.Tip="Stop the download. Nothing is kept." />
+            </Grid>
             <Button Classes="accent" HorizontalAlignment="Stretch" Content="Download"
                     Command="{Binding DownloadCommand}"
                     ToolTip.Tip="Download this collection and open it in the Set browser." />

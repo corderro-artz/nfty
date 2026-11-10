@@ -86,6 +86,11 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     private Image<Rgba32>? _sheet;
     private SheetGrid? _grid;
     private CancellationTokenSource? _railCts;
+    private readonly HttpClient _http;
+    private readonly bool _ownsHttp;
+    private CancellationTokenSource? _downloadCts;
+    private string _downloadingId = "";
+    private string _failedId = "";
 
     /// <summary>Creates the page.</summary>
     /// <param name="cache">The list and its pictures.</param>
@@ -98,10 +103,14 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <param name="urls">Opens a web address; null makes a recorder that opens nothing.</param>
     /// <param name="gate">The decode limit; null makes a small one.</param>
     /// <param name="bridge">Image to bitmap conversion; null makes the standard one.</param>
+    /// <param name="http">The client downloads go through. It carries no token and no timeout (the download
+    /// has its own stall limit); null makes one the page owns and disposes.</param>
     public CommunityViewModel(ICommunityCache cache, ICommunitySeen seen, IGitHubAccount account,
         INavigationService nav, IDialogService dialogs, IStatusService status, Func<string, Task> openSet,
-        IUrlOpener? urls = null, ThumbnailGate? gate = null, IImageBridge? bridge = null)
+        IUrlOpener? urls = null, ThumbnailGate? gate = null, IImageBridge? bridge = null, HttpClient? http = null)
     {
+        _ownsHttp = http is null;
+        _http = http ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         _cache = cache;
         _seen = seen;
         _account = account;
@@ -112,11 +121,6 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         _urls = urls ?? new NoopUrlOpener();
         _gate = gate ?? new ThumbnailGate(2);
         _bridge = bridge ?? new ImageBridge();
-        DownloadHandler = _ =>
-        {
-            _status.Say("Downloading from the gallery isn't available yet.");
-            return Task.CompletedTask;
-        };
         UnshareHandler = _ =>
         {
             _status.Say("Unsharing isn't available yet.");
@@ -137,9 +141,6 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     /// <summary>Opens a downloaded Set in the Set browser.</summary>
     internal Func<string, Task> OpenSet { get; }
-
-    /// <summary>What Download does with the selected entry. The shell replaces it with the real download.</summary>
-    public Func<CommunityEntry, Task> DownloadHandler { get; set; }
 
     /// <summary>What Unshare does with the selected entry. The shell replaces it with the real removal.</summary>
     public Func<CommunityEntry, Task> UnshareHandler { get; set; }
@@ -691,18 +692,95 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the selected entry is the signed-in account's own.</summary>
     public bool CanUnshareSelected => Selected is { IsMine: true };
 
-    /// <summary>The sentence under the rail's buttons: why Download is off, or empty.</summary>
-    public string DownloadNote => IsOffline && _listing?.Notice is { } n ? n : "";
+    /// <summary>
+    /// The sentence under the rail's buttons: why the last download of the selected collection failed
+    /// (the gallery's own words), else why Download is off, else empty. One reserved line says all three.
+    /// </summary>
+    public string DownloadNote =>
+        DownloadFailure.Length > 0 && Selected?.Entry.Id == _failedId ? DownloadFailure
+        : IsOffline && _listing?.Notice is { } n ? n : "";
 
-    private bool CanDownload() => Selected is not null && !IsOffline;
+    /// <summary>The sentence the last failed download ended with; empty after a success or a stop.</summary>
+    [ObservableProperty]
+    private string _downloadFailure = "";
+
+    /// <summary>Whether a download is running. Only one runs at a time, so Download is off meanwhile.</summary>
+    [ObservableProperty]
+    private bool _isDownloading;
+
+    /// <summary>How much of the running download has arrived, 0 to 1.</summary>
+    [ObservableProperty]
+    private double _downloadFraction;
+
+    /// <summary>Whether the rail's progress row is inked: a download is running and it is the selected collection's.</summary>
+    public bool ShowsDownloadProgress => IsDownloading && Selected?.Entry.Id == _downloadingId;
+
+    /// <summary>The download this page last started, so a test (or a caller) can wait for it.</summary>
+    internal Task PendingDownload { get; private set; } = Task.CompletedTask;
+
+    partial void OnDownloadFailureChanged(string value) => OnPropertyChanged(nameof(DownloadNote));
+
+    partial void OnIsDownloadingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowsDownloadProgress));
+        DownloadCommand.NotifyCanExecuteChanged();
+        StopDownloadCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanDownload() => Selected is not null && !IsOffline && !IsDownloading;
 
     private bool CanReport() => Selected is { } t && ReportUrl(t.Entry) is not null;
 
     private bool CanUnshare() => CanUnshareSelected;
 
-    /// <summary>Downloads the selected collection.</summary>
+    /// <summary>Downloads the selected collection, proves it is what the gallery lists, and opens it in the Set browser.</summary>
     [RelayCommand(CanExecute = nameof(CanDownload))]
-    private Task Download() => Selected is { } t ? DownloadHandler(t.Entry) : Task.CompletedTask;
+    private Task Download()
+    {
+        if (Selected is not { } t || IsDownloading) return Task.CompletedTask;   // a disabled button is a label
+        return PendingDownload = DownloadCoreAsync(t.Entry);
+    }
+
+    /// <summary>Stops the running download. What it had received is thrown away.</summary>
+    [RelayCommand(CanExecute = nameof(IsDownloading))]
+    private void StopDownload() => _downloadCts?.Cancel();
+
+    private async Task DownloadCoreAsync(CommunityEntry entry)
+    {
+        var cts = _downloadCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+        _downloadingId = _failedId = entry.Id;
+        DownloadFailure = "";
+        DownloadFraction = 0;
+        IsDownloading = true;
+        string? path = null;
+        try
+        {
+            path = await CommunityDownload.FetchAsync(_http, entry, _cache.SetsDir,
+                new Progress<double>(f => DownloadFraction = f), cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            if (!_cts.IsCancellationRequested) _status.Say("Download stopped.");
+        }
+        catch (CommunityException ex)
+        {
+            DownloadFailure = ex.Message;        // a ShareRules sentence, shown verbatim
+        }
+        catch (Exception)
+        {
+            // Not worth an exception's words on screen.
+            DownloadFailure = ShareRules.Unreachable;
+        }
+        finally
+        {
+            IsDownloading = false;
+            DownloadFraction = 0;
+            if (ReferenceEquals(_downloadCts, cts)) _downloadCts = null;
+            cts.Dispose();
+        }
+        // Opens behind its own busy card (and reports its own failure), after the download row has gone.
+        if (path is not null && !_cts.IsCancellationRequested) await OpenSet(path);
+    }
 
     /// <summary>Opens the gallery's report form for the selected collection.</summary>
     [RelayCommand(CanExecute = nameof(CanReport))]
@@ -719,6 +797,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(CanUnshareSelected));
         OnPropertyChanged(nameof(DownloadNote));
+        OnPropertyChanged(nameof(ShowsDownloadProgress));
         DownloadCommand.NotifyCanExecuteChanged();
         ReportCommand.NotifyCanExecuteChanged();
         UnshareCommand.NotifyCanExecuteChanged();
@@ -741,6 +820,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         _account.Changed -= OnAccountChanged;
         _cts.Cancel();
         _railCts?.Cancel();
+        if (_ownsHttp) _http.Dispose();
         foreach (var t in _byId.Values) t.Dispose();
         _byId.Clear();
         _sheet?.Dispose();

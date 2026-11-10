@@ -60,7 +60,11 @@ public static class ServiceRegistration
             sp.GetRequiredService<ICommunityCache>(), sp.GetRequiredService<ICommunitySeen>(),
             sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<INavigationService>(),
             sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IStatusService>(),
-            path => OpenDownloadedSet(sp, path), sp.GetRequiredService<IUrlOpener>()));
+            path => OpenDownloadedSet(sp, path), sp.GetRequiredService<IUrlOpener>(),
+            http: sp.GetRequiredService<CommunityHttp>().Client));
+        // The one unauthenticated client downloads use: no token ever rides on it, and no overall
+        // timeout (CommunityDownload stalls out on its own when bytes stop arriving).
+        services.AddSingleton<CommunityHttp>();
         services.AddSingleton<IUrlOpener, NoopUrlOpener>();
         // Which files Windows opens with nfty: the registrar on Windows, a refusal elsewhere (the
         // Settings card hides its SYSTEM tab then). Reads only until the user presses Apply.
