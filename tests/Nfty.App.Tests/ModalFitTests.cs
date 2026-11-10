@@ -100,6 +100,20 @@ public class ModalFitTests
             size.Height * ShellViewModel.BaseScale + Chrome);
     }
 
+    [AvaloniaTheory]
+    [InlineData("extras")]
+    [InlineData("replace")]
+    [InlineData("already")]
+    public async System.Threading.Tasks.Task The_share_card_fits_the_smallest_window(string state)
+    {
+        // NOT on the may-scroll list: only its block's row list scrolls, and that list is inside a fixed-height block.
+        var (vm, rig) = await ShareDialogLayoutTests.StateAsync(state);
+        using var _ = rig; using var __ = vm;
+        var size = Measure(new Views.ShareDialogView { DataContext = vm });
+        Fits($"The share card ({state})",
+            size.Width * ShellViewModel.BaseScale + 24, size.Height * ShellViewModel.BaseScale + Chrome);
+    }
+
     [AvaloniaFact]
     public void The_quick_reference_sheet_fits_the_smallest_window()
     {

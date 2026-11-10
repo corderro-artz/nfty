@@ -1,0 +1,203 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nfty.App.ViewModels"
+             x:Class="Nfty.App.Views.ShareDialogView"
+             x:DataType="vm:ShareDialogViewModel"
+             RenderOptions.BitmapInterpolationMode="None"
+             Focusable="True">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+  </UserControl.KeyBindings>
+  <!-- A split card like the wizards, but it does NOT scroll: its height is a property of the design
+       (every state of the one reserved block is the same height). Only that block's row list may
+       scroll, rows only, with Remove these... outside it. Left = what leaves the machine and what
+       the gallery will make of it; right = the listing, and the one reserved block. -->
+  <Border Classes="modal monoform split share">
+    <Grid RowDefinitions="*,Auto">
+      <Border Grid.Row="0" Classes="modal-body">
+        <StackPanel>
+          <Grid ColumnDefinitions="*,Auto" Height="26">
+            <TextBlock Grid.Column="0" Text="Share with the community" Classes="m-h" Margin="0" VerticalAlignment="Center" />
+            <!-- ONE SLOT, TWO STATES: the chip and the Connect button share a cell and swap ink. -->
+            <Grid Grid.Column="1" VerticalAlignment="Center">
+              <Border Classes="idchip" Classes.cgone="{Binding IsSignedOut}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Classes="ck" Text="GITHUB" />
+                  <TextBlock Classes="cvl" Text="{Binding GitHubChip}" />
+                </StackPanel>
+              </Border>
+              <Button Classes="tbtn sbtn" Content="Connect GitHub…" Command="{Binding ConnectGitHubCommand}"
+                      Classes.cgone="{Binding IsSignedIn}" />
+            </Grid>
+          </Grid>
+
+          <Grid Classes="wizcols" ColumnDefinitions="*,25,1,25,*" Margin="0,8,0,0">
+            <Rectangle Grid.Column="2" Classes="wizrule" />
+
+            <!-- WHAT LEAVES THE MACHINE -->
+            <StackPanel Grid.Column="0" Spacing="10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="WHAT LEAVES THIS MACHINE" Classes="plabel" Margin="0,0,0,4" />
+                <CheckBox Content="3D models" IsChecked="{Binding Models}" IsEnabled="{Binding ModelsEnabled}"
+                          ToolTip.Tip="3D models of every asset, as cooked. Dimmed on a Set cooked without them." />
+                <TextBlock Classes="sline" Margin="30,-4,0,0" Text="{Binding ModelsNote}" Height="14" />
+                <CheckBox Content="Include source CookBook" IsChecked="{Binding IncludeCookBook}"
+                          IsEnabled="{Binding IncludeCookBookEnabled}"
+                          ToolTip.Tip="Lets anyone regenerate the collection and cook their own. Offered only for the CookBook that made this Set: the gallery refuses any other." />
+                <TextBlock Classes="sline" Margin="30,-4,0,0" Text="{Binding CookBookNote}" Height="14" />
+              </StackPanel>
+
+              <!-- THE MANIFEST: SetExporter.Plan, the list the share writes. -->
+              <StackPanel Spacing="3">
+                <TextBlock Text="{Binding PlanText}" Classes="sline" TextWrapping="Wrap" MaxLines="2" Height="28" />
+                <TextBlock Text="{Binding PlanSize}" Classes="sline" Height="14" />
+              </StackPanel>
+
+              <StackPanel Spacing="4">
+                <TextBlock Text="LIMITS" Classes="plabel" />
+                <ItemsControl ItemsSource="{Binding LimitRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ShareLimitRow">
+                      <TextBlock Classes="sline limit" Classes.over="{Binding IsOver}" Text="{Binding Text}"
+                                 ToolTip.Tip="{Binding Tip}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- THE LISTING -->
+            <StackPanel Grid.Column="4" Spacing="8">
+              <StackPanel Spacing="4">
+                <TextBlock Text="NAME" Classes="plabel" />
+                <TextBox Text="{Binding Name}" MaxLength="64" />
+                <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,2,0,0">
+                  <Border Classes="idchip"><TextBlock Text="{Binding Slug}" Classes="mono" FontSize="10.5" /></Border>
+                  <TextBlock Text="— the identifier, derived from the collection" Classes="derived" Opacity="0.9" VerticalAlignment="Center" />
+                </StackPanel>
+              </StackPanel>
+
+              <StackPanel Spacing="4">
+                <TextBlock Text="DESCRIPTION" Classes="plabel" />
+                <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="44" MaxLength="500"
+                         TextWrapping="Wrap" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         VerticalContentAlignment="Top" Padding="11,5" />
+              </StackPanel>
+
+              <StackPanel Spacing="4">
+                <!-- The refusal note shares the label row with the counter: one line, always laid out. -->
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                  <TextBlock Grid.Column="0" Text="TAGS" Classes="plabel" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="swarn" TextTrimming="CharacterEllipsis" Text="{Binding TagNote}"
+                             VerticalAlignment="Center" ToolTip.Tip="{Binding TagNote}" />
+                  <TextBlock Grid.Column="2" Classes="sline" Text="{Binding TagsCount}" VerticalAlignment="Center" />
+                </Grid>
+                <!-- Reserved: two rows of chips, or the sentence saying there are none. -->
+                <Panel Height="54">
+                  <ItemsControl ItemsSource="{Binding TagChips}" Classes.cgone="{Binding !HasTags}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ShareTagChip">
+                        <Button Classes="stag" Classes.on="{Binding IsOn}" Content="{Binding Name}"
+                                Command="{Binding $parent[ItemsControl].((vm:ShareDialogViewModel)DataContext).ToggleTagCommand}"
+                                CommandParameter="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="sline" Text="{x:Static vm:ShareDialogViewModel.NoTagsText}"
+                             Classes.cgone="{Binding HasTags}" />
+                </Panel>
+              </StackPanel>
+
+              <!-- THE ONE RESERVED BLOCK: the same height in every state, so a user at 2 of 3 and a
+                   user at 3 of 3 see the same card. Rows may scroll inside it; nothing else does. -->
+              <Border Classes="shareblock">
+                <Panel>
+                  <!-- Extras / repo trouble -->
+                  <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsExtrasBlock}">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                      <TextBlock Grid.Column="0" Classes="swarn" Height="30" TextWrapping="Wrap" MaxLines="2" Text="{Binding BlockHeading}" />
+                      <Button Grid.Column="1" Classes="tbtn sbtn" Content="Remove these…" VerticalAlignment="Top"
+                              MinWidth="104" Command="{Binding RemoveExtrasCommand}" Classes.cgone="{Binding !CanRemoveExtras}" />
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" x:Name="ExtrasScroll" HorizontalScrollBarVisibility="Disabled" Margin="0,4,0,0">
+                      <ItemsControl ItemsSource="{Binding Extras}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ShareExtraRow">
+                            <TextBlock Classes="sline" Height="18" TextTrimming="CharacterEllipsis" Text="{Binding Text}"
+                                       ToolTip.Tip="{Binding Text}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </Grid>
+
+                  <!-- Somebody has it already -->
+                  <TextBlock IsVisible="{Binding IsDuplicateBlock}" Classes="swarn" TextWrapping="Wrap" Text="{Binding BlockHeading}" />
+
+                  <!-- One of your shares -->
+                  <Grid IsVisible="{Binding IsAlreadySharedBlock}" RowDefinitions="Auto,Auto,*" RowSpacing="6">
+                    <TextBlock Grid.Row="0" Classes="sline" Text="{Binding BlockHeading}" />
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10" DataContext="{Binding AlreadyShared}"
+                          x:DataType="vm:ShareShareRow">
+                      <Border Grid.Column="0" Classes="tile spreview">
+                        <Image Source="{Binding Tile.Preview}" Stretch="Uniform" />
+                      </Border>
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Classes="cname" Text="{Binding Name}" />
+                        <TextBlock Classes="cmeta" Text="{Binding DatesText}" />
+                      </StackPanel>
+                    </Grid>
+                    <CheckBox Grid.Row="2" Content="Replace the shared version" IsChecked="{Binding ReplaceSharedVersion}"
+                              VerticalAlignment="Top"
+                              ToolTip.Tip="Sharing again makes a new version and swaps it in. The old one is removed once the gallery lists the new." />
+                  </Grid>
+
+                  <!-- At the limit -->
+                  <Grid IsVisible="{Binding IsReplaceBlock}" RowDefinitions="Auto,*" RowSpacing="4">
+                    <TextBlock Grid.Row="0" Classes="sline" TextTrimming="CharacterEllipsis" Height="16" Text="{Binding BlockHeading}" />
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding ReplaceChoices}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShareShareRow">
+                          <Button Classes="ghost srow" Classes.on="{Binding IsSelected}" Command="{Binding ChooseCommand}">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                              <Ellipse Grid.Column="0" Classes="sradio" Classes.on="{Binding IsSelected}" />
+                              <Border Grid.Column="1" Classes="tile spreview sm">
+                                <Image Source="{Binding Tile.Preview}" Stretch="Uniform" />
+                              </Border>
+                              <TextBlock Grid.Column="2" Classes="cname" VerticalAlignment="Center" Text="{Binding Name}" />
+                              <TextBlock Grid.Column="3" Classes="cmeta" VerticalAlignment="Center" Text="{Binding SizeText}" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Grid>
+                </Panel>
+              </Border>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="1" Classes="modal-foot">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+          <!-- The reason Share waits, always laid out; ink only. -->
+          <TextBlock Grid.Column="0" Classes="swarn" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                     Text="{Binding ShareReason}" ToolTip.Tip="{Binding ShareReason}" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Classes="tbtn" />
+            <Button Command="{Binding ShareCommand}" Classes="accent" ToolTip.Tip="{Binding ShareButtonTip}" MinWidth="96">
+              <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                <Path Classes="ico sm" Data="{StaticResource IconShare}" />
+                <TextBlock Text="Share" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

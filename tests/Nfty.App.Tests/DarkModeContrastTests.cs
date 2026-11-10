@@ -587,6 +587,14 @@ public class DarkModeContrastTests
             new NoopFolderRevealer(), dialogs)
         { Tab = ExportTab.Images, MakeSpriteSheet = true, SheetColumns = 1, SheetRows = 1 };
         yield return ("dialog-export-sheet-refused", new Views.ExportDialogView { DataContext = sheetRefused }, null);
+        // The share card in its riskiest Editing state: a warning limit row (canvas, size) AND the extras block with a
+        // scrolling list, so WarningBrush text, the dimmed checkboxes and the disabled accent button are all scored.
+        var shareTask = ShareDialogLayoutTests.StateAsync("extras", r => r.Checker.Result = () => ShareFixtures.Ok(
+            600, 600, 214L * 1024 * 1024, problems: Nfty.Core.Publish.Community.ShareRules.CanvasTooLarge(600, 600)));
+        UiThreadWait.For(shareTask);
+        var (shareVm, shareRig) = shareTask.Result;
+        yield return ("dialog-share-extras", new Views.ShareDialogView { DataContext = shareVm }, () => { shareVm.Dispose(); shareRig.Dispose(); });
+
 
         var sealMismatch = new ExportDialogViewModel(VisualCapture.ExportCaptureSet(), new FilePickerService(),
             new NoopFolderRevealer(), dialogs)

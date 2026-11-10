@@ -170,6 +170,14 @@ public static class ShareRules
     public static string HistoryTooLarge(long kb) =>
         $"Your nfty-public's history holds about {N((kb + 512) / 1024)} MB of deleted files. Delete the repository on GitHub and share again; nfty will make a fresh one.";
 
+    /// <summary>Sharing needs a GitHub account and none is connected.</summary>
+    public static string NotConnected => "Connect GitHub to share.";
+
+    /// <summary>A size as a person reads it against a limit: whole megabytes print whole ("214 MB").</summary>
+    /// <param name="bytes">The count.</param>
+    /// <returns>The size, invariant.</returns>
+    public static string SizeWords(long bytes) => Size(bytes);
+
     /// <summary>The GitHub token is gone or refused.</summary>
     public static string Reconnect => "Reconnect GitHub to share.";
 

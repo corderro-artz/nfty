@@ -106,6 +106,17 @@
           <TextBlock Text="Export…" />
         </StackPanel>
       </Button>
+
+      <!-- Beside Export: both send this Set somewhere. Disabled with its reason on the tooltip (a
+           sealed Set, a Set with no files); signed out is NOT a reason - the card opens on its
+           sign-in state. -->
+      <Button Classes="tbtn" Command="{Binding ShareCommand}"
+              VerticalAlignment="Center" ToolTip.Tip="{Binding ShareTip}">
+        <StackPanel Orientation="Horizontal" Spacing="7">
+          <Path Classes="ico xs" Data="{StaticResource IconShare}" />
+          <TextBlock Text="Share…" />
+        </StackPanel>
+      </Button>
     </StackPanel>
     </Grid>
 

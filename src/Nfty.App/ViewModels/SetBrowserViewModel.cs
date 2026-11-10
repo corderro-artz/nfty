@@ -293,6 +293,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     private readonly IParallelismSetting? _threads;
     private readonly IPublishingSettings? _publishing;
     private readonly IClipboardService? _clipboard;
+    private readonly Func<ShareSource, ShareDialogViewModel>? _shareCard;
 
     /// <summary>
     /// The book this Set was cooked from, resolved into what pricing an asset needs — or null,
@@ -431,15 +432,18 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     /// <param name="threads">The worker-thread setting: sizes the thumbnail decode limit and the export.</param>
     /// <param name="publishing">Where the export dialog's UPLOAD page uploads to; null leaves it unavailable.</param>
     /// <param name="clipboard">Where the export dialog copies an uploaded address to.</param>
+    /// <param name="shareCard">Builds the community share card over a Set; null leaves Share… unavailable.</param>
     public SetBrowserViewModel(LoadedSet set, IFilePickerService? picker = null,
         IDialogService? dialogs = null, IStatusService? status = null,
         IFolderRevealer? revealer = null, Func<IEnumerable<string>>? bookCandidates = null,
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, INavigationService? nav = null,
         IImageBridge? bridge = null, IParallelismSetting? threads = null,
-        IPublishingSettings? publishing = null, IClipboardService? clipboard = null)
+        IPublishingSettings? publishing = null, IClipboardService? clipboard = null,
+        Func<ShareSource, ShareDialogViewModel>? shareCard = null)
     {
         _publishing = publishing;
         _clipboard = clipboard;
+        _shareCard = shareCard;
         _rise = rise; _nav = nav; _bridge = bridge;
         _bookCandidates = bookCandidates;
         RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(ShownRarity)));
@@ -844,6 +848,33 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
                 // dialog also looks beside the Set, and accepts only the one that hashes right.
                 _set.Manifest.CookbookSha256, _bookCandidates?.Invoke() ?? Array.Empty<string>(), _threads,
                 _publishing, _clipboard));
+
+    /// <summary>Whether this Set can be shared with the community: the same gate as Export, and a card to open.</summary>
+    public bool CanShare => CanExport && _shareCard is not null;
+
+    /// <summary>Why Share… is unavailable, in <see cref="Nfty.Core.Publish.Community.ShareRules"/>' words, or empty.</summary>
+    /// <remarks>Signed out is NOT a reason: the card opens on its sign-in state rather than the button hiding.</remarks>
+    public string ShareReason =>
+        IsSealed ? Nfty.Core.Publish.Community.ShareRules.Sealed
+        : _set.SourceDirectory.Length == 0 ? Nfty.Core.Publish.Community.ShareRules.NotASet
+        : _shareCard is null ? Nfty.Core.Publish.Community.ShareRules.NotSetUp
+        : "";
+
+    /// <summary>The tooltip on Share…: what it does, or why it can't.</summary>
+    public string ShareTip => ShareReason.Length > 0
+        ? ShareReason
+        : "Share this Set with the community gallery: the art and metadata, optionally 3D models and the source CookBook.";
+
+    /// <summary>Opens the community share card for this Set.</summary>
+    [RelayCommand(CanExecute = nameof(CanShare))]
+    private async Task ShareAsync()
+    {
+        string? first = _set.Items.Count > 0 ? _set.Items[0].ImagePath : null;
+        var source = new ShareSource(_set.SourceDirectory, _set.Manifest, first,
+            (_bookCandidates?.Invoke() ?? Array.Empty<string>()).ToList());
+        using var card = _shareCard!(source);
+        await _dialogs.ShowAsync<object>(card);
+    }
 
     /// <summary>Frees every decoded thumbnail and the underlying Set. Rows that were never realized
     /// decoded nothing, and disposing them is a no-op — reading <c>r.Thumbnail</c> here to dispose

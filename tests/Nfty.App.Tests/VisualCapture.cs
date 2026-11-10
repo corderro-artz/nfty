@@ -1528,6 +1528,36 @@ public partial class VisualCapture
         window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, fileName), PngBitmapEncoderOptions.Default);
     }
 
+    /// <summary>The community share card in its Editing states, at the area a modal really gets: the
+    /// riskiest (a warning limit row and the extras block with a scrolling list) and the plain one.</summary>
+    [AvaloniaFact]
+    public void Capture_share_card()
+    {
+        if (Dir is null) return;   // inert unless explicitly capturing
+
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            foreach (var state in new[] { "extras", "none", "replace", "already" })
+            {
+                var task = ShareDialogLayoutTests.StateAsync(state, r =>
+                {
+                    if (state == "extras")
+                        r.Checker.Result = () => ShareFixtures.Ok(600, 600, 214L * 1024 * 1024,
+                            problems: Nfty.Core.Publish.Community.ShareRules.CanvasTooLarge(600, 600));
+                });
+                UiThreadWait.For(task);
+                var (vm, rig) = task.Result;
+                using (rig)
+                using (vm)
+                {
+                    if (state == "extras") { vm.Description = "Pixel chests, fresh from the kitchen."; vm.ToggleTagCommand.Execute(vm.TagChips[0]); }
+                    Capture(new Views.ShareDialogView { DataContext = vm }, variant, $"share-{state}-{key}.png");
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// The states no fixture had ever built. This project's worst defect — an unresolved
     /// <c>WarningBrush</c> leaving "1 problem" as black text at 1.14:1 — survived every audit for

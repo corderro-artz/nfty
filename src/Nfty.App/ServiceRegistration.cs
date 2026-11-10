@@ -223,7 +223,29 @@ public static class ServiceRegistration
             bridge: sp.GetRequiredService<IImageBridge>(),
             threads: sp.GetRequiredService<IParallelismSetting>(),
             publishing: sp.GetRequiredService<IPublishingSettings>(),
-            clipboard: sp.GetRequiredService<IClipboardService>())));
+            clipboard: sp.GetRequiredService<IClipboardService>(),
+            shareCard: sp.GetRequiredService<Func<ShareSource, ShareDialogViewModel>>())));
+
+        // The community share card. Connect GitHub… opens Settings on its PUBLISHING page, where the
+        // device flow lives, so there is one place the account is connected. The run itself is
+        // supplied by the next step: until then Share stays disabled saying so.
+        services.AddSingleton<IShareRepo>(sp => new GitHubShareRepo(sp.GetRequiredService<IGitHubAccount>()));
+        services.AddSingleton<IShareChecker>(sp => new ShareChecker(sp.GetRequiredService<IParallelismSetting>()));
+        services.AddSingleton<Func<ShareSource, ShareDialogViewModel>>(sp => source => new ShareDialogViewModel(
+            source, sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IGitHubAccount>(),
+            sp.GetRequiredService<ICommunityCache>(), sp.GetRequiredService<IShareRepo>(),
+            sp.GetRequiredService<IShareChecker>(), bridge: sp.GetRequiredService<IImageBridge>(),
+            // The gallery's tags.json arrives with ICommunityCache.Tags in a follow-up; until then none are offered.
+            tags: () => [],
+            connect: () => sp.GetRequiredService<IDialogService>().ShowAsync<object>(
+                new SettingsDialogViewModel(sp.GetRequiredService<IDialogService>(),
+                    sp.GetRequiredService<IParallelismSetting>(), sp.GetRequiredService<IAppSettings>(),
+                    sp.GetRequiredService<IThemeService>(), sp.GetRequiredService<IPublishingSettings>(),
+                    sp.GetRequiredService<IRecentsService>(), sp.GetRequiredService<IStateStore>(),
+                    sp.GetRequiredService<IFolderRevealer>(), sp.GetRequiredService<IViewerWindowState>(),
+                    sp.GetRequiredService<IEditorViewState>(), sp.GetRequiredService<IFileAssociations>(),
+                    sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<IUrlOpener>(),
+                    sp.GetRequiredService<IClipboardService>()) { Tab = SettingsTab.Publishing })));
 
         return services;
     }

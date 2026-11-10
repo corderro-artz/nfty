@@ -169,6 +169,9 @@
   <!-- Two sliders, each knob on its own track at a different position. Not a cog: a cog at 14px is a gray blob, and these two knobs sit beside Help's circle and the zoom plus and minus without echoing either. -->
   <StreamGeometry x:Key="IconSettings">M4 8h9M17 8h3M4 16h3M11 16h9M17 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM11 16a2 2 0 1 1-4 0 2 2 0 0 1 4 0z</StreamGeometry>
 
+  <!-- Three nodes joined at one: send this somewhere other people can see it. Not IconUpload's tray, which is a file leaving the machine. -->
+  <StreamGeometry x:Key="IconShare">M21 5a3 3 0 1 1-6 0a3 3 0 0 1 6 0M9 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0M21 19a3 3 0 1 1-6 0a3 3 0 0 1 6 0M8.6 10.5l6.8-4M8.6 13.5l6.8 4</StreamGeometry>
+
   <!-- The collection's ticker symbol: a type T in a frame. Not IconTag (one item's name). -->
   <StreamGeometry x:Key="IconSymbol">M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8h8M12 8v9</StreamGeometry>
 

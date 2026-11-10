@@ -401,14 +401,22 @@ public static class CommunityShare
 
     private static void ValidateWords(ShareRequest r)
     {
-        if (string.IsNullOrWhiteSpace(r.Name) || r.Name.Length > ShareRules.MaxNameLength)
-            throw new CommunityException(ShareRules.NameLength);
-        if ((r.Description?.Length ?? 0) > ShareRules.MaxDescriptionLength)
-            throw new CommunityException(ShareRules.DescriptionLength);
-        if (HasLink(r.Name) || HasLink(r.Description ?? ""))
-            throw new CommunityException(ShareRules.NoLinks);
-        if ((r.Tags?.Count ?? 0) > ShareRules.MaxTags)
-            throw new CommunityException(ShareRules.TooManyTags);
+        if (ListingProblem(r.Name, r.Description, r.Tags) is { } problem) throw new CommunityException(problem);
+    }
+
+    /// <summary>The first thing wrong with a listing's words, in <see cref="ShareRules"/>' sentences, or null when they are fine.</summary>
+    /// <param name="name">The listing's name.</param>
+    /// <param name="description">The listing's description, or null for none.</param>
+    /// <param name="tags">The listing's tags, or null for none.</param>
+    /// <returns>The sentence, or null.</returns>
+    /// <remarks>One rule for the run and for the share card, so the card cannot enable Share for words the run refuses.</remarks>
+    public static string? ListingProblem(string? name, string? description, IReadOnlyList<string>? tags)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > ShareRules.MaxNameLength) return ShareRules.NameLength;
+        if ((description?.Length ?? 0) > ShareRules.MaxDescriptionLength) return ShareRules.DescriptionLength;
+        if (HasLink(name) || HasLink(description ?? "")) return ShareRules.NoLinks;
+        if ((tags?.Count ?? 0) > ShareRules.MaxTags) return ShareRules.TooManyTags;
+        return null;
     }
 
     private static bool HasLink(string s) =>

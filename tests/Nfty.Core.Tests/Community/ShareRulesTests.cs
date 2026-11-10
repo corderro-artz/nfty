@@ -67,6 +67,23 @@ public class ShareRulesTests
         finally { CultureInfo.CurrentCulture = old; }
     }
 
+    [Fact] public void The_card_sentences_are_pinned()
+    {
+        Assert.Equal("Connect GitHub to share.", ShareRules.NotConnected);
+        Assert.Equal("200 MB", ShareRules.SizeWords(ShareRules.MaxSetBytes));
+        Assert.Equal("4 MB", ShareRules.SizeWords(4L * 1024 * 1024));
+    }
+
+    [Fact] public void Listing_words_are_judged_by_one_rule_for_the_run_and_the_card()
+    {
+        Assert.Null(CommunityShare.ListingProblem("Chests", "", ["props"]));
+        Assert.Equal(ShareRules.NameLength, CommunityShare.ListingProblem("  ", "", []));
+        Assert.Equal(ShareRules.NameLength, CommunityShare.ListingProblem(new string('a', 65), "", []));
+        Assert.Equal(ShareRules.DescriptionLength, CommunityShare.ListingProblem("A", new string('a', 501), []));
+        Assert.Equal(ShareRules.NoLinks, CommunityShare.ListingProblem("A", "see www.example.com", []));
+        Assert.Equal(ShareRules.TooManyTags, CommunityShare.ListingProblem("A", "", ["a", "b", "c", "d", "e", "f"]));
+    }
+
     [Fact] public void Limits_match_the_spec()
     {
         Assert.Equal(200L * 1024 * 1024, ShareRules.MaxSetBytes);

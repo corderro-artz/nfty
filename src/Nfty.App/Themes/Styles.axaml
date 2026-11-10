@@ -3932,8 +3932,8 @@
     <Setter Property="Padding" Value="14,10" />
   </Style>
   <Style Selector="Button.insb">
-    <Setter Property="Width" Value="28" />
-    <Setter Property="Height" Value="28" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineStrongBrush}" />
@@ -4757,8 +4757,8 @@
     <Setter Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
   </Style>
   <Style Selector="Button.ttool.bar">
-    <Setter Property="Width" Value="28" />
-    <Setter Property="Height" Value="28" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
   </Style>
   <!-- "2D" / "3D": which pane a footer group governs, in the idchip shape. -->
   <Style Selector="Border.idchip.vtag">
@@ -5071,5 +5071,101 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
     <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="Padding" Value="4" />
+  </Style>
+
+  <!-- ===================== The community share card ===================== -->
+  <!-- This card is the one split modal with a hard height and no scroller, so its body gives back padding. Declared
+       after the split rule it overrides (equal specificity, last wins). -->
+  <Style Selector="Border.modal.split.share Border.modal-body">
+    <Setter Property="Padding" Value="24,14" />
+  </Style>
+  <!-- A line of the card's small print: limits, the manifest, notes. Font size and line box travel together. -->
+  <Style Selector="TextBlock.sline">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.sline.limit">
+    <Setter Property="Height" Value="18" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.sline.over">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.swarn">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="LineHeight" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <!-- The ONE reserved block. Its height is stated once, so every state is the same card. -->
+  <Style Selector="Border.shareblock">
+    <Setter Property="Height" Value="108" />
+    <Setter Property="Padding" Value="9,7" />
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSm}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.spreview">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.spreview.sm">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+  </Style>
+  <Style Selector="Button.sbtn">
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="26" />
+    <Setter Property="FontSize" Value="11.5" />
+  </Style>
+  <!-- A tag chip: a toggle, RadiusXs like every badge. Both states carry their own ground and set the
+       presenter explicitly, or Fluent's hover hands back its stock blue. -->
+  <Style Selector="Button.stag">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Margin" Value="0,0,5,5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.stag /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+  </Style>
+  <Style Selector="Button.stag:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.stag.on /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.srow">
+    <Setter Property="Padding" Value="4,2" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Height" Value="24" />
+  </Style>
+  <Style Selector="Ellipse.sradio">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Stroke" Value="{DynamicResource LineStrongBrush}" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Ellipse.sradio.on">
+    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
   </Style>
 </Styles>
