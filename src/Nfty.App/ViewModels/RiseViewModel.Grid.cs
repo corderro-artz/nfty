@@ -139,7 +139,7 @@ public sealed partial class RiseViewModel
         if (!CanApplyGrid())
         {
             // Said, not swallowed: a press that reaches here past a dimmed button is a job still running.
-            if (GridProblem.Length == 0) _status.Say("Wait for the running job to finish, then apply the grid.");
+            if (GridProblem.Length == 0) _status.Warn("Wait for the running job to finish, then apply the grid.");
             return;
         }
         if (ProblemFor(pic, out var grid) is not null) return;

@@ -167,7 +167,7 @@
     <!-- The DNA-space table. One row per recipe, on one line, paged rather than scrolled. -->
     <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="0">
       <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,7">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><Path Classes="ico xs" Data="{StaticResource IconDna}" /><TextBlock Classes="sub-h" Text="DNA SPACE" VerticalAlignment="Center" /></StackPanel>
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center"><Path Classes="ico sm" Data="{StaticResource IconDna}" /><TextBlock Classes="sub-h" Text="DNA SPACE" VerticalAlignment="Center" /></StackPanel>
         <!-- The pager is present at one page as well as ten - disabled, never absent - so a resize
              that changes the page count does not move anything beside it. -->
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">

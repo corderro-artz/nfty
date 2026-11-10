@@ -436,7 +436,7 @@
             </ScrollViewer>
 
           <Border Grid.Row="2" Classes="rail-foot">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
               <Button Grid.Column="0" Classes="savebtn" HorizontalAlignment="Stretch"
                       Command="{Binding SaveImageCommand}"
                       ToolTip.Tip="Write the selected asset's PNG somewhere of your choosing">
@@ -449,6 +449,9 @@
               <Button Grid.Column="1" Classes="savebtn" Command="{Binding PopOutCommand}"
                       ToolTip.Tip="{x:Static svc:KeyHints.PopOut}">
                 <Path Classes="ico xs" Data="{StaticResource IconPopout}" />
+              </Button>
+              <Button Grid.Column="2" Classes="savebtn" Command="{Binding ClearSelectionCommand}" ToolTip.Tip="Clear selection">
+                <Path Classes="ico xs" Data="{StaticResource IconClose}" />
               </Button>
             </Grid>
           </Border>

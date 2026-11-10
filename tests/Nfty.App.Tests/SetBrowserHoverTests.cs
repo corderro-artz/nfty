@@ -161,6 +161,14 @@ public class SetBrowserHoverTests
             Assert.Same(target, vm.SelectedItem);
             Assert.True(target.IsSelected);
             Assert.Equal(0, dialogs.Shown);
+            window.MouseDown(at, MouseButton.Right);
+            window.MouseUp(at, MouseButton.Right);
+            vm.Hover(null);
+            Assert.Null(vm.SelectedItem);
+            Assert.Null(vm.Shown);
+            vm.SelectCommand.Execute(target);
+            vm.SelectCommand.Execute(target);
+            Assert.Same(target, vm.SelectedItem);
         }
         finally { Cleanup(window, vm, dir); }
     }

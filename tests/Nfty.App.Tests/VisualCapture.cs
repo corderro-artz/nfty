@@ -1727,6 +1727,12 @@ public partial class VisualCapture
             },
                 variant, $"zz-dialog-confirm-{key}.png");
 
+            Capture(new Views.ItemSettingsDialogView
+            {
+                DataContext = new ItemSettingsDialogViewModel(dialogs, "Edit Recipe", "Cat",
+                    _ => System.Threading.Tasks.Task.FromResult(new BookSettingsOutcome(true, Array.Empty<string>()))),
+            }, variant, $"zz-dialog-item-settings-{key}.png");
+
             Capture(new Views.LeaveDialogView
             {
                 DataContext = new LeaveDialogViewModel(dialogs, "Leave Rise?",

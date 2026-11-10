@@ -415,6 +415,21 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         SelectedItem = row;
     }
 
+    [RelayCommand]
+    private void ToggleSelection(SetItemRow? row)
+    {
+        if (row is null) return;
+        if (ReferenceEquals(SelectedItem, row)) ClearSelection();
+        else SelectCommand.Execute(row);
+    }
+
+    [RelayCommand]
+    private void ClearSelection()
+    {
+        SelectedItem = null;
+        Hover(null);
+    }
+
     /// <summary>Opens a cooked Set for browsing.</summary>
     /// <param name="set">The loaded Set; this takes ownership and disposes it.</param>
     /// <param name="picker">Where Save asks for a destination. Defaults to the null picker, which
@@ -768,7 +783,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                        or SixLabors.ImageSharp.ImageFormatException)
         {
-            _status.Say($"Could not open {row.Number} in a viewer: {ErrorText.For(ex)}");
+            _status.Warn($"Could not open {row.Number} in a viewer: {ErrorText.For(ex)}");
         }
     }
 
@@ -810,7 +825,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            _status.Say($"Could not save {ShownNumber}: {ErrorText.For(ex)}");
+            _status.Warn($"Could not save {ShownNumber}: {ErrorText.For(ex)}");
         }
     }
 

@@ -1444,6 +1444,9 @@
   <Style Selector="StackPanel.plabel-row > TextBlock.plabel">
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <Style Selector="StackPanel.plabel-row > Border.qmark">
+    <Setter Property="Margin" Value="0,0,0,8" />
+  </Style>
   <Style Selector="TextBlock.m-h">
     <Setter Property="FontSize" Value="19" />
     <Setter Property="FontWeight" Value="Bold" />
@@ -4826,6 +4829,34 @@
        collapse button lands exactly on the extend button that opened the panel. -->
   <Style Selector="Grid.railhead">
     <Setter Property="MinHeight" Value="28" />
+  </Style>
+  <!-- The folded info rail is a single, full-height reopen target. -->
+  <Style Selector="Button.inforibbon">
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+  <Style Selector="Button.inforibbon /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgAltBrush}" />
+  </Style>
+  <Style Selector="Button.inforibbon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.inforibbon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentLineBrush}" />
+  </Style>
+  <Style Selector="Button.inforibbon:pointerover Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <!-- The tab row: always 28 tall with its closing hairline, whether or not it is inked (one group =
        no strip, the row still reserved). The tabs are railtab, the editor rail's underline tabs. -->

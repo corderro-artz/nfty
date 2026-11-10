@@ -43,7 +43,7 @@ The badge beside the title says which:
 | **Layout** (top right) | **2D**, **Both** or **3D**. Keys ++1++ ++2++ ++3++. |
 | **2D** | Wheel zooms about the pointer; left- or middle-drag pans; **fit** (or ++0++) resets; **1:1** shows one art pixel per screen pixel; the grid button draws the art's pixel lines. **Backdrop**: Checker, Light, Dark or Custom (`#RRGGBB`). |
 | **3D** | Drag orbits, right- or middle-drag pans, wheel zooms, double-click resets. With the 3D half focused, the arrow keys orbit, ++plus++ / ++minus++ zoom and ++home++ resets. **Front / Back / Side / Top** set the camera; **Edges** outlines every face; **Off / Slow / Med / Fast** is the turntable (++s++ steps it). |
-| **INFO** rail | Facts about the subject, in tabs (item, traits, links, file). ++i++ extends it across the window; ++esc++ folds it. |
+| **INFO** rail | Facts about the subject, in tabs (item, traits, links, file). The header chevron or ++h++ folds it into a thin ribbon, giving the preview more room. Click the ribbon or press ++h++ to reopen it with the same tab and scroll position. ++i++ shows all info across the window; ++esc++ returns to the previous rail state. |
 | **EXPORT** | **Still** saves the 3D frame as a PNG with a clear background. **1x / 2x / 4x / 8x** saves the art at that scale; **Copy** puts it on the clipboard. **glb / gltf / inline** writes the model. |
 
 **Light** in the 3D footer controls sets the preview's intensity (0–100) and color (`#RRGGBB`). **Reset**

@@ -144,6 +144,12 @@ public static class KeyHints
     public static string DropSelection { get; } = "Esc";
     /// <summary>Viewer: extend the info panel over the panes, or fold it back.</summary>
     public static string ViewerInfo { get; } = "I";
+    /// <summary>Viewer: fold or reopen the info rail.</summary>
+    public static string ViewerInfoRail { get; } = "H";
+    /// <summary>Tooltip for folding the viewer's info rail.</summary>
+    public static string ViewerHideInfoTip { get; } = "Hide info panel" + Tail(ViewerInfoRail);
+    /// <summary>Tooltip for reopening the viewer's info rail.</summary>
+    public static string ViewerShowInfoTip { get; } = "Show info panel" + Tail(ViewerInfoRail);
     /// <summary>Viewer: the three layouts, 2D, both and 3D.</summary>
     public static string ViewerLayouts { get; } = "1 2 3";
     /// <summary>Viewer: fit the 2D art to its pane.</summary>

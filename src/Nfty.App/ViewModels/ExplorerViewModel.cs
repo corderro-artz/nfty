@@ -52,6 +52,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     [ObservableProperty] private ViewModelBase? _currentDetail;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditSelectedCommand))]
     [NotifyPropertyChangedFor(nameof(LockTip))]
     [NotifyPropertyChangedFor(nameof(LockStateText))]
     private bool _isEditing;
@@ -457,6 +458,27 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
                 : null,
             _ => null,
         };
+        if (CurrentDetail is IngredientDetailViewModel ingredientPane
+            && newValue?.Domain is (LoadedRecipe owner, LoadedIngredient layer))
+        {
+            string recipeId = owner.Manifest.Id, ingredientId = layer.Manifest.Id;
+            ingredientPane.ReorderVariants = async ids =>
+            {
+                var outcome = await CommitBookSettingsAsync(book =>
+                {
+                    var live = book.Recipe(recipeId).Ingredients.First(i => i.Manifest.Id == ingredientId);
+                    var variants = live.Manifest.Variants.ToDictionary(v => v.Id, StringComparer.Ordinal);
+                    if (ids.Count != variants.Count || ids.Distinct(StringComparer.Ordinal).Count() != variants.Count)
+                        throw new InvalidOperationException("The variants changed. Select the layer and try again.");
+                    return CookBookEdits.UpsertIngredient(book, recipeId, new LoadedIngredient
+                    {
+                        Manifest = live.Manifest with { Variants = ids.Select(id => variants[id]).ToArray() },
+                        VariantImages = live.VariantImages, Depths = live.Depths,
+                    });
+                });
+                if (!outcome.Saved) await _dialogs.ShowErrorAsync("Could not reorder variants", string.Join(" ", outcome.Problems));
+            };
+        }
         if (CurrentDetail is RecipeDetailViewModel recipePane && newValue?.Domain is LoadedRecipe shown)
         {
             // By id, read from the live book at call time: the node's graph is the one the pane was
@@ -466,6 +488,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         }
         RebuildCrumbs();
         DeleteSelectedCommand.NotifyCanExecuteChanged();
+        EditSelectedCommand.NotifyCanExecuteChanged();
     }
 
     // ---------------------------------------------------------------- the pop-out viewer
@@ -508,7 +531,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         }
         catch (InvalidOperationException ex)
         {
-            _status.Say($"Could not open a viewer: {ErrorText.For(ex)}");
+            _status.Warn($"Could not open a viewer: {ErrorText.For(ex)}");
         }
     }
 
@@ -525,6 +548,9 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         // painted perfectly well, claiming the opposite. Say something true on the way in.
         if (_disposed) return;
         var editor = _editorFactory(i, r, _book, () => IsEditing);
+        if (CurrentDetail is IngredientDetailViewModel { Selected: { } selected }
+            && editor.Variants.FirstOrDefault(v => v.Id == selected.Id) is { } variant)
+            editor.SelectVariantCommand.Execute(variant);
         editor.Saved += OnEditorSaved;
         editor.Closed += () => { if (ReferenceEquals(_openEditor, editor)) _openEditor = null; };
         _openEditor = editor;
@@ -680,12 +706,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     {
         if (!IsEditing)
         {
-            _status.Say($"Editing is locked. Use the lock button to unlock, then {action}.");
+            _status.Warn($"Editing is locked. Use the lock button to unlock, then {action}.");
             return false;
         }
         if (_session.SourcePath is null)
         {
-            _status.Say("This view is read-only because it isn't backed by a .cbk file on disk.");
+            _status.Warn("This view is read-only because it isn't backed by a .cbk file on disk.");
             return false;
         }
         return true;
@@ -740,7 +766,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     private IDisposable? BeginWrite()
     {
         var write = _session.TryBeginWrite();
-        if (write is null) _status.Say("Still saving the last change - try again in a moment.");
+        if (write is null) _status.Warn("Still saving the last change - try again in a moment.");
         return write;
     }
 
@@ -984,7 +1010,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
                 OpenEditor(i, r);
                 return;
             default:
-                _status.Say("Select a cookbook, recipe or ingredient to add to.");
+                _status.Warn("Select a cookbook, recipe or ingredient to add to.");
                 return;
         }
     }
@@ -1056,7 +1082,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         if (write is null || !CanEditBook("add an ingredient")) return;
         if (!_book.TryRecipe(recipe.Manifest.Id, out var liveRecipe))
         {
-            _status.Say("That recipe was removed while the dialog was open. Select another recipe and try again.");
+            _status.Warn("That recipe was removed while the dialog was open. Select another recipe and try again.");
             return;
         }
         recipe = liveRecipe;
@@ -1259,7 +1285,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         };
         if (target is null)
         {
-            _status.Say("Select the recipe to import the layer into first — a layer belongs to one recipe.");
+            _status.Warn("Select the recipe to import the layer into first — a layer belongs to one recipe.");
             return;
         }
 
@@ -1298,7 +1324,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         };
         if (target is null)
         {
-            _status.Say("Select the recipe to import the image into first - a layer belongs to one recipe.");
+            _status.Warn("Select the recipe to import the image into first - a layer belongs to one recipe.");
             return;
         }
 
@@ -1345,13 +1371,44 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     }
 
     [RelayCommand] private void SelectNode(ExplorerNode node) => SelectedNode = node;
+
+    private bool CanEditSelected() => IsEditing && _session.SourcePath is not null && SelectedNode is not null;
+
+    [RelayCommand(CanExecute = nameof(CanEditSelected))]
+    private async Task EditSelected()
+    {
+        if (!CanEditSelected() || SelectedNode is not { } node) return;
+        if (node.Kind == ExplorerNodeKind.CookBook) { await ShowBookSettingsAsync(); return; }
+        string? recipeId = node.Domain switch
+        {
+            LoadedRecipe r => r.Manifest.Id,
+            (LoadedRecipe r, LoadedIngredient _) => r.Manifest.Id,
+            _ => null,
+        };
+        if (recipeId is null) return;
+        await _dialogs.ShowAsync<object>(new ItemSettingsDialogViewModel(_dialogs,
+            node.IsRecipe ? "Edit Recipe" : "Edit Ingredient", node.Name,
+            name => CommitBookSettingsAsync(book =>
+            {
+                if (node.IsRecipe)
+                    return CookBookEdits.EditRecipeManifest(book, recipeId, m => m with { Name = name });
+                var recipe = book.Recipe(recipeId);
+                var ingredient = recipe.Ingredients.First(i => i.Manifest.Id == node.Id);
+                return CookBookEdits.UpsertIngredient(book, recipeId, new LoadedIngredient
+                {
+                    Manifest = ingredient.Manifest with { Name = name },
+                    VariantImages = ingredient.VariantImages,
+                    Depths = ingredient.Depths,
+                });
+            })));
+    }
     /// <summary>Clicking a layer in the recipe detail jumps to that ingredient in the tree.</summary>
     [RelayCommand]
     private void OpenIngredient(string id)
     {
         var node = FindNode(Root, id);
         if (node is not null) SelectedNode = node;
-        else _status.Say($"“{id}” isn't in the current view (a filter may be hiding it).");
+        else _status.Warn($"“{id}” isn't in the current view (a filter may be hiding it).");
     }
 
     // Delete needs edit-mode ON, a source .cbk to write to, and a recipe/ingredient selected
@@ -1560,7 +1617,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         if (!_book.TryRecipe(recipe.Manifest.Id, out var liveRecipe)
             || liveRecipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingredient.Manifest.Id) is not { } liveIngredient)
         {
-            _status.Say("That layer was removed while the dialog was open. Select another layer and try again.");
+            _status.Warn("That layer was removed while the dialog was open. Select another layer and try again.");
             return;
         }
         recipe = liveRecipe;

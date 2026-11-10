@@ -115,6 +115,36 @@ public sealed partial class ViewerViewModel : ViewModelBase, IDisposable
     /// against it. Wide enough for the four tab names and their counts on one line.</summary>
     public const double RailWidth = 288;
 
+    /// <summary>The narrow reopen ribbon left when the info rail is folded away.</summary>
+    public const double InfoRibbonWidth = 32;
+
+    /// <summary>Whether the info rail is folded into its reopen ribbon.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(InfoRailWidth))]
+    [NotifyPropertyChangedFor(nameof(InfoRailOpacity))]
+    [NotifyPropertyChangedFor(nameof(InfoRibbonOpacity))]
+    private bool _isInfoCollapsed;
+
+    /// <summary>The space currently reserved for the info rail or its ribbon.</summary>
+    public double InfoRailWidth => IsInfoCollapsed ? InfoRibbonWidth : RailWidth;
+    /// <summary>The expanded rail's ink; its internal layout stays at its full width.</summary>
+    public double InfoRailOpacity => IsInfoCollapsed ? 0 : 1;
+    /// <summary>The reopen ribbon's ink.</summary>
+    public double InfoRibbonOpacity => IsInfoCollapsed ? 1 : 0;
+
+    partial void OnIsInfoCollapsedChanged(bool value)
+    {
+        if (value) IsInfoExtended = false;
+    }
+
+    /// <summary>Folds the info rail into a ribbon, or restores its previous contents.</summary>
+    [RelayCommand]
+    private void ToggleInfoRail()
+    {
+        IsInfoExtended = false;
+        IsInfoCollapsed = !IsInfoCollapsed;
+    }
+
     private ViewerFactGroup _selectedGroup = ViewerFactGroup.Item;
 
     /// <summary>The tab the reader picked. Remembered for the life of this viewer: a live subject that

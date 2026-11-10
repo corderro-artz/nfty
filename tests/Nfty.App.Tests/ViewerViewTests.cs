@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
@@ -206,15 +207,17 @@ public class ViewerViewTests
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>(),
                 sb => sb.IsEffectivelyVisible);
             var buttons = view.GetVisualDescendants().OfType<Button>()
-                .Where(b => b.IsEffectivelyVisible).ToList();
+                .Where(b => b.IsEffectivelyVisible && b.Opacity > 0
+                    && b.GetVisualAncestors().All(v => v.Opacity > 0)).ToList();
             Assert.NotEmpty(buttons);
             foreach (var b in buttons)
             {
                 var centre = b.TranslatePoint(new Point(b.Bounds.Width / 2, b.Bounds.Height / 2), view)!.Value;
                 Assert.True(centre.X > 0 && centre.X < w && centre.Y > 0 && centre.Y < h,
                     $"button '{b.Content}' centre {centre} is outside {w}x{h}");
-                var hit = view.GetVisualAt(centre, v => v.IsEffectivelyVisible);
-Assert.True(hit is not null && (ReferenceEquals(hit, b) || b.IsVisualAncestorOf(hit)),
+                if (!b.IsEffectivelyEnabled) continue;
+                var hit = view.InputHitTest(centre) as Visual;
+                Assert.True(hit is not null && (ReferenceEquals(hit, b) || b.IsVisualAncestorOf(hit)),
                     $"button '{b.Content}' is covered by {hit}");
             }
         }

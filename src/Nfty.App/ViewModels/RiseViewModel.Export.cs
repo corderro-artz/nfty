@@ -590,7 +590,7 @@ public sealed partial class RiseViewModel
         MarkSkippedItems(result.Skipped, new[] { item }, new[] { stem });
         if (result.FileNames.Count == 0)
         {
-            _status.Say("Nothing exported: " + SkippedText(result.Skipped) + ".");
+            _status.Warn("Nothing exported: " + SkippedText(result.Skipped) + ".");
             return;
         }
         // The picker asked about the file it named; a .bin beside a .gltf it never mentioned is said here.
@@ -657,7 +657,7 @@ public sealed partial class RiseViewModel
         string tail = skipped.Count == 0 ? "" : " Skipped " + string.Join(", ", skipped) + ".";
         if (result.FileNames.Count == 0)
         {
-            _status.Say("Nothing exported." + tail);
+            _status.Warn("Nothing exported." + tail);
             return;
         }
         int models = items.Count - result.Skipped.Count;
