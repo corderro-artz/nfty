@@ -272,6 +272,7 @@ public static class HelpCatalog
             K(V, 1, "KEYS · VIEWER", KeyHints.ViewerFit, "fit the 2D art"),
             K(V, 1, "KEYS · VIEWER", KeyHints.ViewerSpin, "next turntable speed"),
             K(V, 1, "KEYS · VIEWER", KeyHints.ViewerInfo, "all info (Esc folds it)"),
+            K(V, 1, "KEYS · VIEWER", KeyHints.ViewerInfoRail, "hide / show info rail"),
 
             T(V, 2, "RUNTIME", "Menu", "A CookBook *flattened* for runtime: weights, rules, colors and art. No .cbk needed.", ext: ".mnu"),
             T(V, 2, "RUNTIME", "Ticket", "One rolled outcome in a few hundred bytes. It names the *selection*, not the pixels."),

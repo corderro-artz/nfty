@@ -13,8 +13,11 @@
       THE PRODUCT VERSION, in one place. Every assembly in the solution carries it, so a binary can
       always be asked what it is - a released file that cannot identify itself is a support problem
       the first time somebody reports a bug against "the download".
+
+      Release policy: fixes alone bump PATCH. Compatible user-facing features bump MINOR and
+      reset PATCH to zero, including mixed feature/fix batches. Breaking public APIs bump MAJOR.
     -->
-    <Version>2.4.14</Version>
+    <Version>2.5.0</Version>
 
     <!--
       WHO MADE THIS, stamped into every assembly. Windows reads these for the file's Details tab and

@@ -24,14 +24,15 @@
     one footer line of view controls (StripPanel, so the smallest window wraps it by group).
 
     THE LAYOUT SWITCH RESERVES SPACE. The two panes share one fixed pair of columns; the layout
-    only moves the hidden pane's column to zero and takes its ink and hit-testing away, and the rail
+    only moves the hidden pane's column to zero and takes its ink and hit-testing away, and the open rail
     is a fixed width (ViewerViewModel.RailWidth), so nothing in the rail moves when the layout does
     (ViewerViewTests pixel-diffs the rail across all three).
 
     THE INFO PANEL IS TABBED, SNAPPED AND EXTENDABLE. The rail shows one group of facts at a time
     (ITEM, TRAITS, LINKS, FILE), its list snapped to a whole number of rows with a "N more" line
     under it rather than a scrollbar, and the extend button lays every group out at once over the
-    panes - an overlay, so it covers rather than pushes.
+    panes - an overlay, so it covers rather than pushes. Folding the rail explicitly reclaims its
+    column for the preview; its contents stay laid out at full width behind the reopen ribbon.
   -->
   <UserControl.Resources>
     <!-- One group in the extended panel: its heading and count, then a card of label / value rows
@@ -91,9 +92,8 @@
     <!-- The rail is NOT a third column beside the two panes. Two star columns that split an odd
          width land on a half pixel, and layout rounding then pushes everything after them a pixel to
          the right. The panes share a grid of their own, so whatever they round to cannot reach the
-         rail. The rail's 288 is ViewerViewModel.RailWidth; ColumnDefinitions cannot bind, and
-         ViewerViewTests asserts the two agree. -->
-    <Grid Grid.Row="1" ColumnDefinitions="*,288">
+         rail. The view sets the rail column from InfoRailWidth: 288 open, 32 folded. -->
+    <Grid Grid.Row="1" x:Name="InfoBody" ColumnDefinitions="*,288">
     <Grid Grid.Column="0" x:Name="PaneGrid" ColumnDefinitions="*,*" IsVisible="{Binding IsNotGallery}">
 
       <!-- 2D PANE: the same canvas host the editor and the Rise page draw on. -->
@@ -167,14 +167,19 @@
       <!-- INFO RAIL: fixed width, so a layout change cannot move a thing in it. The head (name, copy,
            extend), the subject's banner, the tabs, the facts of the chosen tab, the more line, and
            the export card pinned to the foot. -->
-      <Border Grid.Column="1" x:Name="Rail" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0">
+      <Border Grid.Column="1" x:Name="Rail" Width="{x:Static vm:ViewerViewModel.RailWidth}" HorizontalAlignment="Right"
+              Opacity="{Binding InfoRailOpacity}" IsHitTestVisible="{Binding !IsInfoCollapsed}" IsEnabled="{Binding !IsInfoCollapsed}"
+              BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0">
         <Grid x:Name="RailGrid" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" Margin="14,10">
-          <!-- The rail's head: the panel's name left, its two actions right - Copy info, and the
+          <!-- The rail's head: fold and name left, its two actions right - Copy info, and the
                extend toggle at the far edge, where the extended panel's own collapse button lands
                exactly, so pressing it twice is one gesture in one place. Both always laid out; Copy
                is dimmed (a sealed subject, or nothing to say) rather than appearing. -->
           <Grid Grid.Row="0" Classes="railhead" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="7">
-            <Path Grid.Column="0" Classes="ico xs" Data="{StaticResource IconTypeVariant}" />
+            <Button Grid.Column="0" x:Name="HideInfoRailButton" Classes="ttool bar" Command="{Binding ToggleInfoRailCommand}"
+                    ToolTip.Tip="{x:Static svc:KeyHints.ViewerHideInfoTip}" AutomationProperties.Name="Hide info panel">
+              <Path Classes="ico sm" Data="{StaticResource IconChevronRight}" />
+            </Button>
             <TextBlock Grid.Column="1" Classes="plabel" Text="INFO" VerticalAlignment="Center" Margin="0" />
             <Button Grid.Column="2" x:Name="CopyInfoButton" Classes="ttool bar" Command="{Binding CopyFactsCommand}"
                     ToolTip.Tip="Copy info: every line, as text">
@@ -357,6 +362,18 @@
           </StackPanel>
         </Grid>
       </Border>
+      <Button Grid.Column="1" x:Name="ShowInfoRailButton" Classes="inforibbon"
+              Opacity="{Binding InfoRibbonOpacity}" IsHitTestVisible="{Binding IsInfoCollapsed}" IsEnabled="{Binding IsInfoCollapsed}"
+              Command="{Binding ToggleInfoRailCommand}" ToolTip.Tip="{x:Static svc:KeyHints.ViewerShowInfoTip}"
+              AutomationProperties.Name="Show info panel">
+        <Grid RowDefinitions="28,*" Margin="0,10,0,0">
+          <Path Grid.Row="0" Classes="ico sm" Data="{StaticResource IconChevronLeft}" HorizontalAlignment="Center" />
+          <LayoutTransformControl Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,14,0,0">
+            <LayoutTransformControl.LayoutTransform><RotateTransform Angle="90" /></LayoutTransformControl.LayoutTransform>
+            <TextBlock Classes="plabel" Text="INFO" Margin="0" />
+          </LayoutTransformControl>
+        </Grid>
+      </Button>
     </Grid>
 
     <!-- FOOTER: how the subject is LOOKED AT, nothing else (taking it out lives in the rail). Four

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -29,6 +30,116 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class ViewerInfoRailTests
 {
+    private static Image<Rgba32> Frame(Window window)
+    {
+        using var bitmap = window.CaptureRenderedFrame()!;
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+        stream.Position = 0;
+        return SixLabors.ImageSharp.Image.Load<Rgba32>(stream);
+    }
+
+    private static void SaveFrame(Image<Rgba32> frame, string name)
+    {
+        if (Environment.GetEnvironmentVariable("NFTY_CAPTURE_DIR") is not { Length: > 0 } dir) return;
+        Directory.CreateDirectory(dir);
+        frame.SaveAsPng(Path.Combine(dir, name + ".png"));
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Folding_the_rail_frees_preview_space_and_reopens_the_same_tab_and_rows(bool dark)
+    {
+        var (window, view, vm, art) = Host(AssetFacts(traits: 20), Smallest);
+        try
+        {
+            window.RequestedThemeVariant = dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+            vm.SelectGroupCommand.Execute(ViewerFactGroup.Traits);
+            Settle();
+            view.StepRows(2);
+            vm.TwoD.Zoom = 3;
+            Settle();
+            int first = view.FirstRow;
+            Assert.True(first > 0);
+            var panes = view.FindControl<Grid>("PaneGrid")!;
+            var before = panes.Bounds;
+            var footer = view.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("toolstrip"));
+            var footerAt = footer.TranslatePoint(default, window)!.Value;
+            using var baseline = Frame(window);
+            SaveFrame(baseline, $"viewer-info-open-{dark}");
+            var hide = view.FindControl<Button>("HideInfoRailButton")!;
+            var at = hide.TranslatePoint(new Point(hide.Bounds.Width / 2, hide.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Settle();
+            Assert.True(vm.IsInfoCollapsed);
+            Assert.Equal(before.Width + ViewerViewModel.RailWidth - ViewerViewModel.InfoRibbonWidth, panes.Bounds.Width);
+            Assert.Equal(0, view.FindControl<Border>("Rail")!.Opacity);
+            Assert.False(view.FindControl<Border>("Rail")!.IsEffectivelyEnabled);
+            var ribbon = view.FindControl<Button>("ShowInfoRailButton")!;
+            Assert.Equal(ViewerViewModel.InfoRibbonWidth, ribbon.Bounds.Width);
+            Assert.Same(ribbon, window.FocusManager!.GetFocusedElement());
+            using var folded = Frame(window);
+            SaveFrame(folded, $"viewer-info-folded-{dark}");
+            for (int y = (int)Math.Ceiling(footerAt.Y); y < baseline.Height; y++)
+            for (int x = 0; x < baseline.Width; x++)
+                Assert.Equal(baseline[x, y], folded[x, y]);
+
+            // The entire ribbon reopens the rail, not only its small chevron.
+            at = ribbon.TranslatePoint(new Point(ribbon.Bounds.Width / 2, ribbon.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(at, MouseButton.Left);
+            window.MouseUp(at, MouseButton.Left);
+            Settle();
+            Assert.False(vm.IsInfoCollapsed);
+            Assert.Equal(before, panes.Bounds);
+            Assert.Equal(ViewerFactGroup.Traits, vm.SelectedGroup);
+            Assert.Equal(first, view.FirstRow);
+            Assert.Equal(3, vm.TwoD.Zoom);
+            using var reopened = Frame(window);
+            SaveFrame(reopened, $"viewer-info-restored-{dark}");
+        }
+        finally { window.Close(); vm.Dispose(); art.Dispose(); }
+    }
+
+    [AvaloniaFact]
+    public void Ribbon_keyboard_toggle_preserves_camera_and_full_info_returns_to_the_ribbon()
+    {
+        using var art = ViewerViewTests.Art();
+        using var subject = new ViewerViewTests.TrackedSubject("Viewer", art, ViewerViewTests.Model());
+        using var vm = ViewerViewTests.Vm(subject);
+        var view = new Views.ViewerView { DataContext = vm };
+        var window = new Window { Content = view, Width = 1067, Height = 526 };
+        window.Show();
+        Settle();
+        try
+        {
+            vm.ShowAngleCommand.Execute(ViewAngle.Side);
+            var camera = vm.Preview.CameraState;
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.H, RawInputModifiers.None);
+            Settle();
+            Assert.True(vm.IsInfoCollapsed);
+            Assert.Equal(camera, vm.Preview.CameraState);
+            window.KeyPressQwerty(PhysicalKey.I, RawInputModifiers.None);
+            Settle();
+            Assert.True(vm.IsInfoExtended);
+            Assert.True(vm.IsInfoCollapsed);
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            Settle();
+            Assert.False(vm.IsInfoExtended);
+            Assert.True(vm.IsInfoCollapsed);
+            window.KeyPressQwerty(PhysicalKey.H, RawInputModifiers.None);
+            Settle();
+            Assert.False(vm.IsInfoCollapsed);
+            Assert.Equal(camera, vm.Preview.CameraState);
+            view.FindControl<TextBox>("CustomColorBox")!.Focus();
+            window.KeyPressQwerty(PhysicalKey.H, RawInputModifiers.None);
+            Assert.False(vm.IsInfoCollapsed);
+        }
+        finally { window.Close(); }
+    }
+
     // The smallest viewer window's content: the window less the shared frame (24 gutter + 2 border,
     // 36 titlebar), at the shell's scale - the same derivation ViewerViewTests uses.
     private static readonly Size Smallest = new(
@@ -406,7 +517,7 @@ public class ViewerInfoRailTests
 
             // The help sheet's viewer keys are each one the handler takes.
             var keys = HelpCatalog.Entries.OfType<HelpKey>().Where(k => k.Section == "KEYS · VIEWER").Select(k => k.Key).ToList();
-            Assert.Equal(new[] { KeyHints.ViewerLayouts, KeyHints.ViewerFit, KeyHints.ViewerSpin, KeyHints.ViewerInfo }, keys);
+            Assert.Equal(new[] { KeyHints.ViewerLayouts, KeyHints.ViewerFit, KeyHints.ViewerSpin, KeyHints.ViewerInfo, KeyHints.ViewerInfoRail }, keys);
         }
         finally { window.Close(); vm.Dispose(); art.Dispose(); }
     }

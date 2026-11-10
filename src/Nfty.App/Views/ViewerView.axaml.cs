@@ -7,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Reactive;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nfty.App.Controls;
 using Nfty.App.Services;
@@ -35,6 +36,7 @@ public partial class ViewerView : UserControl
     private readonly Panel _backdrop;
     private readonly PixelGridLayer _grid;
     private readonly Grid _body;
+    private readonly Grid _infoBody;
     private readonly ModelPreviewView _model;
     private readonly PixelCanvasHost _canvas;
     private ViewerViewModel? _vm;
@@ -51,6 +53,7 @@ public partial class ViewerView : UserControl
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
         _grid = this.FindControl<PixelGridLayer>("GridLines")!;
         _body = this.FindControl<Grid>("PaneGrid")!;
+        _infoBody = this.FindControl<Grid>("InfoBody")!;
         _model = this.FindControl<ModelPreviewView>("ModelView")!;
         _canvas = new PixelCanvasHost(_img, _surface, _backdrop, () => _vm?.TwoD, Brush);
 
@@ -208,6 +211,8 @@ public partial class ViewerView : UserControl
         if (e.KeyModifiers is not (KeyModifiers.None or KeyModifiers.Shift)) return;
         switch (e.Key)
         {
+            case Key.H:
+                _vm.ToggleInfoRailCommand.Execute(null); break;
             case Key.I:
                 _vm.IsInfoExtended = !_vm.IsInfoExtended; break;
             case Key.D1 or Key.NumPad1:
@@ -283,6 +288,14 @@ public partial class ViewerView : UserControl
     {
         switch (e.PropertyName)
         {
+            case nameof(ViewerViewModel.InfoRailWidth):
+                ApplyColumns();
+                break;
+            case nameof(ViewerViewModel.IsInfoCollapsed):
+                Dispatcher.UIThread.Post(() =>
+                    this.FindControl<Button>(_vm?.IsInfoCollapsed == true ? "ShowInfoRailButton" : "HideInfoRailButton")?.Focus(),
+                    DispatcherPriority.Loaded);
+                break;
             case nameof(ViewerViewModel.TwoDColumn):
             case nameof(ViewerViewModel.ThreeDColumn):
                 ApplyColumns();
@@ -325,6 +338,7 @@ public partial class ViewerView : UserControl
     private void ApplyColumns()
     {
         if (_vm is null) return;
+        _infoBody.ColumnDefinitions[1].Width = new GridLength(_vm.InfoRailWidth);
         _body.ColumnDefinitions[0].Width = _vm.TwoDColumn;
         _body.ColumnDefinitions[1].Width = _vm.ThreeDColumn;
     }
