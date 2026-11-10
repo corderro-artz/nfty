@@ -15,13 +15,16 @@ namespace Nfty.App.Tests;
 /// <summary>The share card's geometry: it fits the area a modal really gets, and its one reserved block never changes size.</summary>
 public class ShareDialogLayoutTests
 {
-    private static readonly string[] States = ["none", "extras", "duplicate", "already", "replace"];
+    private static readonly string[] States = ["none", "signedout", "extras", "duplicate", "already", "replace"];
 
     internal static async Task<(ShareDialogViewModel Vm, ShareDialogTests.Rig Rig)> StateAsync(string state, Action<ShareDialogTests.Rig>? edit = null)
     {
         var rig = new ShareDialogTests.Rig();
         switch (state)
         {
+            case "signedout":
+                rig.Account.Login = null;
+                break;
             case "none":
                 rig.Repo.Snapshot = ShareFixtures.Repo([ShareFixtures.Mine("a")]);
                 break;
@@ -65,6 +68,7 @@ public class ShareDialogLayoutTests
 
     [AvaloniaTheory]
     [InlineData("none")]
+    [InlineData("signedout")]
     [InlineData("extras")]
     [InlineData("duplicate")]
     [InlineData("already")]
@@ -158,7 +162,7 @@ public class ShareDialogLayoutTests
     }
 
     [AvaloniaFact]
-    public async Task Connect_and_the_chip_share_one_slot_and_swap_ink()
+    public async Task Connect_is_offered_in_the_block_only_while_signed_out()
     {
         var (vm, rig) = await StateAsync("none");
         using var _ = rig; using var __ = vm;

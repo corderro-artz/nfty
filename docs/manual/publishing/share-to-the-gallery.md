@@ -10,10 +10,12 @@ a canvas up to 512 × 512, up to 1,000 assets, up to 200 MB packed.
    shows a short code: press **Open GitHub**, type the code there and approve nfty. nfty never sees
    your password, and the token is kept in your system's credential store, never a file. See
    [Settings](../app/settings.md#publishing).
-2. In the Set browser press **Share…** in the header. If nothing is connected the card says
-   `Connect GitHub to share.` and offers **Connect GitHub…**.
+2. In the Set browser press **Share…** in the header. If nothing is connected the card's lower block
+   reads `Sharing needs a GitHub account` and offers **Connect GitHub…**, which opens Settings at
+   PUBLISHING over the card; once connected, close Settings and the card carries on.
 3. Wait for the card to read your `nfty-public` repository and check the Set. Anything it refuses is
-   named in the limit rows or the middle block, and **Share** stays dim, with its reason on the tooltip,
+   marked in the **GALLERY LIMITS** table or named in the lower block, and **Share** stays dim, with its
+   reason in the footer and on the tooltip,
    until nothing is left. See [Gallery problems](../help/troubleshooting.md#community-gallery).
 4. Choose what travels. **Include source CookBook** lets others remix (enabled only when nfty finds the
    book that made the Set). **3D models** can be left out to make the file smaller.

@@ -84,16 +84,21 @@ anything uploads.
 
 ### The Share card
 
-The left column, **WHAT LEAVES THIS MACHINE**, lists the contents (the **Include source CookBook** and
-**3D models** boxes, then the exact files and size) and the **LIMITS** rows: `Canvas 32 x 32 of 512 x 512`,
-the asset count, `Size 4.0 MB of 200 MB`, and `2 of 3 shared`. A row past its limit turns to warning ink and
-names the fix. The right column is the listing: **NAME**, **DESCRIPTION**, **TAGS**, and the
-account chip (`Connected as @you`, or **Connect GitHub…**). Between them, one reserved block shows
-whichever of these applies:
+The header names the GitHub account the share goes through (a green dot and `Connected as @you`, or a
+gray dot and `Not connected`). The left column, **WHAT LEAVES THIS MACHINE**, has the **3D models** and
+**Include source CookBook** boxes, then the package: the file name, its size on disk and the exact
+folders it carries. Under it, **GALLERY LIMITS** is a small table, one row each for **CANVAS**,
+**ASSETS**, **PACKED SIZE** and **YOUR SHARES**: a check mark when the figure is within the limit, a
+warning triangle and the fix when it is past it (`cook at a smaller canvas`), and a gray dot while it is
+still being checked. **YOUR SHARES** reads `connect GitHub to see` until an account is connected, since
+the count lives on GitHub. The right column is the listing: **NAME**, **DESCRIPTION** and **TAGS** (the
+gallery's tag list, fetched when the card opens if it has not been already). Below them, one reserved
+block shows whichever of these applies:
 
 | The block shows | When | What you do |
 |---|---|---|
-| Nothing to decide | A new share, under the limit, `nfty-public` clean. | Press **Share**. |
+| `Sharing needs a GitHub account` with **Connect GitHub…** | No account is connected. | Press **Connect GitHub…**: Settings opens at PUBLISHING over the card; connect there, close Settings, and the card picks the account up. |
+| `Goes to @you/nfty-public` | A new share, under the limit, `nfty-public` clean. | Press **Share**. |
 | `Replace one to share this. Nothing is removed until you press Share.` | You already share 3 collections. | Pick which of your three to give up; Share stays dim until you do. |
 | `You already share this collection.` with **Replace the shared version** | The Set is a collection you shared before. | Tick the box to update the listing; an update is never a side effect of pressing Share. |
 | `Nothing changed since you shared "…" on …` | The Set matches what you shared. | Nothing to send; change the Set first. |

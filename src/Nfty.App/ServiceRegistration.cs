@@ -249,6 +249,9 @@ public static class ServiceRegistration
             urls: sp.GetRequiredService<IUrlOpener>(), clipboard: sp.GetService<IClipboardService>(),
             // The gallery's own tag list, as the cache last fetched or kept it.
             tags: () => sp.GetRequiredService<ICommunityCache>().Tags,
+            // None kept yet (the Community page was never opened): fetch the list and its tags now. The fresh
+            // list also makes the duplicate check current.
+            refreshTags: ct => sp.GetRequiredService<ICommunityCache>().RefreshAsync(ct),
             connect: () => sp.GetRequiredService<IDialogService>().ShowAsync<object>(
                 new SettingsDialogViewModel(sp.GetRequiredService<IDialogService>(),
                     sp.GetRequiredService<IParallelismSetting>(), sp.GetRequiredService<IAppSettings>(),

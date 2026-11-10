@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:ctl="using:Nfty.App.Controls"
              x:Class="Nfty.App.Views.ShareDialogView"
              x:DataType="vm:ShareDialogViewModel"
              RenderOptions.BitmapInterpolationMode="None"
@@ -19,26 +20,30 @@
         <!-- THE FORM: stays laid out in every state, inked out and unreachable once a run has started, so the card is
              the same size while it runs, finishes or fails. -->
         <StackPanel Classes.cgone="{Binding !IsEditing}" IsEnabled="{Binding IsEditing}">
-          <Grid ColumnDefinitions="*,Auto" Height="26">
-            <TextBlock Grid.Column="0" Text="Share with the community" Classes="m-h" Margin="0" VerticalAlignment="Center" />
-            <!-- ONE SLOT, TWO STATES: the chip and the Connect button share a cell and swap ink. -->
-            <Grid Grid.Column="1" VerticalAlignment="Center">
-              <Border Classes="idchip" Classes.cgone="{Binding IsSignedOut}">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <TextBlock Classes="ck" Text="GITHUB" />
-                  <TextBlock Classes="cvl" Text="{Binding GitHubChip}" />
-                </StackPanel>
-              </Border>
-              <Button Classes="tbtn sbtn" Content="Connect GitHub…" Command="{Binding ConnectGitHubCommand}"
-                      Classes.cgone="{Binding IsSignedIn}" />
-            </Grid>
+          <!-- Title left, the account right (Settings' own chip: a dot and who is connected). The way to connect
+               lives in the reserved block below, beside the sentence that says why it is needed. -->
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Spacing="2">
+              <TextBlock Text="Share with the community" Classes="m-h" Margin="0" />
+              <TextBlock Classes="m-sub" Margin="0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                         Text="Lists this Set in the nfty gallery, where anyone can browse and download it." />
+            </StackPanel>
+            <Border x:Name="AccountChip" Grid.Column="1" Classes="idchip" VerticalAlignment="Top" Margin="0,4,0,0"
+                    ToolTip.Tip="The GitHub account a share goes through. Connected and disconnected in Settings, PUBLISHING.">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center" Classes="vdot"
+                         Classes.ok="{Binding IsSignedIn}" Classes.idle="{Binding IsSignedOut}" />
+                <TextBlock Classes="ck" Text="GITHUB" />
+                <TextBlock Classes="cvl" Text="{Binding GitHubChip}" />
+              </StackPanel>
+            </Border>
           </Grid>
 
-          <Grid Classes="wizcols" ColumnDefinitions="*,25,1,25,*" Margin="0,8,0,0">
+          <Grid Classes="wizcols" ColumnDefinitions="*,25,1,25,*" Margin="0,14,0,0">
             <Rectangle Grid.Column="2" Classes="wizrule" />
 
-            <!-- WHAT LEAVES THE MACHINE -->
-            <StackPanel Grid.Column="0" Spacing="10">
+            <!-- WHAT LEAVES THE MACHINE, AND WHAT THE GALLERY WILL MAKE OF IT -->
+            <StackPanel Grid.Column="0" Spacing="12">
               <StackPanel Spacing="2">
                 <TextBlock Text="WHAT LEAVES THIS MACHINE" Classes="plabel" Margin="0,0,0,4" />
                 <CheckBox Content="3D models" IsChecked="{Binding Models}" IsEnabled="{Binding ModelsEnabled}"
@@ -50,19 +55,36 @@
                 <TextBlock Classes="sline" Margin="30,-4,0,0" Text="{Binding CookBookNote}" Height="14" />
               </StackPanel>
 
-              <!-- THE MANIFEST: SetExporter.Plan, the list the share writes. -->
-              <StackPanel Spacing="3">
-                <TextBlock Text="{Binding PlanText}" Classes="sline" TextWrapping="Wrap" MaxLines="2" Height="28" />
-                <TextBlock Text="{Binding PlanSize}" Classes="sline" Height="14" />
-              </StackPanel>
+              <!-- THE MANIFEST: SetExporter.Plan, the list the share writes, in the Export card's own block. -->
+              <ctl:PackageCard Title="{Binding Slug, StringFormat={}{0}.set}" Size="{Binding PlanSize}" Parts="{Binding PlanParts}"
+                               Columns="2" SizeTip="The files as they sit on disk. The gallery's limit is on the packed .set, under GALLERY LIMITS." />
 
-              <StackPanel Spacing="4">
-                <TextBlock Text="LIMITS" Classes="plabel" />
+              <!-- THE GALLERY'S LIMITS: a table, one row each - a mark (within, past, not known yet), what is measured,
+                   the figure and what to do about it, the limit. Every row always laid out; only ink changes. -->
+              <StackPanel>
+                <TextBlock Text="GALLERY LIMITS" Classes="plabel" Margin="0,0,0,4" />
                 <ItemsControl ItemsSource="{Binding LimitRows}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ShareLimitRow">
-                      <TextBlock Classes="sline limit" Classes.over="{Binding IsOver}" Text="{Binding Text}"
-                                 ToolTip.Tip="{Binding Tip}" />
+                      <Border Classes="slrow" ToolTip.Tip="{Binding Tip}">
+                        <Grid ColumnDefinitions="16,94,*,Auto" ColumnSpacing="6">
+                          <!-- The mark. Past the limit it is the hover target: the whole sentence (what is wrong and what
+                               to do) is its tooltip, so nothing in the row is ever clipped mid-word. -->
+                          <Panel Grid.Column="0" VerticalAlignment="Center">
+                            <Path Classes="ico xs" Data="{StaticResource IconCheck}" Stroke="{DynamicResource SuccessBrush}"
+                                  Classes.cgone="{Binding !IsOk}" />
+                            <Ellipse Width="5" Height="5" Classes="vdot idle" HorizontalAlignment="Center"
+                                     Classes.cgone="{Binding !IsPending}" />
+                            <Border Classes="alert" Classes.cgone="{Binding !IsOver}" ToolTip.Tip="{Binding Tip}">
+                              <Path Classes="ico xs" Data="{StaticResource IconTriangle}" Stroke="{DynamicResource WarningBrush}" />
+                            </Border>
+                          </Panel>
+                          <TextBlock Grid.Column="1" Classes="slabel" Text="{Binding Label}" />
+                          <TextBlock Grid.Column="2" Classes="svalue" Classes.pending="{Binding IsPending}" Classes.over="{Binding IsOver}"
+                                     Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="3" Classes="slimit" Text="{Binding Limit}" />
+                        </Grid>
+                      </Border>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -72,7 +94,7 @@
             <!-- THE LISTING -->
             <StackPanel Grid.Column="4" Spacing="8">
               <StackPanel Spacing="4">
-                <TextBlock Text="NAME" Classes="plabel" />
+                <TextBlock Text="NAME" Classes="plabel" Margin="0" />
                 <TextBox Text="{Binding Name}" MaxLength="64" />
                 <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,2,0,0">
                   <Border Classes="idchip"><TextBlock Text="{Binding Slug}" Classes="mono" FontSize="10.5" /></Border>
@@ -81,21 +103,22 @@
               </StackPanel>
 
               <StackPanel Spacing="4">
-                <TextBlock Text="DESCRIPTION" Classes="plabel" />
+                <TextBlock Text="DESCRIPTION" Classes="plabel" Margin="0" />
                 <TextBox Text="{Binding Description}" AcceptsReturn="True" Height="44" MaxLength="500"
                          TextWrapping="Wrap" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         VerticalContentAlignment="Top" Padding="11,5" />
+                         VerticalContentAlignment="Top" Padding="11,5"
+                         PlaceholderText="What it is, in a sentence or two. No links." />
               </StackPanel>
 
               <StackPanel Spacing="4">
                 <!-- The refusal note shares the label row with the counter: one line, always laid out. -->
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                  <TextBlock Grid.Column="0" Text="TAGS" Classes="plabel" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="0" Text="TAGS" Classes="plabel" Margin="0" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Classes="swarn" TextTrimming="CharacterEllipsis" Text="{Binding TagNote}"
                              VerticalAlignment="Center" ToolTip.Tip="{Binding TagNote}" />
                   <TextBlock Grid.Column="2" Classes="sline" Text="{Binding TagsCount}" VerticalAlignment="Center" />
                 </Grid>
-                <!-- Reserved: two rows of chips, or the sentence saying there are none. -->
+                <!-- Reserved: two rows of chips, or the sentence saying there are none (or that they are coming). -->
                 <Panel Height="54">
                   <ItemsControl ItemsSource="{Binding TagChips}" Classes.cgone="{Binding !HasTags}">
                     <ItemsControl.ItemsPanel>
@@ -109,8 +132,7 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Classes="sline" Text="{x:Static vm:ShareDialogViewModel.NoTagsText}"
-                             Classes.cgone="{Binding HasTags}" />
+                  <TextBlock Classes="sline" Text="{Binding TagsEmptyText}" Classes.cgone="{Binding HasTags}" />
                 </Panel>
               </StackPanel>
 
@@ -118,11 +140,26 @@
                    user at 3 of 3 see the same card. Rows may scroll inside it; nothing else does. -->
               <Border Classes="shareblock">
                 <Panel>
+                  <!-- Nothing to decide: where the share goes, or (signed out) why GitHub is needed and the way to it. -->
+                  <Grid IsVisible="{Binding IsNoneBlock}" RowDefinitions="Auto,Auto,*" RowSpacing="4">
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                      <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconShare}" Stroke="{DynamicResource AccentTextBrush}" />
+                      <TextBlock Grid.Column="1" Classes="cname" VerticalAlignment="Center" Text="{Binding ReadyHeading}"
+                                 ToolTip.Tip="{Binding ReadyHeading}" />
+                    </Grid>
+                    <TextBlock Grid.Row="1" Classes="sline" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                               Text="{Binding ReadyText}" ToolTip.Tip="{Binding ReadyText}" />
+                    <Button Grid.Row="2" x:Name="ConnectGitHub" Classes="tbtn shbtn" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                            Content="Connect GitHub…" Command="{Binding ConnectGitHubCommand}" Classes.cgone="{Binding IsSignedIn}"
+                            ToolTip.Tip="Opens Settings at PUBLISHING, where you sign in on github.com. This card stays open underneath." />
+                  </Grid>
+
                   <!-- Extras / repo trouble -->
                   <Grid RowDefinitions="Auto,*" IsVisible="{Binding IsExtrasBlock}">
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                      <TextBlock Grid.Column="0" Classes="swarn" Height="30" TextWrapping="Wrap" MaxLines="2" Text="{Binding BlockHeading}" />
-                      <Button Grid.Column="1" Classes="tbtn sbtn" Content="Remove these…" VerticalAlignment="Top"
+                      <TextBlock Grid.Column="0" Classes="swarn" Height="30" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding BlockHeading}" ToolTip.Tip="{Binding BlockHeading}" />
+                      <Button Grid.Column="1" Classes="tbtn shbtn" Content="Remove these…" VerticalAlignment="Top"
                               MinWidth="104" Command="{Binding RemoveExtrasCommand}" Classes.cgone="{Binding !CanRemoveExtras}" />
                     </Grid>
                     <ScrollViewer Grid.Row="1" x:Name="ExtrasScroll" HorizontalScrollBarVisibility="Disabled" Margin="0,4,0,0">
@@ -138,7 +175,11 @@
                   </Grid>
 
                   <!-- Somebody has it already -->
-                  <TextBlock IsVisible="{Binding IsDuplicateBlock}" Classes="swarn" TextWrapping="Wrap" Text="{Binding BlockHeading}" />
+                  <Grid IsVisible="{Binding IsDuplicateBlock}" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Path Grid.Column="0" Classes="ico sm" VerticalAlignment="Top" Data="{StaticResource IconTriangle}"
+                          Stroke="{DynamicResource WarningBrush}" />
+                    <TextBlock Grid.Column="1" Classes="swarn" TextWrapping="Wrap" Text="{Binding BlockHeading}" />
+                  </Grid>
 
                   <!-- One of your shares -->
                   <Grid IsVisible="{Binding IsAlreadySharedBlock}" RowDefinitions="Auto,Auto,*" RowSpacing="6">
@@ -220,8 +261,14 @@
       <Border Grid.Row="1" Classes="modal-foot">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
           <!-- The reason Share waits, always laid out; ink only. -->
-          <TextBlock Grid.Column="0" Classes="swarn" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                     Text="{Binding ShareReason}" ToolTip.Tip="{Binding ShareReason}" Classes.cgone="{Binding !IsEditing}" />
+          <Grid Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="7" Classes.cgone="{Binding !IsEditing}"
+                ToolTip.Tip="{Binding ShareReason}">
+            <Border Grid.Column="0" Classes="alert" Classes.cgone="{Binding CanShare}" VerticalAlignment="Center">
+              <Path Classes="ico xs" Data="{StaticResource IconTriangle}" Stroke="{DynamicResource WarningBrush}" />
+            </Border>
+            <TextBlock Grid.Column="1" Classes="swarn" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       Text="{Binding ShareReason}" />
+          </Grid>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
             <Button Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Classes="tbtn" MinWidth="64" />
             <Button Command="{Binding ShareCommand}" Classes="accent" ToolTip.Tip="{Binding ShareButtonTip}" MinWidth="96"

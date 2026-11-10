@@ -36,7 +36,7 @@ public partial class ExportDialogView : UserControl
         if (scroller.Content is not ItemsControl list || list.ContainerFromIndex(0) is not { } first) return;
         var line = first.Bounds.Height;
         if (line <= 0) return;
-        var room = grid.RowDefinitions[2].ActualHeight;
+        var room = grid.RowDefinitions[Grid.GetRow(scroller)].ActualHeight;
         var snapped = System.Math.Max(line, System.Math.Floor((room + 0.5) / line) * line);
         if (double.IsNaN(scroller.Height) || System.Math.Abs(scroller.Height - snapped) > 0.5)
             scroller.Height = snapped;

@@ -434,6 +434,38 @@ public class ShareDialogTests
     }
 
     [Fact]
+    public async Task A_card_opened_before_the_tags_were_fetched_fetches_them()
+    {
+        using var rig = new Rig();
+        IReadOnlyList<string> kept = [];
+        var gate = new TaskCompletionSource();
+        using var vm = new ShareDialogViewModel(rig.Source, rig.Dialogs, rig.Account, rig.Cache, rig.Repo, rig.Checker,
+            tags: () => kept, refreshTags: async _ => { await gate.Task; kept = ["props", "items"]; });
+        Assert.False(vm.HasTags);
+        Assert.True(vm.TagsLoading);
+        Assert.Equal("Loading the gallery's tags…", vm.TagsEmptyText);
+        gate.SetResult();
+        await vm.PendingTags;
+        Assert.False(vm.TagsLoading);
+        Assert.Equal(["props", "items"], vm.TagChips.Select(c => c.Name));
+    }
+
+    [Fact]
+    public async Task Signed_out_the_shares_row_says_why_it_has_no_count()
+    {
+        using var rig = new Rig();
+        rig.Account.Login = null;
+        using var vm = await rig.OpenAsync();
+        var row = vm.LimitRows[3];
+        Assert.Equal("YOUR SHARES", row.Label);
+        Assert.Equal("connect GitHub to see", row.Value);
+        Assert.True(row.IsPending);
+        Assert.DoesNotContain("—", row.Text);
+        Assert.Equal("Sharing needs a GitHub account", vm.ReadyHeading);
+        Assert.True(vm.IsNoneBlock);
+    }
+
+    [Fact]
     public async Task An_empty_tag_list_offers_none_and_still_shares()
     {
         using var rig = new Rig();

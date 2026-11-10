@@ -179,6 +179,35 @@
         <GradientStop Color="#14a11f31" Offset="0" />
         <GradientStop Color="#00a11f31" Offset="0.55" />
       </RadialGradientBrush>
+      <!-- SCROLLBAR, Fluent's own keys. At rest Fluent draws a thin pill; on hover it EXPANDS into a gray slab with
+           a square thumb, a filled track and two arrow buttons - the one stock-gray surface left in the app. These
+           keep the expanded bar wide enough to grab but in the palette: a hairline-ink thumb on a faint track, no
+           button grounds, muted arrows. -->
+      <Color x:Key="ScrollBarThumbBackgroundColor">#4d121418</Color>
+      <Color x:Key="ScrollBarPanningThumbBackgroundColor">#4d121418</Color>
+      <SolidColorBrush x:Key="ScrollBarPanningThumbBackground" Color="#4d121418" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#80121418" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#a11f31" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillDisabled" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarTrackFill" Color="#0d121418" />
+      <SolidColorBrush x:Key="ScrollBarTrackFillPointerOver" Color="#0d121418" />
+      <SolidColorBrush x:Key="ScrollBarTrackStroke" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarTrackStrokePointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarBackgroundPointerOver" Color="#0d121418" />
+      <SolidColorBrush x:Key="ScrollBarBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackgroundPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackgroundPressed" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackgroundDisabled" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrushPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrushPressed" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrushDisabled" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForeground" Color="#80121418" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForegroundPointerOver" Color="#d9121418" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForegroundPressed" Color="#a11f31" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForegroundDisabled" Color="Transparent" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BgBrush" Color="#07080b" />
@@ -302,6 +331,35 @@
         <GradientStop Color="#26a11f31" Offset="0" />
         <GradientStop Color="#00a11f31" Offset="0.55" />
       </RadialGradientBrush>
+      <!-- SCROLLBAR, Fluent's own keys. At rest Fluent draws a thin pill; on hover it EXPANDS into a gray slab with
+           a square thumb, a filled track and two arrow buttons - the one stock-gray surface left in the app. These
+           keep the expanded bar wide enough to grab but in the palette: a hairline-ink thumb on a faint track, no
+           button grounds, muted arrows. -->
+      <Color x:Key="ScrollBarThumbBackgroundColor">#4df2ede6</Color>
+      <Color x:Key="ScrollBarPanningThumbBackgroundColor">#4df2ede6</Color>
+      <SolidColorBrush x:Key="ScrollBarPanningThumbBackground" Color="#4df2ede6" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#80f2ede6" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#c2384a" />
+      <SolidColorBrush x:Key="ScrollBarThumbFillDisabled" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarTrackFill" Color="#0df2ede6" />
+      <SolidColorBrush x:Key="ScrollBarTrackFillPointerOver" Color="#0df2ede6" />
+      <SolidColorBrush x:Key="ScrollBarTrackStroke" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarTrackStrokePointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarBackgroundPointerOver" Color="#0df2ede6" />
+      <SolidColorBrush x:Key="ScrollBarBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackgroundPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackgroundPressed" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBackgroundDisabled" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrushPointerOver" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrushPressed" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonBorderBrushDisabled" Color="Transparent" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForeground" Color="#80f2ede6" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForegroundPointerOver" Color="#d9f2ede6" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForegroundPressed" Color="#c2384a" />
+      <SolidColorBrush x:Key="ScrollBarButtonArrowForegroundDisabled" Color="Transparent" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

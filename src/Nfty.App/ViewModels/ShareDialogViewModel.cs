@@ -54,6 +54,32 @@ public sealed partial class ShareLimitRow : ObservableObject
 
     /// <summary>The full sentence behind the line, for its tooltip.</summary>
     [ObservableProperty] private string _tip = "";
+
+    /// <summary>What the row measures, in the card's label voice: <c>CANVAS</c>.</summary>
+    [ObservableProperty] private string _label = "";
+
+    /// <summary>The figure itself: <c>32 × 32</c>, or what stands in for it while it is unknown.</summary>
+    [ObservableProperty] private string _value = "";
+
+    /// <summary>The gallery's limit: <c>max 512 × 512</c>.</summary>
+    [ObservableProperty] private string _limit = "";
+
+    /// <summary>Whether the figure is not known yet (or can't be, signed out): neither within nor past.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsOk))] private bool _isPending;
+
+    /// <summary>Whether the figure is known and within its limit.</summary>
+    public bool IsOk => !IsPending && !IsOver;
+
+    partial void OnIsOverChanged(bool value) => OnPropertyChanged(nameof(IsOk));
+
+    internal void Show(string label, string value, string limit, bool over, bool pending)
+    {
+        Label = label;
+        Value = value;
+        Limit = limit;
+        IsOver = over;
+        IsPending = pending;
+    }
 }
 
 /// <summary>One tag the listing may carry.</summary>
@@ -143,6 +169,7 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     private readonly Func<ShareRequest, ShareRunInfo, IProgress<ShareProgress>, CancellationToken, Task<ShareResult>>? _run;
     private readonly IUrlOpener _urls;
     private readonly IClipboardService? _clipboard;
+    private readonly Func<IReadOnlyList<string>>? _tagsSource;
     private CancellationTokenSource? _runCts;
 
     private CancellationTokenSource? _factsCts;
@@ -170,11 +197,13 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     /// <param name="tags">The gallery's fixed tag list (its <c>tags.json</c>), read when the card opens; null or empty offers none.</param>
     /// <param name="urls">Opens the pull request in the browser; null makes a recorder that opens nothing.</param>
     /// <param name="clipboard">Copies the pull request's address; null leaves Copy doing nothing.</param>
+    /// <param name="refreshTags">Fetches the gallery's tag list; called on opening when <paramref name="tags"/> offers none. Null fetches nothing.</param>
     public ShareDialogViewModel(ShareSource source, IDialogService dialogs, IGitHubAccount account, ICommunityCache cache,
         IShareRepo repo, IShareChecker checker, ThumbnailGate? gate = null, IImageBridge? bridge = null,
         Func<Task>? connect = null,
         Func<ShareRequest, ShareRunInfo, IProgress<ShareProgress>, CancellationToken, Task<ShareResult>>? run = null,
-        Func<IReadOnlyList<string>>? tags = null, IUrlOpener? urls = null, IClipboardService? clipboard = null)
+        Func<IReadOnlyList<string>>? tags = null, IUrlOpener? urls = null, IClipboardService? clipboard = null,
+        Func<CancellationToken, Task>? refreshTags = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(dialogs);
@@ -199,7 +228,8 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         _models = SetHasModels;
         _name = source.Manifest.Name;
         _slug = ShareSlug.Of(source.Manifest.Name);
-        TagChips = (tags?.Invoke() ?? []).Distinct(StringComparer.Ordinal).Select(t => new ShareTagChip(t)).ToList();
+        _tagsSource = tags;
+        _tagChips = ChipsOf(tags);
         LimitRows = [new ShareLimitRow(), new ShareLimitRow(), new ShareLimitRow(), new ShareLimitRow()];
         _account.Changed += OnAccountChanged;
 
@@ -208,6 +238,7 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         StartFacts();
         StartRepo();
         Recompute();
+        if (TagChips.Count == 0 && refreshTags is not null) PendingTags = RefreshTagsAsync(refreshTags);
     }
 
     // ------------------------------------------------------------------------------------------ the Set
@@ -310,7 +341,30 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     [ObservableProperty] private string _description = "";
 
     /// <summary>The tags the gallery offers, with the ones in use marked.</summary>
-    public IReadOnlyList<ShareTagChip> TagChips { get; }
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasTags))] private IReadOnlyList<ShareTagChip> _tagChips;
+
+    /// <summary>Whether the gallery's tag list is being fetched (the card asks for it on opening when none is kept).</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(TagsEmptyText))] private bool _tagsLoading;
+
+    /// <summary>What stands in place of the chips when there are none: loading, or the empty-list sentence.</summary>
+    public string TagsEmptyText => TagsLoading ? "Loading the gallery's tags…" : NoTagsText;
+
+    /// <summary>Finishes when the card's own fetch of the tag list has.</summary>
+    public Task PendingTags { get; private set; } = Task.CompletedTask;
+
+    private async Task RefreshTagsAsync(Func<CancellationToken, Task> refresh)
+    {
+        TagsLoading = true;
+        try { await refresh(CancellationToken.None).ConfigureAwait(true); }
+        catch (Exception) { /* tags are a convenience; the empty sentence stands */ }
+        if (_disposed) return;
+        TagsLoading = false;
+        if (TagChips.Count == 0) TagChips = ChipsOf(_tagsSource);
+        Recompute();   // the fresh list is also what duplicates are checked against
+    }
+
+    private static List<ShareTagChip> ChipsOf(Func<IReadOnlyList<string>>? tags) =>
+        (tags?.Invoke() ?? []).Distinct(StringComparer.Ordinal).Select(t => new ShareTagChip(t)).ToList();
 
     /// <summary>The tags in use.</summary>
     public IReadOnlyList<string> Tags => TagChips.Where(t => t.IsOn).Select(t => t.Name).ToList();
@@ -329,6 +383,9 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
 
     /// <summary>The reserved line under the chips: the empty-list sentence, or why a click was refused, else empty.</summary>
     [ObservableProperty] private string _tagNote = "";
+
+    /// <summary>The shares line while signed out: the count lives on GitHub, so it can't be known yet.</summary>
+    public const string SignedOutSharesText = "Shares: connect GitHub to see yours";
 
     /// <summary>The sentence shown in place of the chips when the list is empty.</summary>
     public const string NoTagsText = "No tags available yet.";
@@ -492,6 +549,12 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
     /// <summary>Whether the block asks which share to replace.</summary>
     public bool IsReplaceBlock => LowerBlock == ShareLowerBlock.Replace;
 
+    /// <summary>The block's heading when nothing needs deciding: where the share goes, or that GitHub must be connected.</summary>
+    [ObservableProperty] private string _readyHeading = "";
+
+    /// <summary>The sentence under <see cref="ReadyHeading"/>.</summary>
+    [ObservableProperty] private string _readyText = "";
+
     /// <summary>The sentence at the head of the block, whichever it holds.</summary>
     [ObservableProperty] private string _blockHeading = "";
 
@@ -616,7 +679,7 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         bool atLimit = _repoLoaded && same is null && shares.Count >= ShareRules.MaxShares;
         if (!IsSignedIn)
         {
-            shared.Text = string.Create(CultureInfo.InvariantCulture, $"— of {ShareRules.MaxShares} shared");
+            shared.Text = SignedOutSharesText;
             shared.IsOver = false;
             shared.Tip = ShareRules.NotConnected;
         }
@@ -633,6 +696,29 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
             shared.IsOver = atLimit && ReplaceSlug is null;
             shared.Tip = atLimit ? ShareRules.AtShareLimit : "";
         }
+
+        // ---- the same four facts as label, figure and limit, for the card's table. What is wrong and how to fix it is
+        // the row's Tip, shown on hover over its warning mark, so the row never clips a sentence.
+        string maxShort = string.Create(CultureInfo.InvariantCulture, $"{ShareRules.MaxCanvas} × {ShareRules.MaxCanvas}");
+        if (!factsIn) canvas.Show("CANVAS", "checking…", "max " + maxShort, false, true);
+        else if (_result!.Width > 0 && _result.Height > 0)
+            canvas.Show("CANVAS", string.Create(CultureInfo.InvariantCulture, $"{_result.Width:N0} × {_result.Height:N0}"),
+                "max " + maxShort, canvas.IsOver, false);
+        else canvas.Show("CANVAS", "can't be read", "max " + maxShort, false, true);
+
+        assets.Show("ASSETS", string.Create(CultureInfo.InvariantCulture, $"{count:N0}"),
+            string.Create(CultureInfo.InvariantCulture, $"max {ShareRules.MaxAssets:N0}"), assetsOver, false);
+
+        string maxSize = "max " + ShareRules.SizeWords(ShareRules.MaxSetBytes);
+        if (!factsIn) size.Show("PACKED SIZE", "checking…", maxSize, false, true);
+        else if (_result!.Bytes > 0) size.Show("PACKED SIZE", ShareRules.SizeWords(_result.Bytes), maxSize, size.IsOver, false);
+        else size.Show("PACKED SIZE", "unknown", maxSize, false, true);
+
+        string maxShares = string.Create(CultureInfo.InvariantCulture, $"max {ShareRules.MaxShares}");
+        if (!IsSignedIn) shared.Show("YOUR SHARES", "connect GitHub to see", maxShares, false, true);
+        else if (!_repoLoaded) shared.Show("YOUR SHARES", RepoPending ? "checking…" : "can't be read", maxShares, false, true);
+        else shared.Show("YOUR SHARES", string.Create(CultureInfo.InvariantCulture, $"{shares.Count} in nfty-public"), maxShares,
+            shared.IsOver, false);
 
         // ---- the duplicate check: against the cached list, once the Set's fingerprint is known
         string? duplicate = null;
@@ -680,6 +766,22 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
             _ => "",
         };
         LowerBlock = block;
+        if (!IsSignedIn)
+        {
+            ReadyHeading = "Sharing needs a GitHub account";
+            ReadyText = "Your Set goes to a public repository named nfty-public on your account; the gallery lists it once its checks pass. nfty never sees your password.";
+        }
+        else if (!_repoLoaded)
+        {
+            ReadyHeading = RepoPending ? $"Reading @{_account.Login}/nfty-public…" : $"@{_account.Login}/nfty-public can't be read";
+            ReadyText = RepoPending ? "The share count, and anything that doesn't belong there, are checked first." : _repoNotice ?? "";
+        }
+        else
+        {
+            ReadyHeading = $"Goes to @{_account.Login}/nfty-public";
+            ReadyText = string.Create(CultureInfo.InvariantCulture,
+                $"As share {shares.Count + 1} of {ShareRules.MaxShares}. The gallery checks it and usually lists it within a few minutes.");
+        }
 
         // ---- why Share can't be pressed, first failing reason in the order the card promises
         string reason = "";

@@ -1545,7 +1545,7 @@ public partial class VisualCapture
         foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
             var key = variant.Key.ToString()!.ToLowerInvariant();
-            foreach (var state in new[] { "extras", "none", "replace", "already" })
+            foreach (var state in new[] { "extras", "none", "signedout", "replace", "already" })
             {
                 var task = ShareDialogLayoutTests.StateAsync(state, r =>
                 {

@@ -1125,6 +1125,46 @@
   <Style Selector="Border.ship TextBlock.part.pending">
     <Setter Property="Opacity" Value="0.5" />
   </Style>
+  <!-- PackageCard (Controls/PackageCard.cs): the manifest drawn once for every host. Name and size, a hairline,
+       then the parts as a grid of equal cells - glyph, name, count right-aligned. -->
+  <Style Selector="Border.ship.pkg">
+    <Setter Property="Padding" Value="12,7,12,7" />
+  </Style>
+  <Style Selector="Border.pkgrule">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Margin" Value="0,5,0,3" />
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Grid.pkgcell">
+    <Setter Property="Margin" Value="0,0,14,0" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Grid.pkgcell Path.ico">
+    <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.pkgname">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.pkgdetail">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A warning mark that carries its sentence: hover it for what is wrong and what to do. The sentence never sits
+       in the row clipped mid-word; the mark is the affordance (Help cursor, a hit-testable ground). -->
+  <Style Selector="Border.alert">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Cursor" Value="Help" />
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+  <Style Selector="Border.alert Path.ico">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
   <Style Selector="Border.ship TextBlock.fn">
     <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
     <Setter Property="FontSize" Value="13" />
@@ -4989,6 +5029,20 @@
     <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
   </Style>
 
+  <!-- ===== Scrollbars ===== -->
+  <!-- The expanded bar (pointer over it) keeps Fluent's width, so it stays easy to grab, but its thumb is a
+       rounded, inset pill like the resting one rather than a square gray slab. Colors are Fluent's own keys,
+       re-inked in Tokens.axaml. One /template/ hop. -->
+  <Style Selector="ScrollBar /template/ Thumb">
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="ScrollBar:vertical:expanded /template/ Thumb">
+    <Setter Property="Margin" Value="3,0" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal:expanded /template/ Thumb">
+    <Setter Property="Margin" Value="0,3" />
+  </Style>
+
   <!-- ===== Community page ===== -->
 
   <!-- RESERVED, NOT REVEALED: anything on this page that comes and goes (a tile's badge, the 3D and
@@ -5145,13 +5199,6 @@
     <Setter Property="LineHeight" Value="14" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>
-  <Style Selector="TextBlock.sline.limit">
-    <Setter Property="Height" Value="18" />
-    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-  </Style>
-  <Style Selector="TextBlock.sline.over">
-    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
-  </Style>
   <Style Selector="TextBlock.swarn">
     <Setter Property="FontSize" Value="11" />
     <Setter Property="LineHeight" Value="14" />
@@ -5176,11 +5223,49 @@
     <Setter Property="Width" Value="22" />
     <Setter Property="Height" Value="22" />
   </Style>
-  <Style Selector="Button.sbtn">
+  <!-- The card's small buttons (Connect GitHub…, Remove these…). NOT .sbtn: that class is the editor's 19px
+       placement stepper, and sharing the name drew Connect GitHub… as a 19px empty box (and resized the
+       steppers). -->
+  <Style Selector="Button.shbtn">
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Height" Value="26" />
     <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <!-- A row of the GALLERY LIMITS table: mark, label, figure (+ fix), limit. One height, a hairline under each. -->
+  <Style Selector="Border.slrow">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="TextBlock.slabel">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="LetterSpacing" Value="0.8" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.svalue">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.svalue.pending">
+    <Setter Property="FontFamily" Value="{DynamicResource SansFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.svalue.over">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.slimit">
+    <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- A tag chip: a toggle, RadiusXs like every badge. Both states carry their own ground and set the
        presenter explicitly, or Fluent's hover hands back its stock blue. -->
