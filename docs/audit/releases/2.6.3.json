@@ -1,0 +1,56 @@
+{
+  "version": "2.6.3",
+  "mainCommit": "e5fcda5d6b4d2e718432efcdbc929bbfab65f1fa",
+  "url": "https://github.com/corderro-artz/nfty/releases/tag/v2.6.3",
+  "publishedAt": "2026-11-10T19:54:50Z",
+  "assets": [
+    {
+      "name": "nfty-2.6.3-linux-x64-framework-dependent.tar.gz",
+      "size": 13208561,
+      "digest": "sha256:f214eef5f7ef74074b729850dc6d6181f93d9250cc1b3579d8e60b8bf070ddb8",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-linux-x64-framework-dependent.tar.gz"
+    },
+    {
+      "name": "nfty-2.6.3-linux-x64-portable.tar.gz",
+      "size": 83684602,
+      "digest": "sha256:bfe63b525c4cadf90c0c5ca8c93b93381ef6a9e0e24706f26b83037cb0e0de28",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-linux-x64-portable.tar.gz"
+    },
+    {
+      "name": "nfty-2.6.3-linux-x64-single-file-net10.tar.gz",
+      "size": 13203082,
+      "digest": "sha256:e96e585974eff1a4ce5dd4b892b8b9c0558180007bbd731a93257ef9f930fe32",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-linux-x64-single-file-net10.tar.gz"
+    },
+    {
+      "name": "nfty-2.6.3-linux-x64-single-file.tar.gz",
+      "size": 76558736,
+      "digest": "sha256:dd894c659bc00f5ee5bbf6d9353a23b300e3a7035a0e935dceb66b4a9809d487",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-linux-x64-single-file.tar.gz"
+    },
+    {
+      "name": "nfty-2.6.3-win-x64-framework-dependent.zip",
+      "size": 15904803,
+      "digest": "sha256:5cb46f043a6cdcbf2e615be35700cc14a246a18eb01e2ececb5af65160747ef7",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-win-x64-framework-dependent.zip"
+    },
+    {
+      "name": "nfty-2.6.3-win-x64-portable.zip",
+      "size": 89397518,
+      "digest": "sha256:716270ffdbc122da1eee2537b293d4c0acb964ad0c17f18408b4dfa3ab608032",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-win-x64-portable.zip"
+    },
+    {
+      "name": "nfty-2.6.3-win-x64-single-file-net10.zip",
+      "size": 15810133,
+      "digest": "sha256:324c24f88a34dce8f47b0fa900b5af80e9a9cbcbeaa56fa6237c1731c3d9453e",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-win-x64-single-file-net10.zip"
+    },
+    {
+      "name": "nfty-2.6.3-win-x64-single-file.zip",
+      "size": 81438897,
+      "digest": "sha256:c091a772c2517c269c79847270c1caf4884dbfab61769e9812980ed8203091cb",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.6.3/nfty-2.6.3-win-x64-single-file.zip"
+    }
+  ]
+}
