@@ -391,6 +391,28 @@ public class CommunityLayoutTests
     }
 
     [AvaloniaFact]
+    public void A_preview_whose_grid_claims_more_than_the_picture_shows_the_whole_picture_and_never_throws()
+    {
+        var dir = TempSheetDir();
+        using var vm = Page(CommunityFixtures.Listing([CommunityFixtures.Entry("a")]), dir);
+        // 80 columns of 16 px in a 32 px picture: a hostile chunk. Nothing may crop outside the picture.
+        Nfty.Core.Publish.SheetGrid.WriteInto(Path.Combine(dir, "preview.png"), new Nfty.Core.Publish.SheetGrid(80, 2, 16, 16, 4));
+        var (window, _) = Show(vm);
+        try
+        {
+            vm.SelectCommand.Execute(vm.Tiles[0]);
+            Settle(vm);
+            Assert.NotNull(vm.Tiles[0].Preview);
+            Assert.False(vm.Tiles[0].ImageMissing);
+            Assert.Equal(32, vm.Tiles[0].Preview!.PixelSize.Width);   // no grid is believed: the whole picture
+            Assert.Equal(1, vm.CellCount);
+            Assert.False(vm.RailMissing);
+            Assert.Equal(32, vm.RailPreview!.PixelSize.Width);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
     public void The_wheel_steps_the_rail_through_the_preview_cells()
     {
         var dir = TempSheetDir();

@@ -136,6 +136,15 @@ public static class ShareRules
     /// <summary>The user already shares this Set.</summary>
     public static string AlreadySharedAs(string name) => $"You already share this Set as \"{name}\".";
 
+    /// <summary>The card's note that the account already shares the collection being looked at.</summary>
+    public static string AlreadySharedThis => "You already share this collection.";
+
+    /// <summary>The card's note at the share limit: a swap is the way in, and nothing happens until Share.</summary>
+    public static string ReplaceOneToShare => "Replace one to share this. Nothing is removed until you press Share.";
+
+    /// <summary>Unsharing is not wired on this page (no sharing service).</summary>
+    public static string UnshareUnavailable => "Unsharing isn't available here.";
+
     /// <summary>The share would change nothing.</summary>
     public static string NothingChanged(string name, DateTimeOffset date) =>
         $"Nothing changed since you shared \"{name}\" on {date.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}.";

@@ -65,7 +65,10 @@ public static class ServiceRegistration
             sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<INavigationService>(),
             sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IStatusService>(),
             path => OpenDownloadedSet(sp, path), sp.GetRequiredService<IUrlOpener>(),
-            http: sp.GetRequiredService<CommunityHttp>().Client, sharing: sp.GetRequiredService<ICommunitySharing>()));
+            http: sp.GetRequiredService<CommunityHttp>().Client, sharing: sp.GetRequiredService<ICommunitySharing>(),
+            endpoints: sp.GetRequiredService<Nfty.Core.Publish.Community.CommunityEndpoints>()));
+        // Where the gallery lives, for the page's report link (the share and sign-in services read the same record).
+        services.AddSingleton(Nfty.Core.Publish.Community.CommunityEndpoints.Default);
         // The one unauthenticated client downloads use: no token ever rides on it, and no overall
         // timeout (CommunityDownload stalls out on its own when bytes stop arriving).
         services.AddSingleton<CommunityHttp>();

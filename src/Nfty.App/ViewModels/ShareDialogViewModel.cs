@@ -675,8 +675,8 @@ public sealed partial class ShareDialogViewModel : ViewModelBase, IUnsavedWork, 
         {
             ShareLowerBlock.Extras => repoProblem ?? "",
             ShareLowerBlock.Duplicate => duplicate ?? "",
-            ShareLowerBlock.AlreadyShared => "You already share this collection.",
-            ShareLowerBlock.Replace => "Replace one to share this. Nothing is removed until you press Share.",
+            ShareLowerBlock.AlreadyShared => ShareRules.AlreadySharedThis,
+            ShareLowerBlock.Replace => ShareRules.ReplaceOneToShare,
             _ => "",
         };
         LowerBlock = block;

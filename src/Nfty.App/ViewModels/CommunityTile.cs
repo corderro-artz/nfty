@@ -163,7 +163,7 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
             }
             catch (OperationCanceledException) { return; }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
-                                           or InvalidImageContentException
+                                           or InvalidImageContentException or ArgumentException
                                            or SixLabors.ImageSharp.UnknownImageFormatException)
             {
                 missing = true;
@@ -188,9 +188,7 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
     {
         using var sheet = ImageFormats.Load(path);
         var grid = SheetGrid.Read(path);
-        var rect = grid is null
-            ? new Rectangle(0, 0, sheet.Width, sheet.Height)
-            : new Rectangle(0, 0, Math.Min(grid.CellWidth, sheet.Width), Math.Min(grid.CellHeight, sheet.Height));
+        var rect = PreviewCells.Rect(grid, 0, sheet.Width, sheet.Height);
         using var cell = sheet.Clone(c => c.Crop(rect));
         return _bridge.ToBitmap(cell);
     }

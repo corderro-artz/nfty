@@ -71,6 +71,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     private string _downloadingId = "";
     private string _failedId = "";
     private readonly ICommunitySharing? _sharing;
+    private readonly CommunityEndpoints _endpoints;
     private readonly HashSet<string> _standIns = new(StringComparer.Ordinal);
 
     /// <summary>Creates the page.</summary>
@@ -87,11 +88,13 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <param name="http">The client downloads go through. It carries no token and no timeout (the download
     /// has its own stall limit); null makes one the page owns and disposes.</param>
     /// <param name="sharing">Shares, unshares and the pending list; null leaves Unshare saying it is unavailable and shows nothing pending.</param>
+    /// <param name="endpoints">Where the gallery lives (the report form's address); the shipped one when null.</param>
     public CommunityViewModel(ICommunityCache cache, ICommunitySeen seen, IGitHubAccount account,
         INavigationService nav, IDialogService dialogs, IStatusService status, Func<string, Task> openSet,
         IUrlOpener? urls = null, ThumbnailGate? gate = null, IImageBridge? bridge = null, HttpClient? http = null,
-        ICommunitySharing? sharing = null)
+        ICommunitySharing? sharing = null, CommunityEndpoints? endpoints = null)
     {
+        _endpoints = endpoints ?? CommunityEndpoints.Default;
         _ownsHttp = http is null;
         _sharing = sharing;
         _http = http ?? new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
@@ -108,7 +111,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         UnshareHandler = _sharing is null
             ? _ =>
             {
-                _status.Say("Unsharing isn't available here.");
+                _status.Say(ShareRules.UnshareUnavailable);
                 return Task.CompletedTask;
             }
             : UnshareCoreAsync;
@@ -695,7 +698,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
                 _grid = grid;
                 RailLoading = false;
                 RailMissing = sheet is null;
-                CellCount = sheet is null ? 0 : Math.Max(1, grid?.Count ?? 1);
+                CellCount = sheet is null ? 0 : PreviewCells.Count(grid, sheet.Width, sheet.Height);
                 ShowCell();
             });
         });
@@ -705,16 +708,18 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     {
         var old = RailPreview;
         if (_sheet is null) { RailPreview = null; old?.Dispose(); return; }
-        Rectangle rect;
-        if (_grid is null) rect = new Rectangle(0, 0, _sheet.Width, _sheet.Height);
-        else
+        var rect = PreviewCells.Rect(_grid, Cell, _sheet.Width, _sheet.Height);
+        try
         {
-            int col = Cell % _grid.Columns, row = Cell / _grid.Columns;
-            rect = Rectangle.Intersect(new Rectangle(col * _grid.CellWidth, row * _grid.CellHeight,
-                _grid.CellWidth, _grid.CellHeight), new Rectangle(0, 0, _sheet.Width, _sheet.Height));
+            using var cell = _sheet.Clone(c => c.Crop(rect));
+            RailPreview = _bridge.ToBitmap(cell);
         }
-        using var cell = _sheet.Clone(c => c.Crop(rect));
-        RailPreview = _bridge.ToBitmap(cell);
+        catch (Exception ex) when (ex is ArgumentException or InvalidImageContentException)
+        {
+            // The picture is not one a crop can read: the rail says so, as for a picture that never arrived.
+            RailPreview = null;
+            RailMissing = true;
+        }
         old?.Dispose();
     }
 
@@ -775,7 +780,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     private bool CanDownload() => Selected is { } t && !_standIns.Contains(t.Entry.Id) && !IsOffline && !IsDownloading;
 
-    private bool CanReport() => Selected is { } t && !_standIns.Contains(t.Entry.Id) && ReportUrl(t.Entry) is not null;
+    private bool CanReport() => Selected is { } t && !_standIns.Contains(t.Entry.Id) && ReportUrl(t.Entry, _endpoints) is not null;
 
     private bool CanUnshare() => CanUnshareSelected && !IsUnsharing;
 
@@ -832,7 +837,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     [RelayCommand(CanExecute = nameof(CanReport))]
     private void Report()
     {
-        if (Selected is { } t && ReportUrl(t.Entry) is { } url) _urls.Open(url);
+        if (Selected is { } t && ReportUrl(t.Entry, _endpoints) is { } url) _urls.Open(url);
     }
 
     /// <summary>Removes the signed-in account's own share.</summary>
@@ -897,12 +902,13 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>The gallery's report form for one entry, naming nothing but the entry's id.</summary>
     /// <param name="entry">The entry.</param>
     /// <returns>The address, or null when the entry's id is not one nfty will put in a URL.</returns>
-    public static Uri? ReportUrl(CommunityEntry entry)
+    /// <param name="endpoints">Where the gallery lives; the shipped one when null.</param>
+    public static Uri? ReportUrl(CommunityEntry entry, CommunityEndpoints? endpoints = null)
     {
         ArgumentNullException.ThrowIfNull(entry);
         if (entry.Owner.Id <= 0 || !ShareSlug.IsValid(entry.Slug)) return null;
         return new Uri(string.Create(CultureInfo.InvariantCulture,
-            $"https://github.com/{CommunityEndpoints.Default.GalleryRepo}/issues/new?template=report.yml&entry={entry.Owner.Id}/{entry.Slug}"));
+            $"https://github.com/{(endpoints ?? CommunityEndpoints.Default).GalleryRepo}/issues/new?template=report.yml&entry={entry.Owner.Id}/{entry.Slug}"));
     }
 
     /// <summary>Stops everything in flight and frees the pictures.</summary>

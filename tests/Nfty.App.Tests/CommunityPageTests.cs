@@ -260,6 +260,22 @@ public class CommunityPageTests
     }
 
     [Fact]
+    public void Report_url_follows_the_injected_gallery()
+    {
+        var other = CommunityEndpoints.Default with { GalleryRepo = "someone/test-gallery" };
+        Assert.StartsWith("https://github.com/someone/test-gallery/issues/new", CommunityViewModel.ReportUrl(CommunityFixtures.Entry("fine"), other)!.AbsoluteUri);
+    }
+
+    [Fact]
+    public async Task Unshare_without_a_sharing_service_says_the_house_sentence()
+    {
+        var status = new StatusService();
+        using var vm = CommunityFixtures.Page(new FakeCommunityCache(), status: status);
+        await vm.UnshareHandler(CommunityFixtures.Entry("fine"));
+        Assert.Equal(ShareRules.UnshareUnavailable, status.Last);
+    }
+
+    [Fact]
     public void Report_url_refuses_an_id_that_is_not_digits_and_a_slug()
     {
         Assert.Null(CommunityViewModel.ReportUrl(CommunityFixtures.Entry("fine", ownerId: 0)));
