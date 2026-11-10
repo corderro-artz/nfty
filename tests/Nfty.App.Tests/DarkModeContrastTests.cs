@@ -392,6 +392,7 @@ public class DarkModeContrastTests
         yield return ("help-search-empty", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Query = "qzxv" } }, null);
         yield return ("help-rise", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } }, null);
         yield return ("help-viewer", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } }, null);
+        yield return ("help-community", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Community } }, null);
         // The environment-locked state: tray and stepper both disabled (dimmed), and the note naming
         // the variable. The riskiest ink the card can carry; Auto is the same card with less dimming.
         yield return ("settings-env-locked", new Views.SettingsDialogView

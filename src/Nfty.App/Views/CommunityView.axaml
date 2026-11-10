@@ -5,77 +5,48 @@
              xmlns:vm="using:Nfty.App.ViewModels"
              x:Class="Nfty.App.Views.CommunityView"
              x:DataType="vm:CommunityViewModel"
-             RenderOptions.BitmapInterpolationMode="None">
-  <!-- The Community page: header (title, search, tag tray, sort) over a reserved status line, then
-       a PAGED grid of fixed-size tiles beside a 288px rail.
+             RenderOptions.BitmapInterpolationMode="None"
+             Focusable="True" IsTabStop="False">
+  <!-- The Community page: a header (Back, title, search, sort, Refresh), the TAG ROW, then a PAGED
+       grid of fixed-size tiles over the pager band (which also carries the status line), beside a
+       288px rail.
 
        The grid pages and never scrolls: how many tiles a page holds is measured from the host the
        Grid gives it, divided by the tile pitch TOKENS (CommunityView.axaml.cs). The host is a
        ScrollViewer with both bars off for the CookBook card's reason - it reports the room it was
-       GIVEN, so the tiles cannot grow the thing measured to decide how many fit. -->
+       GIVEN, so the tiles cannot grow the thing measured to decide how many fit.
+
+       The page takes focus on arrival (Focusable, not a tab stop) so its keys are live: they are all
+       on one focus-guarded handler in the code-behind, the editor's and viewer's pattern. -->
   <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*,288">
 
-    <!-- Header. Title left; search, tag tray and sort right, every one a stated width so nothing
-         moves as the tags change. -->
-    <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12"
+    <!-- Header. Back and the title left; search, sort and Refresh right, every one a stated width so
+         nothing moves. The tags used to share this line as a seg tray of 72px buttons, which truncated
+         every tag name and pushed the rest into a dropdown of bare buttons; they have a row of their own
+         now (below), which is also what gave Back its room. -->
+    <Grid Grid.Row="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="12"
           Height="36">
-      <TextBlock Grid.Column="0" Classes="mono" FontSize="17" FontWeight="Bold" Text="Community"
-                 VerticalAlignment="Center" />
+      <Button Grid.Column="0" x:Name="BackButton" Classes="tbtn ghost" Command="{Binding BackCommand}"
+              VerticalAlignment="Center" ToolTip.Tip="Back to the start screen  ·  Esc">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Path Classes="ico sm" Data="{StaticResource IconArrowLeft}" />
+          <TextBlock Text="Back" />
+        </StackPanel>
+      </Button>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+        <Path Classes="ico ti ctitle" Data="{StaticResource IconCommunity}" />
+        <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="Community" VerticalAlignment="Center" />
+      </StackPanel>
 
-      <Border Grid.Column="2" Classes="search" Width="200" VerticalAlignment="Center">
-        <Grid ColumnDefinitions="Auto,*">
+      <Border Grid.Column="3" Classes="search" Width="240" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="Auto,*,Auto">
           <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconSearch}" VerticalAlignment="Center" />
-          <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding Query}" Classes="bare" Margin="8,0,0,0"
+          <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding Query}" Classes="bare" Margin="8,0,6,0"
                    VerticalAlignment="Center" PlaceholderText="#tag, @user or a name"
                    ToolTip.Tip="Search by #tag, @user or a name. Terms combine: #props @alice chest finds alice's chests tagged props." />
+          <Border Grid.Column="2" Classes="kbd"><TextBlock x:Name="SearchKey" /></Border>
         </Grid>
       </Border>
-
-      <!-- The gallery's fixed tag list. Each chip writes its #tag into the search box (and shows on while
-           it is there); chips past the row's budget live in the More tags dropdown. Every chip a stated
-           width, the whole tray present even before the list arrives (it only loses its ink). -->
-      <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
-                  Classes.cgone="{Binding !HasTags}">
-        <TextBlock Classes="seglbl" Text="TAG" />
-        <Border Classes="seg tiny" VerticalAlignment="Center"
-                ToolTip.Tip="Add or remove a #tag in the search box.">
-          <StackPanel Orientation="Horizontal">
-            <ItemsControl ItemsSource="{Binding TrayTags}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:CommunityToken">
-                  <Button Classes="seg-b tiny" Width="72" Classes.on="{Binding IsOn}"
-                          Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding Token}">
-                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <Button Classes="seg-b tiny" Width="72" Content="More tags" Classes.on="{Binding MoreIsOn}"
-                    Classes.cgone="{Binding !HasMoreTags}" ToolTip.Tip="The rest of the gallery's tags.">
-              <Button.Flyout>
-                <Flyout Placement="BottomEdgeAlignedRight">
-                  <Border Classes="seg tiny">
-                    <ItemsControl ItemsSource="{Binding MoreTags}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:CommunityToken">
-                          <Button Classes="seg-b tiny" Width="120" HorizontalContentAlignment="Left"
-                                  Classes.on="{Binding IsOn}" Command="{Binding ToggleCommand}"
-                                  ToolTip.Tip="{Binding Token}">
-                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                          </Button>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </Border>
-                </Flyout>
-              </Button.Flyout>
-            </Button>
-          </StackPanel>
-        </Border>
-      </StackPanel>
 
       <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
         <TextBlock Classes="seglbl" Text="SORT" />
@@ -93,19 +64,108 @@
           </StackPanel>
         </Border>
       </StackPanel>
+
+      <Button Grid.Column="5" x:Name="RefreshButton" Classes="tbtn" Command="{Binding RefreshCommand}"
+              VerticalAlignment="Center" ToolTip.Tip="Fetch the list again  ·  R">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Path Classes="ico sm" Data="{StaticResource IconRefresh}" />
+          <TextBlock Text="Refresh" />
+        </StackPanel>
+      </Button>
     </Grid>
 
-    <!-- The reserved status line: when the list was fetched and what is new, or a notice in warning
-         ink. Always laid out; Mark all seen only loses its ink when there is nothing to mark. -->
-    <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="*,Auto" Height="24" Margin="0,0,14,0">
-      <TextBlock Grid.Column="0" Classes="cstatus" Classes.warn="{Binding StatusIsWarning}"
-                 Text="{Binding StatusLine}" />
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
-        <Button Classes="cmarkall" Content="Mark all seen" Classes.cgone="{Binding !HasMarks}"
-                Command="{Binding MarkAllSeenCommand}" ToolTip.Tip="Count every collection in the list as seen." />
-        <Button Classes="cmarkall" Content="Refresh" Command="{Binding RefreshCommand}"
-                ToolTip.Tip="Fetch the list again." />
+    <!-- THE TAG ROW. The gallery's fixed tag list, in its own order: each chip is a toggle that writes its
+         #tag into the search box (accent wash while it is there) and carries how many collections wear it.
+         Five chips of one stated width fit the column at the smallest window; the picker button holds the
+         rest (and every tag again, with a filter). The whole row is present before the list arrives; it only
+         loses its ink. -->
+    <Grid Grid.Row="1" Grid.Column="0" Height="34" Margin="0,0,14,0" ColumnDefinitions="Auto,Auto,Auto,*"
+          ColumnSpacing="8" Classes.cgone="{Binding !HasTags}">
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+        <Path Classes="ico xs" Data="{StaticResource IconTag}" />
+        <TextBlock Classes="seglbl" Text="TAGS" />
       </StackPanel>
+      <ItemsControl Grid.Column="1" ItemsSource="{Binding TrayTags}" VerticalAlignment="Center">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CommunityToken">
+            <Button Classes="ctag" Width="100" Classes.on="{Binding IsOn}" Command="{Binding ToggleCommand}"
+                    ToolTip.Tip="{Binding Token, StringFormat='Add or remove {0} in the search box'}">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Classes="ctagname" Classes.on="{Binding IsOn}" Text="{Binding Label}" />
+                <TextBlock Grid.Column="1" Classes="ctagcount" Classes.on="{Binding IsOn}" Text="{Binding CountText}" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- The tag picker: every tag with its count, a filter, and Clear tags. Opened by this button or T. -->
+      <Button Grid.Column="2" x:Name="TagPickerButton" Classes="ctag more" Width="100"
+              Classes.on="{Binding MoreIsOn}" VerticalAlignment="Center"
+              ToolTip.Tip="Every tag in the gallery, with a filter  ·  T">
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <Grid x:Name="TagPicker" Classes="ctagpicker" Width="340" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10">
+              <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Classes="plabel" Margin="0" Text="ALL TAGS" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Classes="cstatus" Text="{Binding TagSummary}" />
+              </Grid>
+              <Border Grid.Row="1" Classes="search" MaxWidth="1000">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconSearch}" />
+                  <TextBox Grid.Column="1" x:Name="TagFilterBox" Classes="bare" Margin="8,0,0,0"
+                           Text="{Binding TagFilter}" PlaceholderText="Filter tags" VerticalAlignment="Center" />
+                </Grid>
+              </Border>
+              <!-- One stated height, so the picker is one size whatever the filter leaves; the chips scroll
+                   inside it when a gallery has more tags than five rows. -->
+              <Panel Grid.Row="2" Height="164">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding PickerTags}" VerticalAlignment="Top">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:CommunityToken">
+                        <Button Classes="ctag" HorizontalAlignment="Stretch" Margin="0,0,6,6"
+                                Classes.on="{Binding IsOn}" Command="{Binding ToggleCommand}"
+                                ToolTip.Tip="{Binding Token, StringFormat='Add or remove {0} in the search box'}">
+                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Classes="ctagname" Classes.on="{Binding IsOn}" Text="{Binding Label}" />
+                            <TextBlock Grid.Column="1" Classes="ctagcount" Classes.on="{Binding IsOn}" Text="{Binding CountText}" />
+                          </Grid>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+                <TextBlock Classes="zp" Text="{Binding PickerEmptyText}" IsVisible="{Binding PickerIsEmpty}"
+                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+              </Panel>
+              <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0" Classes="cmeta" TextWrapping="Wrap" TextTrimming="None"
+                           VerticalAlignment="Center"
+                           Text="Click a tag to add or drop it. Enter adds the first match." />
+                <Button Grid.Column="1" Classes="tbtn cellbtn" Command="{Binding ClearTagsCommand}"
+                        ToolTip.Tip="Take every #tag out of the search box">
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <Path Classes="ico xs" Data="{StaticResource IconClose}" />
+                    <TextBlock Text="Clear tags" />
+                  </StackPanel>
+                </Button>
+              </Grid>
+            </Grid>
+          </Flyout>
+        </Button.Flyout>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+          <TextBlock Grid.Column="0" Classes="ctagname" Classes.on="{Binding MoreIsOn}" Text="{Binding MoreLabel}" />
+          <Path Grid.Column="1" Classes="ico xs ctagchev" Classes.on="{Binding MoreIsOn}" Data="{StaticResource IconChevronDown}" />
+        </Grid>
+      </Button>
     </Grid>
 
     <!-- The grid host, with the empty state layered over it (IsVisible is right here: both share one
@@ -179,11 +239,35 @@
       </StackPanel>
     </Panel>
 
-    <!-- The pager. A fixed band, so the grid above is one height whatever the page. -->
-    <Grid Grid.Row="3" Grid.Column="0" ColumnDefinitions="Auto,*,Auto" Height="36" Margin="0,0,14,0">
-      <Button Grid.Column="0" Classes="tbtn" Content="Previous" Command="{Binding PrevPageCommand}" />
-      <TextBlock Grid.Column="1" Classes="cstatus" HorizontalAlignment="Center" Text="{Binding PageText}" />
-      <Button Grid.Column="2" Classes="tbtn" Content="Next" Command="{Binding NextPageCommand}" />
+    <!-- The pager band, which also carries the reserved status line: when the list was fetched and what is
+         new, or a notice in warning ink (its whole sentence on the tooltip). A fixed band, so the grid above is
+         one height whatever the page; Mark all seen only loses its ink when there is nothing to mark. -->
+    <Grid Grid.Row="3" Grid.Column="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12" Height="36"
+          Margin="0,0,14,0">
+      <Button Grid.Column="0" x:Name="PrevButton" Classes="tbtn" Command="{Binding PrevPageCommand}"
+              VerticalAlignment="Center" ToolTip.Tip="Previous page  ·  PgUp">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <Path Classes="ico sm" Data="{StaticResource IconChevronLeft}" />
+          <TextBlock Text="Previous" />
+        </StackPanel>
+      </Button>
+      <TextBlock Grid.Column="1" Classes="cstatus" Classes.warn="{Binding StatusIsWarning}"
+                 Text="{Binding StatusLine}" ToolTip.Tip="{Binding StatusLine}" />
+      <Button Grid.Column="2" Classes="cmarkall" Classes.cgone="{Binding !HasMarks}"
+              Command="{Binding MarkAllSeenCommand}" ToolTip.Tip="Count every collection in the list as seen.">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <Path Classes="ico xs cink" Data="{StaticResource IconSeen}" />
+          <TextBlock Text="Mark all seen" />
+        </StackPanel>
+      </Button>
+      <TextBlock Grid.Column="3" Classes="cstatus" Text="{Binding PageText}" />
+      <Button Grid.Column="4" x:Name="NextButton" Classes="tbtn" Command="{Binding NextPageCommand}"
+              VerticalAlignment="Center" ToolTip.Tip="Next page  ·  PgDn">
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <TextBlock Text="Next" />
+          <Path Classes="ico sm" Data="{StaticResource IconChevronRight}" />
+        </StackPanel>
+      </Button>
     </Grid>
 
     <!-- The rail. Nothing selected: one sentence saying how to pick. Otherwise the picture with its
@@ -261,29 +345,53 @@
                        ToolTip.Tip="{Binding DownloadNote}" />
             <!-- The download's progress and its Stop. Always laid out; inked only while the selected
                  collection is the one downloading, so starting one moves nothing. -->
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Height="24"
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Height="26"
                   Classes.cgone="{Binding !ShowsDownloadProgress}">
               <ProgressBar Grid.Column="0" Minimum="0" Maximum="1" Value="{Binding DownloadFraction}"
                            VerticalAlignment="Center" />
-              <Button Grid.Column="1" Classes="tbtn" Content="Stop" Command="{Binding StopDownloadCommand}"
-                      ToolTip.Tip="Stop the download. Nothing is kept." />
+              <Button Grid.Column="1" Classes="tbtn cellbtn" Command="{Binding StopDownloadCommand}"
+                      ToolTip.Tip="Stop the download. Nothing is kept.">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Path Classes="ico xs" Data="{StaticResource IconStop}" />
+                  <TextBlock Text="Stop" />
+                </StackPanel>
+              </Button>
             </Grid>
-            <Button Classes="accent" HorizontalAlignment="Stretch" Content="Download"
+            <Button x:Name="DownloadButton" Classes="accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                     Command="{Binding DownloadCommand}"
-                    ToolTip.Tip="Download this collection and open it in the Set browser." />
+                    ToolTip.Tip="Download this collection and open it in the Set browser  ·  Enter">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconDownload}" />
+                <TextBlock Text="Download" />
+              </StackPanel>
+            </Button>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-              <Button Grid.Column="0" Classes="tbtn" HorizontalAlignment="Stretch" Content="Report"
-                      Command="{Binding ReportCommand}"
-                      ToolTip.Tip="Open the gallery's report form for this collection. Only its id is sent." />
+              <Button Grid.Column="0" Classes="tbtn" HorizontalAlignment="Stretch" Command="{Binding ReportCommand}"
+                      ToolTip.Tip="Open the gallery's report form for this collection. Only its id is sent.">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Path Classes="ico sm" Data="{StaticResource IconReport}" />
+                  <TextBlock Text="Report" />
+                </StackPanel>
+              </Button>
               <!-- One slot, two buttons that are never both inked: Unshare for a live collection of yours, Dismiss for a request
                    the gallery turned away. -->
               <Panel Grid.Column="1">
-                <Button Classes="tbtn" HorizontalAlignment="Stretch" Content="Unshare"
+                <Button Classes="tbtn" HorizontalAlignment="Stretch"
                         Classes.cgone="{Binding !CanUnshareSelected}" Command="{Binding UnshareCommand}"
-                        ToolTip.Tip="Take your collection out of the gallery." />
-                <Button Classes="tbtn" HorizontalAlignment="Stretch" Content="Dismiss"
+                        ToolTip.Tip="Take your collection out of the gallery.">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Classes="ico sm" Data="{StaticResource IconUnshare}" />
+                    <TextBlock Text="Unshare" />
+                  </StackPanel>
+                </Button>
+                <Button Classes="tbtn" HorizontalAlignment="Stretch"
                         Classes.cgone="{Binding !CanDismissSelected}" Command="{Binding DismissPendingCommand}"
-                        ToolTip.Tip="Forget this request and its reasons." />
+                        ToolTip.Tip="Forget this request and its reasons.">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Path Classes="ico sm" Data="{StaticResource IconClose}" />
+                    <TextBlock Text="Dismiss" />
+                  </StackPanel>
+                </Button>
               </Panel>
             </Grid>
           </StackPanel>

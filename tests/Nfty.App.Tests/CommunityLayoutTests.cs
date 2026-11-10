@@ -120,28 +120,38 @@ public class CommunityLayoutTests
     }
 
     [AvaloniaFact]
-    public void The_tag_tray_fits_the_header_at_the_smallest_window_and_the_dropdown_lists_the_rest()
+    public void The_tag_row_fits_its_column_at_the_smallest_window_and_the_picker_lists_every_tag()
     {
         using var vm = RiskyPage(online: true);
         var (window, view) = Show(vm);
         try
         {
-            var more = view.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "More tags");
-            var header = (Control)view.GetVisualDescendants().OfType<Grid>().First(g => g.Height == 36);
-            var search = view.FindControl<TextBox>("SearchBox")!;
-            var sort = view.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "Updated");
-            var rMore = RectIn(more, header);
-            Assert.True(rMore.Right <= RectIn(sort, header).X, "the tray must end before the sort tray begins");
-            Assert.True(RectIn(search, header).Right < rMore.X - 40, "the tray must leave the search box its width");
-            Assert.True(rMore.Right <= header.Bounds.Width);
-            Assert.Equal(72, more.Bounds.Width);
+            var picker = view.FindControl<Button>("TagPickerButton")!;
+            var row = picker.GetVisualParent<Grid>()!;
+            var host = view.FindControl<ScrollViewer>("TilesHost")!;
+            var chips = row.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("ctag") && b != picker).ToList();
 
-            // the dropdown holds the overflow tags (its content binds through the flyout's own data context)
-            more.Flyout!.ShowAt(more);
+            Assert.Equal(CommunityViewModel.TrayFit, chips.Count);
+            // every chip and the picker one stated width, drawn whole, and the row inside the grid's column
+            Assert.All(chips, c => Assert.Equal(100, c.Bounds.Width));
+            Assert.Equal(100, picker.Bounds.Width);
+            var rPicker = RectIn(picker, window);
+            Assert.True(rPicker.Right <= RectIn(host, window).Right, $"the picker ends at {rPicker.Right}, past the grid's column");
+            Assert.True(RectIn(chips[^1], window).Right < rPicker.X, "the last chip runs into the picker button");
+            // a tag name fits its chip at the smallest window: "characters" is the longest in the shipped list
+            var name = chips[0].GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("ctagname"));
+            var ink = new Avalonia.Media.FormattedText(name.Text!, System.Globalization.CultureInfo.InvariantCulture,
+                Avalonia.Media.FlowDirection.LeftToRight, new Avalonia.Media.Typeface(name.FontFamily, name.FontStyle, name.FontWeight),
+                name.FontSize, null).Width;
+            Assert.True(ink <= name.Bounds.Width, $"\"{name.Text}\" needs {ink:0.0}px, its cell has {name.Bounds.Width:0.0}");
+
+            // the picker holds EVERY tag (its content binds through the flyout's own data context)
+            picker.Flyout!.ShowAt(picker);
             Dispatcher.UIThread.RunJobs();
-            var items = (ItemsControl)((Border)((Flyout)more.Flyout!).Content!).Child!;
-            Assert.Equal(vm.MoreTags.Count, items.ItemCount);
-            more.Flyout!.Hide();
+            var content = (Control)((Flyout)picker.Flyout!).Content!;
+            var items = content.GetVisualDescendants().OfType<ItemsControl>().First();
+            Assert.Equal(GalleryTags.Length, items.ItemCount);
+            picker.Flyout!.Hide();
         }
         finally { window.Close(); }
     }
@@ -226,6 +236,7 @@ public class CommunityLayoutTests
             using var after = window.CaptureRenderedFrame()!;
             var b = Pixels(after);
             int stride = after.PixelSize.Width * 4, diffOutside = 0, diffInside = 0;
+            Point? firstOutside = null;
             for (int y = 0; y < after.PixelSize.Height; y++)
                 for (int x = 0; x < after.PixelSize.Width; x++)
                 {
@@ -233,11 +244,19 @@ public class CommunityLayoutTests
                     bool same = a[i] == b[i] && a[i + 1] == b[i + 1] && a[i + 2] == b[i + 2] && a[i + 3] == b[i + 3];
                     if (same) continue;
                     var p = new Point(x, y);
-                    if (badgeRect.Contains(p)) diffInside++;
-                    else if (!statusRect.Contains(p)) diffOutside++;
+                    if (badgeRect.Contains(p)) { diffInside++; continue; }
+                    if (statusRect.Contains(p)) continue;
+                    // A 1-LSB change is the renderer re-blending an anti-aliased edge inside the badge's dirty
+                    // region (measured: the preview's rounded corner, 214 -> 215 in one channel), not a move.
+                    bool noise = Math.Abs(a[i] - b[i]) <= 1 && Math.Abs(a[i + 1] - b[i + 1]) <= 1
+                        && Math.Abs(a[i + 2] - b[i + 2]) <= 1 && a[i + 3] == b[i + 3];
+                    if (noise) continue;
+                    diffOutside++;
+                    firstOutside ??= p;
                 }
             Assert.True(diffInside > 0, "the badge's ink did not change");
-            Assert.True(diffOutside == 0, $"{diffOutside} pixels moved outside the badge and the status line");
+            Assert.True(diffOutside == 0,
+                $"{diffOutside} pixels moved outside the badge and the status line, first at {firstOutside}; status {statusRect}, badge {badgeRect}");
         }
         finally { window.Close(); }
     }

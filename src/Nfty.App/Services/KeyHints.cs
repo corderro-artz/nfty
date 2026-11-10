@@ -142,6 +142,20 @@ public static class KeyHints
     public static string MoveLayer { get; } = Alt + Gap + "↑↓";
     /// <summary>Drop the editor's selection marquee.</summary>
     public static string DropSelection { get; } = "Esc";
+    /// <summary>Community: focus the search box (the tree's chord, plus a bare slash).</summary>
+    public static string CommunitySearch { get; } = Search + " or /";
+    /// <summary>Community: leave the page, as Back does.</summary>
+    public static string CommunityBack { get; } = Alt + Gap + "←";
+    /// <summary>Community: turn the grid's page.</summary>
+    public static string CommunityPage { get; } = "PgUp PgDn";
+    /// <summary>Community: the first and last page.</summary>
+    public static string CommunityEnds { get; } = "Home End";
+    /// <summary>Community: download the selected collection.</summary>
+    public static string CommunityDownload { get; } = "Enter";
+    /// <summary>Community: open the tag picker.</summary>
+    public static string CommunityTags { get; } = "T";
+    /// <summary>Community: fetch the list again.</summary>
+    public static string CommunityRefresh { get; } = "R";
     /// <summary>Viewer: extend the info panel over the panes, or fold it back.</summary>
     public static string ViewerInfo { get; } = "I";
     /// <summary>Viewer: fold or reopen the info rail.</summary>

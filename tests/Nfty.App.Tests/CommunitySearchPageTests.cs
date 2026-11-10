@@ -30,17 +30,73 @@ public class CommunitySearchPageTests
     {
         using var vm = await Open([E("a", "A", "alice", "c", "props")]);
 
-        Assert.Equal(["characters", "creatures", "props", "items"], vm.TrayTags.Select(t => t.Label));
-        Assert.Equal(["scenery", "effects", "ui", "abstract"], vm.MoreTags.Select(t => t.Label));
+        Assert.Equal(["characters", "creatures", "props", "items", "scenery"], vm.TrayTags.Select(t => t.Label));
+        Assert.Equal(["effects", "ui", "abstract"], vm.MoreTags.Select(t => t.Label));
+        Assert.Equal("+3 more", vm.MoreLabel);
         Assert.True(vm.HasMoreTags);
         Assert.True(vm.HasTags);
 
         using var few = await Open([E("a", "A", "alice", "c")], ["props", "items"]);
         Assert.Equal(["props", "items"], few.TrayTags.Select(t => t.Label));
         Assert.False(few.HasMoreTags);
+        Assert.Equal("All tags", few.MoreLabel);
 
         using var none = await Open([E("a", "A", "alice", "c")], []);
         Assert.False(none.HasTags);
+    }
+
+    [Fact]
+    public async Task Every_tag_carries_how_many_collections_wear_it()
+    {
+        using var vm = await Open([
+            E("a", "Cat", "alice", "c", "creatures", "props"),
+            E("b", "Chest", "alice", "c", "PROPS"),
+            E("c", "Gem", "bob", "c", "items")]);
+
+        // the search's own comparison: a tag spelled in capitals counts
+        Assert.Equal(2, vm.TrayTags.Single(t => t.Label == "props").Count);
+        Assert.Equal(1, vm.TrayTags.Single(t => t.Label == "creatures").Count);
+        Assert.Equal("0", vm.TrayTags.Single(t => t.Label == "characters").CountText);
+        Assert.Equal(0, vm.MoreTags.Single(t => t.Label == "effects").Count);
+    }
+
+    [Fact]
+    public async Task The_picker_lists_every_tag_and_its_filter_narrows_it_not_the_grid()
+    {
+        using var vm = await Open([E("a", "Cat", "alice", "c", "creatures"), E("b", "Chest", "alice", "c", "props")]);
+
+        Assert.Equal(Gallery, vm.PickerTags.Select(t => t.Label));
+        Assert.Equal("8 tags", vm.TagSummary);
+
+        vm.TagFilter = "#CR";          // a hash and capitals are forgiven
+        Assert.Equal(["creatures"], vm.PickerTags.Select(t => t.Label));
+        Assert.Equal(["Cat", "Chest"], Names(vm));    // the grid is untouched
+        Assert.False(vm.PickerIsEmpty);
+
+        Assert.True(vm.ToggleFirstPickerTag());       // Enter in the filter box
+        Assert.Equal("#creatures", vm.Query);
+        Assert.Equal("8 tags · 1 in search", vm.TagSummary);
+
+        vm.TagFilter = "zzz";
+        Assert.True(vm.PickerIsEmpty);
+        Assert.Equal("No tag matches “zzz”.", vm.PickerEmptyText);
+        Assert.False(vm.ToggleFirstPickerTag());
+    }
+
+    [Fact]
+    public async Task Clear_tags_drops_every_tag_and_keeps_owners_and_words()
+    {
+        using var vm = await Open([E("a", "Cat", "alice", "c", "creatures", "props")]);
+        Assert.False(vm.ClearTagsCommand.CanExecute(null));
+
+        vm.Query = "cat #props @alice #effects";
+        Assert.True(vm.HasTagsOn);
+        Assert.True(vm.ClearTagsCommand.CanExecute(null));
+        vm.ClearTagsCommand.Execute(null);
+
+        Assert.Equal("cat @alice", vm.Query);
+        Assert.False(vm.HasTagsOn);
+        Assert.False(vm.ClearTagsCommand.CanExecute(null));
     }
 
     [Fact]
@@ -64,14 +120,14 @@ public class CommunitySearchPageTests
         Assert.Equal(["Cat", "Chest", "Gem"], Names(vm));
 
         // a tag typed by hand lights its chip, including one in the dropdown, and lights the dropdown button
-        vm.Query = "#SCENERY";
-        Assert.True(vm.MoreTags.Single(t => t.Label == "scenery").IsOn);
+        vm.Query = "#EFFECTS";
+        Assert.True(vm.MoreTags.Single(t => t.Label == "effects").IsOn);
         Assert.True(vm.MoreIsOn);
         vm.Query = "";
         Assert.False(vm.MoreIsOn);
 
         vm.MoreTags[0].ToggleCommand.Execute(null);
-        Assert.Equal("#scenery", vm.Query);
+        Assert.Equal("#effects", vm.Query);
     }
 
     [Fact]

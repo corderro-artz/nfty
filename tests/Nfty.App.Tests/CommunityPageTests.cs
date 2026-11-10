@@ -20,8 +20,12 @@ internal sealed class FakeCommunityCache : ICommunityCache
     public IReadOnlyList<PendingRecord> Pending { get; private set; } = [];
     public void SavePending(IReadOnlyList<PendingRecord> records) => Pending = records.ToList();
 
+    /// <summary>How many times the list was fetched.</summary>
+    public int Refreshes { get; private set; }
+
     public Task<CommunityListing> RefreshAsync(CancellationToken ct)
     {
+        Refreshes++;
         var listing = Next ?? new CommunityListing(null, DateTimeOffset.UtcNow, ShareRules.Unreachable);
         Cached = listing;
         return Task.FromResult(listing);

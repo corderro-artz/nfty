@@ -188,22 +188,37 @@
             <TextBlock Grid.Row="1" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="RECENT FILES" />
             <TextBlock Grid.Row="1" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
                        Text="{Binding RecentsText}" />
-            <Button Grid.Row="1" Grid.Column="2" Classes="tbtn" Content="Clear recents"
+            <Button Grid.Row="1" Grid.Column="2" Classes="tbtn"
                     Command="{Binding ClearRecentsCommand}" HorizontalAlignment="Stretch"
-                    ToolTip.Tip="Forget the Recent list on the start screen. No file is touched." />
+                    ToolTip.Tip="Forget the Recent list on the start screen. No file is touched.">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconTrash}" />
+                <TextBlock Text="Clear recents" />
+              </StackPanel>
+            </Button>
 
             <TextBlock Grid.Row="2" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="WINDOWS, VIEWS" />
             <TextBlock Grid.Row="2" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
                        Text="viewer window sizes, the editor's grid and rail" />
-            <Button Grid.Row="2" Grid.Column="2" Classes="tbtn" Content="Reset" Command="{Binding ResetViewsCommand}"
+            <Button Grid.Row="2" Grid.Column="2" Classes="tbtn" Command="{Binding ResetViewsCommand}"
                     HorizontalAlignment="Stretch"
-                    ToolTip.Tip="Viewer windows open at their default sizes again; the editor opens with its default grid and rail." />
+                    ToolTip.Tip="Viewer windows open at their default sizes again; the editor opens with its default grid and rail.">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconUndo}" />
+                <TextBlock Text="Reset" />
+              </StackPanel>
+            </Button>
 
             <TextBlock Grid.Row="3" Grid.Column="0" Classes="plabel" VerticalAlignment="Center" Margin="0" Text="DATA FOLDER" />
             <TextBlock Grid.Row="3" Grid.Column="1" Classes="m-sub" Margin="0" VerticalAlignment="Center"
                        Text="recents, palette, settings, remembered views" />
-            <Button Grid.Row="3" Grid.Column="2" Classes="tbtn" Content="Open folder" Command="{Binding OpenDataFolderCommand}"
-                    HorizontalAlignment="Stretch" />
+            <Button Grid.Row="3" Grid.Column="2" Classes="tbtn" Command="{Binding OpenDataFolderCommand}"
+                    HorizontalAlignment="Stretch">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="ico sm" Data="{StaticResource IconFolderOpen}" />
+                <TextBlock Text="Open folder" />
+              </StackPanel>
+            </Button>
 
             <!-- Reserved: what the last action did. -->
             <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Classes="m-sub" Margin="0" MinHeight="16"

@@ -18,6 +18,9 @@ public enum HelpTab
 
     /// <summary>The pop-out viewer and the runtime Menu and Ticket.</summary>
     Viewer,
+
+    /// <summary>The Community page: what it is, its search, and its keys.</summary>
+    Community,
 }
 
 /// <summary>A run of entries under one label (or, for <see cref="Dashed"/>, under a dashed rule).</summary>
@@ -140,6 +143,7 @@ public partial class HelpViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsEditorTab))]
     [NotifyPropertyChangedFor(nameof(IsRiseTab))]
     [NotifyPropertyChangedFor(nameof(IsViewerTab))]
+    [NotifyPropertyChangedFor(nameof(IsCommunityTab))]
     private HelpTab _tab = HelpTab.Basics;
 
     /// <summary>Whether the basics tab is the chosen one. While a search is under way no tab is: the
@@ -151,6 +155,8 @@ public partial class HelpViewModel : ViewModelBase
     public bool IsRiseTab => !IsSearching && Tab == HelpTab.Rise;
     /// <summary>Whether the viewer page is showing.</summary>
     public bool IsViewerTab => !IsSearching && Tab == HelpTab.Viewer;
+    /// <summary>Whether the Community page is showing.</summary>
+    public bool IsCommunityTab => !IsSearching && Tab == HelpTab.Community;
 
     partial void OnTabChanged(HelpTab value) => SyncPages();
 
@@ -167,6 +173,7 @@ public partial class HelpViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsEditorTab))]
     [NotifyPropertyChangedFor(nameof(IsRiseTab))]
     [NotifyPropertyChangedFor(nameof(IsViewerTab))]
+    [NotifyPropertyChangedFor(nameof(IsCommunityTab))]
     private string _query = "";
 
     /// <summary>Whether a search is under way: the results replace the pages.</summary>

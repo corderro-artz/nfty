@@ -45,10 +45,10 @@ public enum CommunityEmptyKind
 /// <summary>The Community page: the shared gallery as a searchable, paged grid with a detail rail.</summary>
 public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 {
-    /// <summary>How many tag chips the tray shows in its row; the rest go in the More tags dropdown. Four chips of
-    /// the stated width, the dropdown button and the TAG label fit the header beside the search box and the sort at
-    /// the page's smallest area (about 1067 px), so this is a measured budget, not a taste.</summary>
-    internal const int TrayFit = 4;
+    /// <summary>How many tag chips the tag row shows; the rest are a click away in the tag picker. Five chips of the
+    /// stated width (104), the picker button and the TAGS label fit the grid's column (about 733 px) at the page's
+    /// smallest area, so this is a measured budget, not a taste.</summary>
+    internal const int TrayFit = 5;
 
     private readonly ICommunityCache _cache;
     private readonly ICommunitySeen _seen;
@@ -168,6 +168,81 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>Whether any tag in the dropdown is in the search box, so the dropdown button shows it is in force.</summary>
     public bool MoreIsOn => MoreTags.Any(t => t.IsOn);
 
+    /// <summary>The tag picker button's words: how many tags the row leaves out, or "All tags" when it leaves none.</summary>
+    public string MoreLabel => HasMoreTags
+        ? string.Create(CultureInfo.InvariantCulture, $"+{MoreTags.Count} more")
+        : "All tags";
+
+    /// <summary>The picker's heading figure: how many tags the gallery has and how many are in the search.</summary>
+    public string TagSummary
+    {
+        get
+        {
+            int all = TrayTags.Count + MoreTags.Count, on = TrayTags.Concat(MoreTags).Count(t => t.IsOn);
+            var tags = all == 1 ? "1 tag" : string.Create(CultureInfo.InvariantCulture, $"{all} tags");
+            return on == 0 ? tags : string.Create(CultureInfo.InvariantCulture, $"{tags} · {on} in search");
+        }
+    }
+
+    /// <summary>The text in the tag picker's filter box. View state only: it narrows the picker, never the grid.</summary>
+    [ObservableProperty]
+    private string _tagFilter = "";
+
+    partial void OnTagFilterChanged(string value) => RaisePicker();
+
+    /// <summary>Every gallery tag whose name contains the filter, in the gallery's order. The picker shows ALL of
+    /// them (the row's five included), so it is the one place every tag and its count can be read.</summary>
+    public IReadOnlyList<CommunityToken> PickerTags
+    {
+        get
+        {
+            var f = TagFilter.Trim().TrimStart('#');
+            var all = TrayTags.Concat(MoreTags);
+            return f.Length == 0 ? all.ToList() : all.Where(t => t.Label.Contains(f, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    /// <summary>Whether the filter left the picker empty, so it says so instead of showing a blank list.</summary>
+    public bool PickerIsEmpty => PickerTags.Count == 0;
+
+    /// <summary>The picker's empty sentence, naming the filter.</summary>
+    public string PickerEmptyText => $"No tag matches “{TagFilter.Trim()}”.";
+
+    /// <summary>Whether any #tag is in the search box, so Clear tags has something to clear.</summary>
+    public bool HasTagsOn => TrayTags.Concat(MoreTags).Any(t => t.IsOn);
+
+    /// <summary>Takes every gallery #tag out of the search box, leaving owners and words alone.</summary>
+    [RelayCommand(CanExecute = nameof(HasTagsOn))]
+    private void ClearTags()
+    {
+        var q = Query;
+        foreach (var t in TrayTags.Concat(MoreTags).Where(t => t.IsOn).ToList()) q = CommunitySearch.Toggle(q, t.Token);
+        Query = q;
+    }
+
+    /// <summary>Adds (or removes) the first tag the picker's filter leaves: what Enter in the filter box does.</summary>
+    /// <returns>True when there was a tag to toggle.</returns>
+    public bool ToggleFirstPickerTag()
+    {
+        if (PickerTags.FirstOrDefault() is not { } t) return false;
+        t.ToggleCommand.Execute(null);
+        return true;
+    }
+
+    private void RaisePicker()
+    {
+        OnPropertyChanged(nameof(PickerTags));
+        OnPropertyChanged(nameof(PickerIsEmpty));
+        OnPropertyChanged(nameof(PickerEmptyText));
+    }
+
+    /// <summary>Counts how many collections carry each gallery tag, with the comparison the search itself uses.</summary>
+    private void CountTags()
+    {
+        foreach (var c in TrayTags.Concat(MoreTags))
+            c.Count = _byId.Values.Count(t => t.Entry.Tags.Contains(c.Label, StringComparer.OrdinalIgnoreCase));
+    }
+
     partial void OnQueryChanged(string value)
     {
         MarkTokens();
@@ -184,6 +259,9 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
             foreach (var l in t.TagLinks) l.IsOn = CommunitySearch.Has(Query, l.Token);
         }
         OnPropertyChanged(nameof(MoreIsOn));
+        OnPropertyChanged(nameof(HasTagsOn));
+        OnPropertyChanged(nameof(TagSummary));
+        ClearTagsCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSortChanged(CommunitySort value)
@@ -277,6 +355,36 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>Shows the later page.</summary>
     [RelayCommand(CanExecute = nameof(CanNextPage))]
     private void NextPage() => PageIndex++;
+
+    /// <summary>How many tiles a grid row holds, set by the view beside <see cref="PageSize"/>; the arrow keys
+    /// step a row up or down by it.</summary>
+    public int Columns { get; set; } = 1;
+
+    /// <summary>Moves the selection through the filtered list by <paramref name="delta"/> tiles, turning the page
+    /// when it crosses an edge. With nothing selected (or the selection filtered away) the first tile on the page
+    /// is selected instead. Clamped at both ends: the keys never wrap round.</summary>
+    /// <param name="delta">Tiles to move: ±1 for left and right, ±<see cref="Columns"/> for up and down.</param>
+    public void MoveSelection(int delta)
+    {
+        if (_filtered.Count == 0) return;
+        int at = Selected is { } s ? _filtered.IndexOf(s) : -1;
+        int next = at < 0
+            ? Math.Min(PageIndex * PageSize, _filtered.Count - 1)
+            : Math.Clamp(at + delta, 0, _filtered.Count - 1);
+        PageIndex = next / PageSize;
+        Selected = _filtered[next];
+    }
+
+    /// <summary>Shows the first page (Home).</summary>
+    public void FirstPage() => PageIndex = 0;
+
+    /// <summary>Shows the last page (End).</summary>
+    public void LastPage() => PageIndex = PageCount - 1;
+
+    /// <summary>Leaves the page for the one under it (Landing), the way the editor's and Rise's Back do. Leaving
+    /// stops a running download, as closing the page always has: nothing half-received is kept.</summary>
+    [RelayCommand]
+    private void Back() => Nav.Back();
 
     private void Refilter(bool resetPage)
     {
@@ -470,6 +578,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         if (selectedId is not null) Selected = _byId.GetValueOrDefault(selectedId);
 
         BuildTagTray();
+        CountTags();
         MarkTokens();
         RecountMarks();
         Refilter(resetPage: false);
@@ -488,6 +597,9 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         MoreTags = all.Skip(TrayFit).Select(Chip).ToList();
         OnPropertyChanged(nameof(HasMoreTags));
         OnPropertyChanged(nameof(HasTags));
+        OnPropertyChanged(nameof(MoreLabel));
+        OnPropertyChanged(nameof(TagSummary));
+        RaisePicker();
     }
 
     private void RecountMarks()

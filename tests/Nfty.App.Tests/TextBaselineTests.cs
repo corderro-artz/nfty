@@ -128,6 +128,7 @@ public class TextBaselineTests
         Sweep("help", new Views.HelpView { DataContext = new HelpViewModel(dialogs) });
         Sweep("help-rise", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Rise } });
         Sweep("help-viewer", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Viewer } });
+        Sweep("help-community", new Views.HelpView { DataContext = new HelpViewModel(dialogs) { Tab = HelpTab.Community } });
 
         var nav = new FakeNav();
         var session = new CookBookSession();

@@ -130,6 +130,38 @@
       <StaticResource x:Key="ComboBoxItemForegroundSelected" ResourceKey="FgBrush" />
       <StaticResource x:Key="ComboBoxItemForegroundSelectedPointerOver" ResourceKey="FgBrush" />
       <StaticResource x:Key="ComboBoxItemForegroundSelectedPressed" ResourceKey="FgBrush" />
+      <!-- The rest of the closed combo: Fluent inked its text, placeholder and chevron from its own
+           grays (and the focused border from the OS accent), so a focused combo went blue beside an
+           oxblood text field. -->
+      <StaticResource x:Key="ComboBoxForeground" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxForegroundFocused" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxForegroundFocusedPressed" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxPlaceHolderForeground" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="ComboBoxDropDownGlyphForeground" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="ComboBoxDropDownGlyphForegroundFocused" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxDropDownGlyphForegroundFocusedPressed" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxBackgroundBorderBrushFocused" ResourceKey="AccentLineBrush" />
+      <StaticResource x:Key="ComboBoxBackgroundBorderBrushUnfocused" ResourceKey="LineStrongBrush" />
+      <StaticResource x:Key="ComboBoxItemForeground" ResourceKey="FgBrush" />
+      <!-- Every FLYOUT and MENU surface: the popover the ToolTip and the drop-down already speak
+           (panel ground, strong hairline). Left at Fluent's defaults a flyout was the stock acrylic
+           gray and a context menu's hovered row the stock wash: the two popups in the app that did
+           not look like it. -->
+      <StaticResource x:Key="FlyoutPresenterBackground" ResourceKey="PanelBrush" />
+      <StaticResource x:Key="FlyoutBorderThemeBrush" ResourceKey="LineStrongBrush" />
+      <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="PanelBrush" />
+      <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="LineStrongBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForeground" ResourceKey="FgBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="FgBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForegroundPressed" ResourceKey="FgBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForegroundDisabled" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="TileBrush" />
+      <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="AccentWashBrush" />
+      <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutSubItemChevron" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutSubItemChevronPointerOver" ResourceKey="FgBrush" />
       <SolidColorBrush x:Key="GuideBrush" Color="#2b121418" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#59121418" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #10121418, 0 18 48 -24 #33121418</BoxShadows>
@@ -292,6 +324,38 @@
       <StaticResource x:Key="ComboBoxItemForegroundSelected" ResourceKey="FgBrush" />
       <StaticResource x:Key="ComboBoxItemForegroundSelectedPointerOver" ResourceKey="FgBrush" />
       <StaticResource x:Key="ComboBoxItemForegroundSelectedPressed" ResourceKey="FgBrush" />
+      <!-- The rest of the closed combo: Fluent inked its text, placeholder and chevron from its own
+           grays (and the focused border from the OS accent), so a focused combo went blue beside an
+           oxblood text field. -->
+      <StaticResource x:Key="ComboBoxForeground" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxForegroundFocused" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxForegroundFocusedPressed" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxPlaceHolderForeground" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="ComboBoxDropDownGlyphForeground" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="ComboBoxDropDownGlyphForegroundFocused" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxDropDownGlyphForegroundFocusedPressed" ResourceKey="FgBrush" />
+      <StaticResource x:Key="ComboBoxBackgroundBorderBrushFocused" ResourceKey="AccentLineBrush" />
+      <StaticResource x:Key="ComboBoxBackgroundBorderBrushUnfocused" ResourceKey="LineStrongBrush" />
+      <StaticResource x:Key="ComboBoxItemForeground" ResourceKey="FgBrush" />
+      <!-- Every FLYOUT and MENU surface: the popover the ToolTip and the drop-down already speak
+           (panel ground, strong hairline). Left at Fluent's defaults a flyout was the stock acrylic
+           gray and a context menu's hovered row the stock wash: the two popups in the app that did
+           not look like it. -->
+      <StaticResource x:Key="FlyoutPresenterBackground" ResourceKey="PanelBrush" />
+      <StaticResource x:Key="FlyoutBorderThemeBrush" ResourceKey="LineStrongBrush" />
+      <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="PanelBrush" />
+      <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="LineStrongBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForeground" ResourceKey="FgBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="FgBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForegroundPressed" ResourceKey="FgBrush" />
+      <StaticResource x:Key="MenuFlyoutItemForegroundDisabled" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="TileBrush" />
+      <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="AccentWashBrush" />
+      <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutSubItemChevron" ResourceKey="FgMutedBrush" />
+      <StaticResource x:Key="MenuFlyoutSubItemChevronPointerOver" ResourceKey="FgBrush" />
       <SolidColorBrush x:Key="GuideBrush" Color="#1ff2ede6" />
       <SolidColorBrush x:Key="GuideHiBrush" Color="#3df2ede6" />
       <BoxShadows x:Key="WinShadow">0 1 2 0 #60000000, 0 22 60 -28 #000000</BoxShadows>
@@ -385,6 +449,10 @@
   <CornerRadius x:Key="RadiusLg">8</CornerRadius>
   <CornerRadius x:Key="RadiusMd">6</CornerRadius>
   <CornerRadius x:Key="RadiusSm">5</CornerRadius>
+  <!-- Fluent's corner for EVERY popup surface (combo drop-down, flyout, menu), aliased to the small
+       radius the ToolTip and the app's floating cards use: left at Fluent's 8 a drop-down was
+       rounder than the field it fell from. -->
+  <StaticResource x:Key="OverlayCornerRadius" ResourceKey="RadiusSm" />
 
   <!-- FIELD METRICS. Every input in this app is one of exactly two heights, and the choice is
        semantic rather than per-call-site taste: FieldHeight is a FORM field (the wizards, a name, a
