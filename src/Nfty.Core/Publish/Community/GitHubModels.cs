@@ -13,7 +13,9 @@ internal sealed class RateLimitedException(string message) : CommunityException(
 /// <param name="ApiBase">The GitHub REST API root.</param>
 /// <param name="UploadsBase">The GitHub release-upload root.</param>
 /// <param name="ClientId">The OAuth app's public client id.</param>
-public sealed record CommunityEndpoints(string GalleryRepo, Uri IndexUrl, Uri ApiBase, Uri UploadsBase, string ClientId)
+/// <param name="ActionsBot">The login whose pull request comments are the gallery's checks; any other commenter is ignored.</param>
+public sealed record CommunityEndpoints(string GalleryRepo, Uri IndexUrl, Uri ApiBase, Uri UploadsBase, string ClientId,
+    string ActionsBot = "github-actions[bot]")
 {
     /// <summary>The shipped gallery. The client id is filled in when the OAuth app exists.</summary>
     public static CommunityEndpoints Default { get; } = new(

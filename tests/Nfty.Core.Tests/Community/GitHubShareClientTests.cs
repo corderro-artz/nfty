@@ -266,10 +266,18 @@ public class GitHubShareClientTests
     {
         var fake = new FakeGitHub()
             .Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/pulls/42", "{\"state\":\"closed\",\"merged\":true}")
-            .Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/issues/42/comments", "[{\"body\":\"one\"},{\"body\":\"two\"}]");
+            .Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/issues/42/comments", "[{\"body\":\"one\",\"user\":{\"login\":\"github-actions[bot]\"}},{\"body\":\"two\",\"user\":{\"login\":\"github-actions[bot]\"}}]");
         var c = Client(fake);
         Assert.Equal(new GitHubPull("closed", true), await c.GetPullAsync(Ends.GalleryRepo, 42, default));
         Assert.Equal(["one", "two"], await c.GetPullCommentsAsync(Ends.GalleryRepo, 42, default));
+    }
+
+    [Fact]
+    public async Task Only_the_gallery_bots_comments_are_returned()
+    {
+        var fake = new FakeGitHub().Ok(HttpMethod.Get, "/repos/nfty-art/nfty-gallery/issues/42/comments",
+            "[{\"body\":\"fake reason\",\"user\":{\"login\":\"stranger\"}},{\"body\":\"real\",\"user\":{\"login\":\"github-actions[bot]\"}},{\"body\":\"no user\"},{\"body\":\"null user\",\"user\":null}]");
+        Assert.Equal(["real"], await Client(fake).GetPullCommentsAsync(Ends.GalleryRepo, 42, default));
     }
 
     [Fact]

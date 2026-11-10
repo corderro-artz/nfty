@@ -202,11 +202,21 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
             e.TryGetProperty("merged", out var m) && m.ValueKind == JsonValueKind.True));
     }
 
-    /// <summary>The text of a pull request's conversation comments (where the gallery's checks answer).</summary>
-    public Task<IReadOnlyList<string>> GetPullCommentsAsync(string galleryRepo, int number, CancellationToken ct)
+    /// <summary>
+    /// The text of a pull request's conversation comments written by the gallery's checks bot
+    /// (<see cref="CommunityEndpoints.ActionsBot"/>); anyone else's comment is dropped, since anyone may comment on a pull request.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetPullCommentsAsync(string galleryRepo, int number, CancellationToken ct)
     {
         var (owner, name) = SplitFullName(galleryRepo);
-        return PagedAsync(Join("repos", owner, name, "issues", Num(number), "comments"), e => Str(e, "body"), ct);
+        var all = await PagedAsync(Join("repos", owner, name, "issues", Num(number), "comments"), e => new
+        {
+            Body = Str(e, "body"),
+            Login = e.TryGetProperty("user", out var u) && u.ValueKind == JsonValueKind.Object && u.TryGetProperty("login", out var l)
+                ? l.GetString() : null,
+        }, ct).ConfigureAwait(false);
+        return all.Where(c => string.Equals(c.Login, endpoints.ActionsBot, StringComparison.OrdinalIgnoreCase))
+            .Select(c => c.Body).ToList();
     }
 
     /// <summary>The published list, fetched from the gallery's site WITHOUT the token.</summary>
