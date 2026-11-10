@@ -48,6 +48,15 @@ public class HelpCatalogTests
     }
 
     [Fact]
+    public void The_community_gallery_is_in_the_basics_and_names_the_real_button()
+    {
+        var hit = Assert.Single(HelpCatalog.Search("community gallery"));
+        Assert.Equal(HelpTab.Basics, hit.Tab);
+        // The sentence must name the control Landing really carries.
+        Assert.Contains("Browse the community gallery", hit.Description);
+    }
+
+    [Fact]
     public void Search_finds_across_tabs_case_insensitively_and_needs_every_word()
     {
         var zoom = HelpCatalog.Search("ZOOM");

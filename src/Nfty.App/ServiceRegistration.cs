@@ -115,7 +115,10 @@ public static class ServiceRegistration
             sp.GetRequiredService<IParallelismSetting>(),
             viewer: sp.GetService<IViewerHost>(),
             settings: sp.GetRequiredService<IAppSettings>(),
-            bookCandidates: () => BookCandidates(sp)));
+            bookCandidates: () => BookCandidates(sp),
+            community: sp.GetRequiredService<Func<CommunityViewModel>>(),
+            communityCache: sp.GetRequiredService<ICommunityCache>(),
+            communitySeen: sp.GetRequiredService<ICommunitySeen>()));
 
         services.AddSingleton<Func<LoadedIngredient, LoadedRecipe, LoadedCookBook, Func<bool>, IngredientEditorViewModel>>(sp =>
             (ing, recipe, book, isEditing) => RememberOnSave(sp, new IngredientEditorViewModel(ing, recipe, book,

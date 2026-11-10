@@ -371,7 +371,10 @@ public class DarkModeContrastTests
                 new CookBookSession(), new FilePickerService(),
                 ExplorerViewModelTests.LooseEditorFactory(nav, new CookBookSession(), dialogs), new StatusService()),
             set => new SetBrowserViewModel(set), (_, _, _) => null!, rise: _ => null!,
-            viewer: new ArchiveGalleryTests.Host());
+            viewer: new ArchiveGalleryTests.Host(),
+            // The shipped app always has the page, so Browse the community gallery is live (a missing
+            // callback renders it at 0.38), and the chip is INKED - the state with the most ink.
+            community: () => null!, communityCache: LandingCommunityTests.InkedCache(), communitySeen: LandingCommunityTests.InkedSeen());
         yield return ("landing", new Views.LandingView { DataContext = landing }, null);
 
         // THE COMMUNITY PAGE in its riskiest state: offline (the status line and the sentence under

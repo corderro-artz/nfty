@@ -171,13 +171,15 @@ public static class HelpCatalog
             T(B, 0, Words, "Recipe", "One character *type* — an ordered stack of layers, plus its rules.", "icon:IconTypeRecipe", ".rcp"),
             T(B, 0, Words, "Ingredient", "One layer — its kind, its coloring, its weighted variants.", "icon:IconTypeIngredient", ".igt"),
             T(B, 0, Words, "Variant", "One image and a weight, inside an Ingredient.", "icon:IconTypeVariant"),
-            T(B, 0, Words, "Set", "What ^Cook^ produces: images, metadata, rarity, seed.", "icon:IconTypeSet", ".set"),
+            T(B, 0, Words, "Set", "What ^Cook^ produces: images, metadata, rarity, seed. ^Browse the community gallery^ for shared ones.", "icon:IconTypeSet", ".set"),
 
             T(B, 1, Kinds, "dynamic", "Gray value-map. Color *rolled* per asset.", "kind:D"),
             T(B, 1, Kinds, "static", "Gray value-map. One *fixed* color.", "kind:S"),
             T(B, 1, Kinds, "custom", "Full color, composited *as-is*.", "kind:C"),
             T(B, 1, Words, "Kitchen", "Your shelf of *loose parts* — Ingredients and Recipes that belong to no one CookBook. Pull them into any project. Found by *scanning the folder*.",
                 "icon:IconKitchen", ".ktn", dashed: true),
+
+            
 
             T(B, 2, "RULES & STATE", "never together", glyph: "mark:IconMarkExclude:accent"),
             T(B, 2, "RULES & STATE", "always together", glyph: "mark:IconMarkRequire:success"),

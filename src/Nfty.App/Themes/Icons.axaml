@@ -47,6 +47,9 @@
 
   <StreamGeometry x:Key="IconClose">M7 7l10 10M17 7 7 17</StreamGeometry>
 
+  <!-- A globe: the gallery everyone shares into. Not IconShare's three nodes, which is the act of sending one Set there. -->
+  <StreamGeometry x:Key="IconCommunity">M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0M3 12h18M12 3c-3 3-3 15 0 18M12 3c3 3 3 15 0 18</StreamGeometry>
+
   <!-- Copy to the clipboard: two sheets, the copy in front of the original. Not IconLink (a reference, nothing duplicated). -->
   <StreamGeometry x:Key="IconCopy">M10 9h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1</StreamGeometry>
 

@@ -14,6 +14,7 @@ It has three columns (**CREATE**, **OPEN**, **RECENT**) and the Kitchen shelf al
 | **New Kitchen…** | A new `.ktn`, turning its folder into a workspace. See [Work out of a Kitchen](kitchen.md). |
 | **Recipe** | A loose `.rcp` belonging to no CookBook, saved into the open Kitchen or wherever you choose. |
 | **Ingredient** | A loose `.igt` belonging to no Recipe. Opens the Ingredient Editor on it. |
+| **Rise an asset…** | Opens a `.png` on the [Rise page](rise.md) to build a 3D model, as one picture or, when it has a grid, as a [spritesheet](spritesheets.md). |
 
 **The cooking metaphor**, under the wordmark, opens the Quick Reference on the vocabulary.
 
@@ -26,8 +27,8 @@ It has three columns (**CREATE**, **OPEN**, **RECENT**) and the Kitchen shelf al
 | **Open a cooked .set…** | A packed `.set`, or a sealed `.tin` (which asks for its passphrase), in the [Set browser](set-browser.md). |
 | **Open the demo CookBook** | The built-in Chest Demo, written into a `demo` folder beside the app. See [the demo](../get-started/the-demo.md). |
 | **Open Kitchen…** | A `.ktn` workspace. |
+| **Browse the community gallery** | The Community gallery. A line under it says how many shared Sets are new or updated since you last looked; it reads the list your last visit saved, so the opening screen makes no request. |
 | **Open in viewer…** | Any file the [viewer](viewer.md) reads, in its own window: an archive, a Set, a picture, a glTF model or an asset's metadata `.json`. |
-| **Rise an asset…** | A `.png` on the [Rise page](rise.md), as one picture or, when it has a grid, as a [spritesheet](spritesheets.md). |
 
 ## RECENT
 

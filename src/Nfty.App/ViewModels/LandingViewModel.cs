@@ -40,6 +40,9 @@ public partial class LandingViewModel : ViewModelBase
     private readonly Func<IEnumerable<string>>? _bookCandidates;
     private readonly IImageBridge _bridge;
     private readonly IParallelismSetting? _threads;
+    private readonly Func<CommunityViewModel>? _community;
+    private readonly ICommunityCache? _communityCache;
+    private readonly ICommunitySeen? _communitySeen;
 
     /// <summary>Read at the START of each operation, so a change on the Settings card applies to the next open.</summary>
     private Parallelism Threads => _threads?.Current ?? Parallelism.Default;
@@ -75,6 +78,9 @@ public partial class LandingViewModel : ViewModelBase
     /// <param name="viewer">Where Open in viewer shows its subject; null leaves that button dim.</param>
     /// <param name="bookCandidates">CookBook paths the app can name, so a Set shown in the viewer can show its model.</param>
     /// <param name="settings">Where a new CookBook's or Ingredient's starting canvas comes from; null starts at 32.</param>
+    /// <param name="community">Builds the Community page; null leaves Browse the community gallery dim.</param>
+    /// <param name="communityCache">The gallery cache; only its CACHED list is read here, never the network.</param>
+    /// <param name="communitySeen">Counts the cached entries the reader has not looked at.</param>
     public LandingViewModel(INavigationService nav, IDialogService dialogs,
         IFilePickerService picker, IRecentsService recents, ICookBookSession session,
         Func<LoadedCookBook, ExplorerViewModel> explorerFactory,
@@ -84,8 +90,10 @@ public partial class LandingViewModel : ViewModelBase
         Func<Nfty.App.Rise.RiseSource, RiseViewModel>? rise = null, IStatusService? status = null,
         IImageBridge? bridge = null, IParallelismSetting? threads = null,
         IViewerHost? viewer = null, Func<IEnumerable<string>>? bookCandidates = null,
-        IAppSettings? settings = null)
+        IAppSettings? settings = null, Func<CommunityViewModel>? community = null,
+        ICommunityCache? communityCache = null, ICommunitySeen? communitySeen = null)
     {
+        _community = community; _communityCache = communityCache; _communitySeen = communitySeen;
         _settings = settings;
         _viewer = viewer; _bookCandidates = bookCandidates;
         _threads = threads;
@@ -567,6 +575,37 @@ public partial class LandingViewModel : ViewModelBase
     private void OpenSetPath(string path) => PendingOpen = OpenSetPathAsync(path);
 
     private bool CanRisePicture() => _rise is not null;
+
+    private bool CanBrowseCommunity() => _community is not null;
+
+    /// <summary>Opens the Community gallery page.</summary>
+    [RelayCommand(CanExecute = nameof(CanBrowseCommunity))]
+    private void BrowseCommunity()
+    {
+        if (!CanBrowseCommunity()) return;   // a disabled button is a label
+        _nav.To(_community!());
+    }
+
+    /// <summary>What the Community button's chip says: how many entries in the CACHED list are new
+    /// and updated since the reader last looked. Reads the cache the page last wrote and never the
+    /// network, so opening this screen costs no request; empty when nothing is cached or nothing
+    /// changed (the chip's slot is reserved either way, only its ink toggles).</summary>
+    public string CommunityChip
+    {
+        get
+        {
+            var index = _communityCache?.Cached?.Index;
+            if (index is null || _communitySeen is null) return "";
+            var (n, u) = _communitySeen.Count(index);
+            return n + u == 0 ? "" : $"{n} new · {u} updated";
+        }
+    }
+
+    /// <summary>True when <see cref="CommunityChip"/> has something to say; the view inks on it.</summary>
+    public bool HasCommunityChip => CommunityChip.Length > 0;
+
+    /// <summary>The chip's ink: 1 when it says something, 0 otherwise (its slot stays laid out).</summary>
+    public double CommunityChipOpacity => HasCommunityChip ? 1 : 0;
 
     /// <summary>Picks a <c>.png</c> and opens the Rise page on it: one picture, or a sheet cut into cells.</summary>
     /// <remarks>Reading the picture, finding its grid and writing that grid back into the file are all

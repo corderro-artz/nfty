@@ -93,6 +93,12 @@
           <StackPanel Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPlus}" /><TextBlock Classes="lbl" Text="Ingredient" /></StackPanel>
         </Button>
       </Grid>
+      <!-- Rise: pixel art to 3D. A picture or a spritesheet is not an archive, so it has no other way in.
+           It sits under CREATE (it makes a model) rather than OPEN: the Community gallery's chip line
+           took twelve pixels OPEN did not have at the smallest window, and CREATE had the room. -->
+      <Button Classes="landing tbtn" Command="{Binding RisePictureCommand}">
+        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconRise}" /><TextBlock Classes="lbl" Text="Rise an asset…" /></StackPanel></Grid>
+      </Button>
 
       </StackPanel>
 
@@ -168,10 +174,18 @@
         <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconPopout}" /><TextBlock Classes="lbl" Text="Open in viewer…" /></StackPanel></Grid>
       </Button>
 
-      <!-- Rise: pixel art to 3D. A picture or a spritesheet is not an archive, so it has no other way in. -->
-      <Button Classes="landing tbtn" Command="{Binding RisePictureCommand}">
-        <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconRise}" /><TextBlock Classes="lbl" Text="Rise an asset…" /></StackPanel></Grid>
-      </Button>
+      <!-- The Community gallery. The chip is a caption UNDER the button, not beside the label: the
+           column is 262px and "Browse the community gallery" + "12 new · 0 updated" measured 24px
+           more than it holds, so the two ran over each other. Its line is always laid out and only
+           its ink toggles (zero new/updated, or nothing cached, leaves it blank), so the button
+           and everything below it never move. -->
+      <StackPanel Spacing="0">
+        <Button Classes="landing tbtn" Command="{Binding BrowseCommunityCommand}">
+          <Grid ColumnDefinitions="*,Auto"><StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"><Path Classes="ico sm" Data="{StaticResource IconCommunity}" /><TextBlock Classes="lbl" Text="Browse the community gallery" /></StackPanel></Grid>
+        </Button>
+        <TextBlock FontFamily="{DynamicResource MonoFontFamily}" Foreground="{DynamicResource FgMutedBrush}" FontSize="10" LineHeight="12" Height="12" HorizontalAlignment="Right" Margin="0,2,13,0" Text="{Binding CommunityChip}" Opacity="{Binding CommunityChipOpacity}" />
+      </StackPanel>
+
       </StackPanel>
 
     </Grid>

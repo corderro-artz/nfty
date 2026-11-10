@@ -529,7 +529,9 @@ public partial class VisualCapture
                 // actually be in, which is worse than not capturing the screen at all: it made a
                 // working action look unavailable and matched the bug that was being investigated.
                 // The shipped app always has a viewer, so Open in viewer is live in the frame.
-                new KitchenSession(), rise: _ => null!, viewer: new ArchiveGalleryTests.Host());
+                new KitchenSession(), rise: _ => null!, viewer: new ArchiveGalleryTests.Host(),
+                // Live button + inked chip, as the shipped app shows after a visit that cached a list.
+                community: () => null!, communityCache: LandingCommunityTests.InkedCache(), communitySeen: LandingCommunityTests.InkedSeen());
             Capture(new Views.LandingView { DataContext = vm }, variant, $"landing-{key}.png");
             if (!empty)
             {
