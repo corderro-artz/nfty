@@ -187,6 +187,12 @@ public static class ShareRules
     /// <summary>GitHub can't be reached.</summary>
     public static string Unreachable => "GitHub can't be reached. Check your connection and try again.";
 
+    /// <summary>A gallery entry's link is not an https address nfty will fetch.</summary>
+    public static string LinkNotOpened => "This gallery entry's link isn't one nfty opens.";
+
+    /// <summary>The download arrived but could not be written to this machine.</summary>
+    public static string SaveFailed => "nfty couldn't save the download. Check free disk space and try again.";
+
     /// <summary>GitHub sent a bigger answer than any real one.</summary>
     public static string GitHubTooMuch => "GitHub sent more than expected.";
 

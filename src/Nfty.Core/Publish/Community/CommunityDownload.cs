@@ -11,7 +11,7 @@ namespace Nfty.Core.Publish.Community;
 public static partial class CommunityDownload
 {
     /// <summary>The sentence for an entry whose link is not an https address.</summary>
-    public static string LinkNotOpened => "This gallery entry's link isn't one nfty opens.";
+    public static string LinkNotOpened => ShareRules.LinkNotOpened;
 
     /// <summary>How long the body may go without a byte before the download gives up.</summary>
     internal static readonly TimeSpan DefaultStall = TimeSpan.FromSeconds(60);
@@ -104,7 +104,10 @@ public static partial class CommunityDownload
             var body = await response.Content.ReadAsStreamAsync(timer.Token).ConfigureAwait(false);
             await using (body.ConfigureAwait(false))
             {
-                var output = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+                FileStream output;
+                try { output = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                { throw new CommunityException(ShareRules.SaveFailed); }
                 await using var _ = output.ConfigureAwait(false);
                 var buffer = new byte[81920];
                 int n;
@@ -116,7 +119,8 @@ public static partial class CommunityDownload
                     total += n;
                     if (total > file.Size) throw new CommunityException(ShareRules.HashMismatch);
                     hash.AppendData(buffer, 0, n);
-                    await output.WriteAsync(buffer.AsMemory(0, n), ct).ConfigureAwait(false);
+                    try { await output.WriteAsync(buffer.AsMemory(0, n), ct).ConfigureAwait(false); }
+                    catch (IOException) { throw new CommunityException(ShareRules.SaveFailed); }
                     progress?.Report(file.Size == 0 ? 1 : Math.Min(1.0, (double)total / file.Size));
                 }
             }
