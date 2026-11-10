@@ -330,9 +330,9 @@ client secret.
 
 ### 6.4 Cache and offline
 
-`.nfty/gallery/index.json` kept with its `ETag` (conditional GET; a 304 costs nothing).
-`.nfty/gallery/previews/<sha256>.png`, least-recently-used, capped at 200 MB. Downloads go to a
-temp file, then into `.nfty/gallery/sets/<sha256>.set` once checked; the Set browser opens from
+`.nfty/community/index.json` kept with its `ETag` (conditional GET; a 304 costs nothing).
+`.nfty/community/previews/<sha256>.png`, least-recently-used, capped at 200 MB. Downloads go to a
+temp file, then into `.nfty/community/sets/<sha256>.set` once checked; the Set browser opens from
 there and **Save to…** copies it out. Offline: the cached list stays on screen, the header's
 reserved status line says `GitHub can't be reached. Showing the list from 14:02.`, Download and
 Share are disabled with that sentence as their reason. No cache yet and offline: the empty state
