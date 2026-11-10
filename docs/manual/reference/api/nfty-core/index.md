@@ -4,7 +4,7 @@
 
 The whole engine: archives, validation, generation, rendering, Sets, export, sealing, statistics. Depends on Nfty.Ticket and ImageSharp.
 
-185 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
+226 public types. Each page lists the public and protected members with their signatures and the documentation written beside the code.
 
 ## Nfty.Core
 
@@ -208,6 +208,52 @@ The whole engine: archives, validation, generation, rendering, Sets, export, sea
 | [`SpriteSheetProgress`](Nfty.Core.Publish.SpriteSheetProgress.md) | record | How far a sheet has got. |
 | [`TokenNaming`](Nfty.Core.Publish.TokenNaming.md) | enum | How an export names the files that go to a marketplace. |
 | [`TokenNamingTokens`](Nfty.Core.Publish.TokenNamingTokens.md) | class | The one mapping between [`TokenNaming`](Nfty.Core.Publish.TokenNaming.md) and the words the CLI, the export dialog and the manual spell it with, so none of them can name a choice two ways. |
+
+## Nfty.Core.Publish.Community
+
+| Type | Kind | Summary |
+|---|---|---|
+| [`CommunityCanvas`](Nfty.Core.Publish.Community.CommunityCanvas.md) | record | A shared Set's canvas. |
+| [`CommunityDates`](Nfty.Core.Publish.Community.CommunityDates.md) | class | Date rules for a share arriving as a pull request. |
+| [`CommunityDownload`](Nfty.Core.Publish.Community.CommunityDownload.md) | class | Fetches a listed Set into a cache folder and proves it is what the gallery lists before anything opens it. |
+| [`CommunityDuplicates`](Nfty.Core.Publish.Community.CommunityDuplicates.md) | class | Duplicate rules for a new share (spec 4.4a). |
+| [`CommunityEndpoints`](Nfty.Core.Publish.Community.CommunityEndpoints.md) | record | Where the community gallery lives. |
+| [`CommunityEntry`](Nfty.Core.Publish.Community.CommunityEntry.md) | record | One shared collection as the gallery lists it. |
+| [`CommunityException`](Nfty.Core.Publish.Community.CommunityException.md) | class | A share or gallery step that failed; the message is always a [`ShareRules`](Nfty.Core.Publish.Community.ShareRules.md) sentence, safe to show. |
+| [`CommunityFile`](Nfty.Core.Publish.Community.CommunityFile.md) | record | A file the entry points at. |
+| [`CommunityIndex`](Nfty.Core.Publish.Community.CommunityIndex.md) | record | The gallery's published list: every entry, generated from the owners' repositories. |
+| [`CommunityOwner`](Nfty.Core.Publish.Community.CommunityOwner.md) | record | The GitHub account that shares an entry. |
+| [`CommunityPreview`](Nfty.Core.Publish.Community.CommunityPreview.md) | class | The preview sheet a shared Set carries: its first assets stitched into one PNG that holds its own `nfty-grid` chunk, never more than [`ShareRules.MaxPreviewSide`](Nfty.Core.Publish.Community.ShareRules.md#f-maxpreviewside) pixels a side. |
+| [`CommunityQuery`](Nfty.Core.Publish.Community.CommunityQuery.md) | record | What the Community search box asks for: every tag, every owner and every word must match. |
+| [`CommunitySchema`](Nfty.Core.Publish.Community.CommunitySchema.md) | class | The community gallery's schema range. |
+| [`CommunitySearch`](Nfty.Core.Publish.Community.CommunitySearch.md) | class | The one search box: `#tag`, `@user` and plain words, combined with AND. |
+| [`CommunityShare`](Nfty.Core.Publish.Community.CommunityShare.md) | class | The share run (spec 7.2): scan, pack, check, preview, Release, upload, manifest, pull request, and the undo of whatever a failed or canceled run made. |
+| [`CommunityTags`](Nfty.Core.Publish.Community.CommunityTags.md) | record | The gallery's fixed tag list, published as `tags.json` beside `index.json`. |
+| [`DeviceCode`](Nfty.Core.Publish.Community.DeviceCode.md) | record | One sign-in in progress: what to show the person and what to poll with. |
+| [`GitHubAsset`](Nfty.Core.Publish.Community.GitHubAsset.md) | record | A file attached to a release. |
+| [`GitHubAuthException`](Nfty.Core.Publish.Community.GitHubAuthException.md) | class | A GitHub sign-in that did not finish; the message is a [`ShareRules`](Nfty.Core.Publish.Community.ShareRules.md) sentence, safe to show. |
+| [`GitHubDeviceFlow`](Nfty.Core.Publish.Community.GitHubDeviceFlow.md) | class | GitHub's OAuth device flow: no client secret, no browser callback. |
+| [`GitHubPull`](Nfty.Core.Publish.Community.GitHubPull.md) | record | A pull request's state. |
+| [`GitHubRelease`](Nfty.Core.Publish.Community.GitHubRelease.md) | record | A GitHub release. |
+| [`GitHubRepo`](Nfty.Core.Publish.Community.GitHubRepo.md) | record | A GitHub repository. |
+| [`GitHubShareClient`](Nfty.Core.Publish.Community.GitHubShareClient.md) | class | The GitHub REST calls sharing needs. |
+| [`GitHubTreeItem`](Nfty.Core.Publish.Community.GitHubTreeItem.md) | record | One entry of a repository tree. |
+| [`GitHubUser`](Nfty.Core.Publish.Community.GitHubUser.md) | record | The signed-in GitHub account. |
+| [`PendingShare`](Nfty.Core.Publish.Community.PendingShare.md) | record | What is left to do once the gallery merges a pull request: delete the Release (and tag) it made obsolete. |
+| [`PublicRepoManifest`](Nfty.Core.Publish.Community.PublicRepoManifest.md) | record | The `nfty-public.json` an owner's repository carries: what that account shares. |
+| [`PublicRepoScan`](Nfty.Core.Publish.Community.PublicRepoScan.md) | class | The scan before every share (spec 3.3). |
+| [`RepoExtra`](Nfty.Core.Publish.Community.RepoExtra.md) | record | One thing the repository holds that the gallery does not allow. |
+| [`RepoExtraKind`](Nfty.Core.Publish.Community.RepoExtraKind.md) | enum | What kind of thing the repository holds that the gallery does not allow. |
+| [`RepoScan`](Nfty.Core.Publish.Community.RepoScan.md) | record | The scan's answer. |
+| [`RepoSnapshot`](Nfty.Core.Publish.Community.RepoSnapshot.md) | record | Everything the scan reads about a user's `nfty-public` repository. |
+| [`ShareCheck`](Nfty.Core.Publish.Community.ShareCheck.md) | class | Decides whether a packed Set may go in the community gallery. |
+| [`ShareFacts`](Nfty.Core.Publish.Community.ShareFacts.md) | record | What [`ShareCheck.CheckAsync()`](Nfty.Core.Publish.Community.ShareCheck.md#m-checkasync-system-string-system-threading-cancellationtoken) learned about a packed Set. |
+| [`ShareProgress`](Nfty.Core.Publish.Community.ShareProgress.md) | record | A progress report. |
+| [`ShareRequest`](Nfty.Core.Publish.Community.ShareRequest.md) | record | What the person asked to share. |
+| [`ShareResult`](Nfty.Core.Publish.Community.ShareResult.md) | record | A submitted share. |
+| [`ShareRules`](Nfty.Core.Publish.Community.ShareRules.md) | class | The community gallery's limits and every sentence that refuses a share or a download, so each surface says the same thing. |
+| [`ShareSlug`](Nfty.Core.Publish.Community.ShareSlug.md) | class | Turns a collection name into the slug that names a share's Release, files and index entry. |
+| [`ShareStage`](Nfty.Core.Publish.Community.ShareStage.md) | enum | Where a share run is. |
 
 ## Nfty.Core.Publish.Ipfs
 

@@ -37,6 +37,7 @@ A failed command prints one sentence on stderr and exits `1`.
 | [`serve`](#serve) | Roll or render one asset from a Menu. |
 | [`export`](#export) | Publish a cooked Set: presets, marketplace metadata, upload, seal. |
 | [`ipfs status`](#ipfs-status) | Check the IPFS service an upload would use. |
+| [`share check`](#share-check) | Check a Set against the community gallery's rules. |
 | [`sheet grid`](#sheet-grid) | Read or set the grid a spritesheet carries. |
 | [`new`](#new) | Create an `.igt`, `.rcp`, `.cbk` or `.ktn`. |
 | [`add`](#add) | Add a variant, layer, Recipe or rule to an archive. |
@@ -272,6 +273,18 @@ nfty ipfs status [--api <url>] [--pinata --pinata-key <source>]
 
 Prints the provider and a one-line state (`connected · kubo 0.29.0`, `not reachable`, `key refused`),
 and exits `1` when the service cannot be reached.
+
+### share check
+
+```text
+nfty share check <file.set> [--json]
+```
+
+Runs the check the app's **Share…** card and the gallery's Action run: canvas, asset count, size,
+archive safety, sealed or not, and the preview. Prints each problem on its own line and exits `1`, or
+prints `ok: <assets> assets · <w> x <h>` and exits `0`. `--json` prints the facts (problems, assets,
+canvas, fingerprint, file hash) instead, with the same exit code. Limits are in
+[the community gallery](../app/community.md#limits).
 
 ### sheet grid
 

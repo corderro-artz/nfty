@@ -174,3 +174,17 @@ the same credential store, and one more CLI provider flag beside `--pinata`. Che
 account before shipping, like Pinata was: the same Set must give the same CIDs on every provider.
 Filebase speaks an S3-compatible API (bucket + access key/secret); NFT.Storage's current API must be
 checked first, since its upload service has changed over time.
+
+## Community gallery: deferred (spec 2026-11-09, section 11)
+
+**Image screening.** Shared Sets are not looked at: the Action checks structure, size and rules, never what the pictures show. Reason: no classifier fits the zero-new-packages rule, and a server-side one means running something. Report on a tile is the only recourse today, and `blocked.json` removes an owner or share. Pick up by adding a screening step to `check.yml` (a hosted classifier on the preview only, so cost is one 2 MB image per share) with a verdict the existing comment can carry.
+
+**GitHub App with narrower scope.** The in-app sign-in is a GitHub OAuth app, whose `public_repo` scope lets nfty's token write to every public repository of the account. nfty only touches `nfty-public` and a pull request on the gallery. A GitHub App with repository-level permissions would shrink that to the two repositories. Deferred: installation tokens need a relay to sign with the app's key (a server), and device flow for Apps is newer. Pick up when a server exists or Apps support the device flow for user tokens; `GitHubAccount` is the one place that holds the token.
+
+**Near-duplicate detection.** Duplicates are caught by the Set's fingerprint and the file hash only, so one collection with a pixel changed shares as new, up to three per account. Pick up by comparing the preview's perceptual hash in `check.py` against `index.json` (add the hash to the entry as an optional field, no schema bump) and flagging within a small distance; decide first whether it refuses or only comments.
+
+**Pin the workflows' actions to commit SHAs.** `check.yml`, `merge.yml`, `build-index.yml` and `health.yml` reference `actions/*` by major tag. A moved tag runs new code with the gallery's write token in `merge.yml`. `tools/gallery/README.md` says to replace each with the full SHA before the gallery opens; not done in the template because the real SHAs are only known when the repository is created. Pick up with Dependabot for `github-actions` in the real repository.
+
+**A failed first share leaves an empty `nfty-public`.** The run restores what it changed, but a repository it just created stays (empty `nfty-public.json`, still recognized, reused by the next attempt). Deleting it needs the `delete_repo` scope, a much bigger grant than sharing; not worth asking for. Pick up only if the leftover repo is reported as a nuisance, by asking for the scope at that moment and never in the sign-in.
+
+**The gallery's workflows have never run on GitHub.** The Python is tested against fixtures and the YAML is reviewed, but `check.yml` -> `merge.yml` (`workflow_run`), Pages deploy and the nightly health check were written without an `nfty-gallery` repository to run in. Pick up by creating it from `tools/gallery/repo`, sharing a real Set from a test account end to end, and fixing what GitHub's runner disagrees with (permissions, artifact names, `workflow_run` payload shape are the likely places).

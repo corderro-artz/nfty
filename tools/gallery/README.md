@@ -55,3 +55,15 @@ that test once with `NFTY_WRITE_FIXTURE=1`.
   `*.githubusercontent.com`, and a download stops the moment it passes its cap.
 * Account age, rates and duplicates are decided from GitHub's answers and the entries already merged, never
   from claims in the entry.
+
+## Before release
+
+`CommunityEndpoints.Default` (`src/Nfty.Core/Publish/Community/CommunityEndpoints.cs`) still holds placeholders.
+Two values must be filled in, and then the `Default_endpoints_are_filled` test added to
+`tests/Nfty.Core.Tests/Community/CommunityEndpointsTests.cs` (non-empty `GalleryRepo` matching
+`^[\w.-]+/nfty-gallery$`, non-empty `ClientId`, an https `IndexUrl`):
+
+1. `GalleryRepo`: the owner of the real `nfty-gallery` repository (`<owner>/nfty-gallery`).
+2. `ClientId`: the client id of the GitHub OAuth app (device flow enabled) nfty signs in through.
+
+Also replace the `NFTY_REPO` placeholder in `check.yml` and pin the actions (see Setting up, steps 3 and 6).
