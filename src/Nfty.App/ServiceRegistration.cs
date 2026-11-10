@@ -80,6 +80,7 @@ public static class ServiceRegistration
         services.AddSingleton<IFolderRevealer, NoopFolderRevealer>();
         services.AddSingleton<IClipboardService, NoopClipboardService>();
 
+        services.AddSingleton<IChildWindows, ChildWindows>();
         services.AddSingleton(sp => new ShellViewModel(
             sp.GetRequiredService<INavigationService>(), sp.GetRequiredService<IDialogService>(),
             sp.GetRequiredService<IThemeService>(), sp.GetRequiredService<IStatusService>(),
@@ -93,7 +94,8 @@ public static class ServiceRegistration
                 sp.GetRequiredService<IEditorViewState>(), sp.GetRequiredService<IFileAssociations>(),
                 sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<IUrlOpener>(),
                 sp.GetRequiredService<IClipboardService>()),
-            general: sp.GetRequiredService<IAppSettings>()));
+            general: sp.GetRequiredService<IAppSettings>(),
+            childWindows: sp.GetRequiredService<IChildWindows>()));
         services.AddTransient<HelpViewModel>();
         services.AddTransient<NewCookBookViewModel>();
         services.AddTransient<NewRecipeViewModel>();

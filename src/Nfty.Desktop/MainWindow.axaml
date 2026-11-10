@@ -25,6 +25,10 @@
          the same thing on click; this is the keyboard route, and Ctrl+W is what "close the thing
          I am looking at" means almost everywhere. -->
     <KeyBinding Gesture="F11" Command="{Binding ToggleFullScreenCommand}" />
+    <!-- Other windows: cycle (Ctrl+`) or list (Ctrl+Shift+W). Needed in full screen, where nothing on
+         the desktop can reach a viewer behind the shell. -->
+    <KeyBinding Gesture="Ctrl+OemTilde" Command="{Binding CycleChildWindowsCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+W" Command="{Binding ShowChildWindowsCommand}" />
     <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
     <!-- Escape closes the open modal. It has to live here rather than on each dialog: the dialog
          layer hosts its content in a ContentControl that never takes focus, so a UserControl-level

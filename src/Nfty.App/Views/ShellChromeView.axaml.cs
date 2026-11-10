@@ -49,12 +49,29 @@ public partial class ShellChromeView : UserControl
         };
     }
 
+    /// <summary>Opens the other-windows list on its badge (Ctrl+Shift+W).</summary>
+    private void OpenChildWindowMenu() =>
+        this.FindControl<Button>("ChildWindowsButton")?.Flyout?.ShowAt(this.FindControl<Button>("ChildWindowsButton")!);
+
+    /// <summary>Folds the list once a window was chosen from it.</summary>
+    private void CloseChildWindowMenu() => this.FindControl<Button>("ChildWindowsButton")?.Flyout?.Hide();
+
     private void ObserveShell(ShellViewModel? shell)
     {
-        if (_observedShell is not null) _observedShell.PropertyChanged -= OnShellChanged;
+        if (_observedShell is not null)
+        {
+            _observedShell.PropertyChanged -= OnShellChanged;
+            _observedShell.ChildWindowMenuRequested -= OpenChildWindowMenu;
+            _observedShell.ChildWindowMenuCloseRequested -= CloseChildWindowMenu;
+        }
         StopAttention();
         _observedShell = shell;
-        if (shell is not null) shell.PropertyChanged += OnShellChanged;
+        if (shell is not null)
+        {
+            shell.PropertyChanged += OnShellChanged;
+            shell.ChildWindowMenuRequested += OpenChildWindowMenu;
+            shell.ChildWindowMenuCloseRequested += CloseChildWindowMenu;
+        }
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e)

@@ -41,6 +41,10 @@ public static class KeyHints
     public static string CloseDocument { get; } = WithMod("W");
     /// <summary>Switch light/dark.</summary>
     public static string Theme { get; } = WithMod("T");
+    /// <summary>Cycle through the other windows.</summary>
+    public static string ChildWindows { get; } = WithMod("`");
+    /// <summary>List the other windows.</summary>
+    public static string ChildWindowList { get; } = WithMod("Shift W");
     /// <summary>Toggle full screen.</summary>
     public static string FullScreen { get; } = "F11";
     /// <summary>Reset zoom to 100%.</summary>

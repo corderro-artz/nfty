@@ -2580,6 +2580,30 @@
     <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
   </Style>
 
+  <!-- The titlebar's other-windows badge: a vchip, centered, with a fixed slot (Width on the control). -->
+  <Style Selector="Button.winchip">
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="Button.winchip.has">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- A row in the other-windows menu: flat until hovered, like every other bar control here. -->
+  <Style Selector="Button.winrow">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="FontSize" Value="12.5" />
+  </Style>
+  <Style Selector="Button.winrow:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.winrow:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
+
   <Style Selector="Border.modal.validity">
     <Setter Property="Width" Value="620" />
     <Setter Property="MaxHeight" Value="620" />

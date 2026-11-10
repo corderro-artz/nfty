@@ -27,15 +27,17 @@ public sealed class DesktopViewerHost : IViewerHost
     private readonly IViewerWindowState _state;
     private readonly IImageBridge _bridge;
     private readonly Func<Window?> _mainWindow;
+    private readonly IChildWindows? _children;
 
     /// <summary>Creates the host.</summary>
     /// <param name="picker">Save dialogs.</param>
     /// <param name="clipboard">The clipboard.</param>
     /// <param name="state">The remembered window size.</param>
     /// <param name="bridge">Turns art into bitmaps.</param>
+    /// <param name="children">The registry the shell lists open viewers from; null keeps none.</param>
     public DesktopViewerHost(IFilePickerService picker, IClipboardService clipboard, IViewerWindowState state,
-        IImageBridge bridge)
-        : this(picker, clipboard, state, bridge, DefaultMainWindow)
+        IImageBridge bridge, IChildWindows? children = null)
+        : this(picker, clipboard, state, bridge, DefaultMainWindow, children)
     {
     }
 
@@ -44,11 +46,13 @@ public sealed class DesktopViewerHost : IViewerHost
     /// <param name="clipboard">The clipboard.</param>
     /// <param name="state">The remembered window size.</param>
     /// <param name="bridge">Turns art into bitmaps.</param>
+    /// <param name="children">The registry the shell lists open viewers from; null keeps none.</param>
     /// <param name="mainWindow">Finds a live opening window, or null to use the native opening display.
     /// The default host prefers the active viewer, then the shell, then any visible window.</param>
     public DesktopViewerHost(IFilePickerService picker, IClipboardService clipboard, IViewerWindowState state,
-        IImageBridge bridge, Func<Window?> mainWindow)
+        IImageBridge bridge, Func<Window?> mainWindow, IChildWindows? children = null)
     {
+        _children = children;
         _picker = picker;
         _clipboard = clipboard;
         _state = state;
@@ -84,6 +88,23 @@ public sealed class DesktopViewerHost : IViewerHost
         timer.Start();
     }
 
+    /// <summary>Lists the viewer with the shell until it closes.</summary>
+    private void Register(ViewerWindow window, ViewerViewModel vm)
+    {
+        if (_children is null) return;
+        var token = _children.Register(new ChildWindowEntry
+        {
+            Title = () => string.IsNullOrWhiteSpace(vm.Title) ? "Viewer" : vm.Title,
+            Hint = () => vm.LiveBadge,
+            Activate = () =>
+            {
+                if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                window.Activate();
+            },
+        });
+        window.Closed += (_, _) => token.Dispose();
+    }
+
     private static Window? DefaultMainWindow() => DesktopWindowContext.Current;
 
     /// <inheritdoc />
@@ -113,6 +134,7 @@ public sealed class DesktopViewerHost : IViewerHost
             Opened?.Invoke(window);
             window.Show();
             KeepAboveFullScreen(window);
+            Register(window, vm);
         }
         catch
         {

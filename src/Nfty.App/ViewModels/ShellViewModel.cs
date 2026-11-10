@@ -211,6 +211,59 @@ public partial class ShellViewModel : ViewModelBase
     /// button's glyph and tooltip follow what the window is, not what was last asked.</summary>
     [ObservableProperty] private bool _isFullScreen;
 
+    private readonly IChildWindows _childWindows;
+
+    /// <summary>The open secondary windows, as menu rows. Rebuilt whenever one opens or closes and
+    /// again when the menu is asked for, so a changed title or live/snapshot hint is current.</summary>
+    [ObservableProperty] private IReadOnlyList<ChildWindowItem> _childWindowItems = [];
+
+    /// <summary>Whether any secondary window is open, which is what lights the titlebar badge.</summary>
+    public bool HasChildWindows => ChildWindowItems.Count > 0;
+
+    /// <summary>The badge's count.</summary>
+    public string ChildWindowCountText => ChildWindowItems.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The badge's tooltip.</summary>
+    public string ChildWindowsTip => ChildWindowItems.Count switch
+    {
+        0 => "No other windows are open",
+        1 => $"1 other window  ·  {KeyHints.ChildWindows}  ·  {KeyHints.ChildWindowList}",
+        var n => $"{n} other windows  ·  {KeyHints.ChildWindows} cycles  ·  {KeyHints.ChildWindowList} lists",
+    };
+
+    /// <summary>Raised when the chord asks for the list; the view opens its menu on the badge.</summary>
+    public event Action? ChildWindowMenuRequested;
+
+    /// <summary>Raised after a window was chosen from the list, so the view folds the menu.</summary>
+    public event Action? ChildWindowMenuCloseRequested;
+
+    partial void OnChildWindowItemsChanged(IReadOnlyList<ChildWindowItem> value)
+    {
+        OnPropertyChanged(nameof(HasChildWindows));
+        OnPropertyChanged(nameof(ChildWindowCountText));
+        OnPropertyChanged(nameof(ChildWindowsTip));
+    }
+
+    /// <summary>Rebuilds <see cref="ChildWindowItems"/> from the registry.</summary>
+    public void RefreshChildWindows() =>
+        ChildWindowItems = _childWindows.Windows.Select(w => new ChildWindowItem(w, () => ChildWindowMenuCloseRequested?.Invoke())).ToList();
+
+    /// <summary>Opens the list of other windows (Ctrl+Shift+W). Says so when there are none.</summary>
+    [RelayCommand]
+    private void ShowChildWindows()
+    {
+        RefreshChildWindows();
+        if (ChildWindowItems.Count == 0) { _status.Say("No other windows are open."); return; }
+        ChildWindowMenuRequested?.Invoke();
+    }
+
+    /// <summary>Brings the next other window forward (Ctrl+`).</summary>
+    [RelayCommand]
+    private void CycleChildWindows()
+    {
+        if (_childWindows.ActivateNext() is null) _status.Say("No other windows are open.");
+    }
+
     /// <summary>The titlebar's workspace chip. Per explorer.html it is "fixed for every item below
     /// it; changes only when you close this Kitchen and open another" - so it lives on the shell
     /// rather than following the selection. Empty when no Kitchen is open, which is a normal state:
@@ -232,11 +285,15 @@ public partial class ShellViewModel : ViewModelBase
     /// one over <paramref name="parallelism"/> alone, every other page session-only.</param>
     /// <param name="general">The remembered theme, applied as the shell is built and updated by the
     /// titlebar's theme button. Null leaves the theme to the application's default.</param>
+    /// <param name="childWindows">The open secondary windows the titlebar badge lists. Null uses an empty registry.</param>
     public ShellViewModel(INavigationService nav, IDialogService dialogs, IThemeService theme,
         IStatusService status, IKitchenSession? kitchen = null, ICookBookSession? session = null,
         IParallelismSetting? parallelism = null, Func<SettingsDialogViewModel>? settingsCard = null,
-        IAppSettings? general = null)
+        IAppSettings? general = null, IChildWindows? childWindows = null)
     {
+        _childWindows = childWindows ?? new ChildWindows();
+        _childWindows.Changed += RefreshChildWindows;
+        RefreshChildWindows();
         _settingsCard = settingsCard;
         _general = general;
         if (general is not null) theme.Apply(general.Theme);

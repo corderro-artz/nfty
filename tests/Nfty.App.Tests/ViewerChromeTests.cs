@@ -69,7 +69,7 @@ public class ViewerChromeTests
             Assert.Single(frame.GetVisualDescendants().OfType<Views.BrandMarkView>());
             Assert.Contains(frame.TitlebarArea.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Chest #42");
             var caption = frame.TitlebarArea.GetVisualDescendants().OfType<Button>()
-                .Where(b => b.Classes.Contains("icon")).ToList();
+                .Where(b => b.Classes.Contains("icon") && b.IsEffectivelyVisible).ToList();
             Assert.Equal(3, caption.Count);
             Assert.Single(caption, b => b.Classes.Contains("danger"));
 

@@ -98,6 +98,36 @@
          the two read as one control with a stripe down it. 12 matches the brand's own inset on the
          far left. -->
     <ctl:WindowFrame.TitleRight>
+     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+      <!-- Other windows (pop-out viewers, galleries). A fixed-width slot that is always laid out and
+           only INKED when a window is open, so the titlebar never reflows. In full screen nothing on
+           the desktop can reach a window behind the shell, so this is the way back to one: a click
+           lists them, choosing one raises it. -->
+      <Button x:Name="ChildWindowsButton" Classes="vchip winchip" Classes.has="{Binding HasChildWindows}" Width="44"
+              IsHitTestVisible="{Binding HasChildWindows}" Focusable="False"
+              ToolTip.Tip="{Binding ChildWindowsTip}">
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedRight" ShowMode="Standard">
+            <ItemsControl ItemsSource="{Binding ChildWindowItems}" MinWidth="220" MaxWidth="360">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Classes="winrow" Command="{Binding ActivateCommand}"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Classes="sbar" Text="{Binding Hint}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Flyout>
+        </Button.Flyout>
+        <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+          <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
+          <TextBlock Classes="sbar" Text="{Binding ChildWindowCountText}" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
       <Button Classes="lockflag" VerticalAlignment="Center" Margin="0,0,12,0"
               Classes.editing="{Binding CurrentExplorer.IsEditing}"
               Command="{Binding CurrentExplorer.ToggleLockCommand}"
@@ -109,6 +139,7 @@
           <TextBlock Classes="lockflag-txt" Text="{Binding CurrentExplorer.LockStateText}" />
         </StackPanel>
       </Button>
+     </StackPanel>
     </ctl:WindowFrame.TitleRight>
 
     <!-- Page + dialog overlay: flush under the titlebar, no second bordered/shadowed frame here
