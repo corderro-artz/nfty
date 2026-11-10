@@ -48,6 +48,15 @@ public partial class WindowFrame : UserControl
     public static readonly StyledProperty<ICommand?> MinimizeCommandProperty =
         AvaloniaProperty.Register<WindowFrame, ICommand?>(nameof(MinimizeCommand));
 
+    /// <summary>The full screen button's command; the button is drawn only when this is set (a
+    /// window either offers full screen or does not, it never toggles at runtime).</summary>
+    public static readonly StyledProperty<ICommand?> ToggleFullScreenCommandProperty =
+        AvaloniaProperty.Register<WindowFrame, ICommand?>(nameof(ToggleFullScreenCommand));
+
+    /// <summary>Whether the window is full screen, so the button shows the way out.</summary>
+    public static readonly StyledProperty<bool> IsFullScreenProperty =
+        AvaloniaProperty.Register<WindowFrame, bool>(nameof(IsFullScreen));
+
     /// <summary>The maximise/restore button's command.</summary>
     public static readonly StyledProperty<ICommand?> ToggleMaximizeCommandProperty =
         AvaloniaProperty.Register<WindowFrame, ICommand?>(nameof(ToggleMaximizeCommand));
@@ -92,6 +101,10 @@ public partial class WindowFrame : UserControl
     public object? Footer { get => GetValue(FooterProperty); set => SetValue(FooterProperty, value); }
     /// <summary>The minimise button's command.</summary>
     public ICommand? MinimizeCommand { get => GetValue(MinimizeCommandProperty); set => SetValue(MinimizeCommandProperty, value); }
+    /// <summary>The full screen button's command; null hides the button.</summary>
+    public ICommand? ToggleFullScreenCommand { get => GetValue(ToggleFullScreenCommandProperty); set => SetValue(ToggleFullScreenCommandProperty, value); }
+    /// <summary>Whether the window is full screen.</summary>
+    public bool IsFullScreen { get => GetValue(IsFullScreenProperty); set => SetValue(IsFullScreenProperty, value); }
     /// <summary>The maximise/restore button's command.</summary>
     public ICommand? ToggleMaximizeCommand { get => GetValue(ToggleMaximizeCommandProperty); set => SetValue(ToggleMaximizeCommandProperty, value); }
     /// <summary>The close button's command.</summary>

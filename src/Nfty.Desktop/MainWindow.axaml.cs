@@ -62,6 +62,8 @@ public partial class MainWindow : Window
         _attachedShell = shell;
         shell.MinimizeRequested += Minimize;
         shell.ToggleMaximizeRequested += ToggleMaximize;
+        shell.ToggleFullScreenRequested += ToggleFullScreen;
+        shell.IsFullScreen = WindowState == WindowState.FullScreen;
         shell.CloseRequested += Close;
     }
 
@@ -69,11 +71,35 @@ public partial class MainWindow : Window
     private void ToggleMaximize() =>
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
+    private WindowState _beforeFullScreen = WindowState.Normal;
+
+    /// <summary>Enters or leaves full screen, returning to the state (normal or maximized) it left.</summary>
+    private void ToggleFullScreen()
+    {
+        if (WindowState == WindowState.FullScreen)
+        {
+            WindowState = _beforeFullScreen == WindowState.Minimized ? WindowState.Normal : _beforeFullScreen;
+            return;
+        }
+        _beforeFullScreen = WindowState;
+        WindowState = WindowState.FullScreen;
+    }
+
+    /// <summary>Keeps the shell's full screen flag equal to the real window state.</summary>
+    /// <param name="change">The changed property.</param>
+    protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WindowStateProperty && _attachedShell is { } shell)
+            shell.IsFullScreen = WindowState == WindowState.FullScreen;
+    }
+
     private void DetachShell()
     {
         if (_attachedShell is not { } shell) return;
         shell.MinimizeRequested -= Minimize;
         shell.ToggleMaximizeRequested -= ToggleMaximize;
+        shell.ToggleFullScreenRequested -= ToggleFullScreen;
         shell.CloseRequested -= Close;
         _attachedShell = null;
     }

@@ -49,6 +49,12 @@ term. The full list is in [Keyboard shortcuts](../reference/shortcuts.md).
 
 **Window zoom.** ++ctrl+plus++, ++ctrl+minus++ and ++ctrl+0++ scale the whole window.
 
+**Full screen.** ++f11++, or the first button in the titlebar, fills the display with the window and
+back again. ++esc++ closes an open dialog and never leaves full screen. Viewer windows opened meanwhile
+stay above it. A small windows badge in the titlebar (shown only while another window is open)
+lists them: click it, or press ++ctrl+shift+w++, and choose one to bring it forward; ++ctrl+grave-accent++
+cycles through them. This is the way back to a viewer while the main window is full screen.
+
 **Closing.** ++ctrl+w++ closes the open book or Set and returns to the opening screen. Closing the
 window asks about unsaved work, and refuses while a cook, export or upload is running.
 

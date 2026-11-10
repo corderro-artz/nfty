@@ -1,3 +1,6 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Avalonia.Controls;
 using Nfty.App.Services;
 using Nfty.App.Viewer;
@@ -24,15 +27,17 @@ public sealed class DesktopViewerHost : IViewerHost
     private readonly IViewerWindowState _state;
     private readonly IImageBridge _bridge;
     private readonly Func<Window?> _mainWindow;
+    private readonly IChildWindows? _children;
 
     /// <summary>Creates the host.</summary>
     /// <param name="picker">Save dialogs.</param>
     /// <param name="clipboard">The clipboard.</param>
     /// <param name="state">The remembered window size.</param>
     /// <param name="bridge">Turns art into bitmaps.</param>
+    /// <param name="children">The registry the shell lists open viewers from; null keeps none.</param>
     public DesktopViewerHost(IFilePickerService picker, IClipboardService clipboard, IViewerWindowState state,
-        IImageBridge bridge)
-        : this(picker, clipboard, state, bridge, DefaultMainWindow)
+        IImageBridge bridge, IChildWindows? children = null)
+        : this(picker, clipboard, state, bridge, DefaultMainWindow, children)
     {
     }
 
@@ -41,11 +46,13 @@ public sealed class DesktopViewerHost : IViewerHost
     /// <param name="clipboard">The clipboard.</param>
     /// <param name="state">The remembered window size.</param>
     /// <param name="bridge">Turns art into bitmaps.</param>
+    /// <param name="children">The registry the shell lists open viewers from; null keeps none.</param>
     /// <param name="mainWindow">Finds a live opening window, or null to use the native opening display.
     /// The default host prefers the active viewer, then the shell, then any visible window.</param>
     public DesktopViewerHost(IFilePickerService picker, IClipboardService clipboard, IViewerWindowState state,
-        IImageBridge bridge, Func<Window?> mainWindow)
+        IImageBridge bridge, Func<Window?> mainWindow, IChildWindows? children = null)
     {
+        _children = children;
         _picker = picker;
         _clipboard = clipboard;
         _state = state;
@@ -55,6 +62,48 @@ public sealed class DesktopViewerHost : IViewerHost
 
     /// <summary>Raised with each window just before it is shown, so a test can reach it.</summary>
     public event Action<ViewerWindow>? Opened;
+
+    /// <summary>
+    /// A viewer opened over a full screen window stays above it.
+    /// </summary>
+    /// <remarks>Viewers are deliberately un-owned (an owned window dies with the shell), so nothing
+    /// ties their z-order to the main window's. A full screen window covers the display and can sit
+    /// above a window opened beside it, so while any window is full screen the new viewer is topmost,
+    /// and goes back to an ordinary window once none is.</remarks>
+    private static void KeepAboveFullScreen(Window viewer)
+    {
+        var windows = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Windows;
+        if (windows is null || !windows.Any(w => !ReferenceEquals(w, viewer) && w.WindowState == WindowState.FullScreen))
+            return;
+        viewer.Topmost = true;
+        viewer.Activate();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        timer.Tick += (_, _) =>
+        {
+            if (windows.Any(w => !ReferenceEquals(w, viewer) && w.WindowState == WindowState.FullScreen)) return;
+            viewer.Topmost = false;
+            timer.Stop();
+        };
+        viewer.Closed += (_, _) => timer.Stop();
+        timer.Start();
+    }
+
+    /// <summary>Lists the viewer with the shell until it closes.</summary>
+    private void Register(ViewerWindow window, ViewerViewModel vm)
+    {
+        if (_children is null) return;
+        var token = _children.Register(new ChildWindowEntry
+        {
+            Title = () => string.IsNullOrWhiteSpace(vm.Title) ? "Viewer" : vm.Title,
+            Hint = () => vm.LiveBadge,
+            Activate = () =>
+            {
+                if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                window.Activate();
+            },
+        });
+        window.Closed += (_, _) => token.Dispose();
+    }
 
     private static Window? DefaultMainWindow() => DesktopWindowContext.Current;
 
@@ -84,6 +133,8 @@ public sealed class DesktopViewerHost : IViewerHost
 
             Opened?.Invoke(window);
             window.Show();
+            KeepAboveFullScreen(window);
+            Register(window, vm);
         }
         catch
         {

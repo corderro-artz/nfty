@@ -193,6 +193,7 @@ public static class HelpCatalog
             K(B, 3, "KEYS · ANYWHERE", KeyHints.CloseDocument, "close document"),
             K(B, 3, "KEYS · ANYWHERE", KeyHints.Theme, "light / dark"),
             K(B, 3, "KEYS · ANYWHERE", KeyHints.ZoomReset, "zoom to 100%"),
+            K(B, 3, "KEYS · ANYWHERE", KeyHints.FullScreen, "full screen (Esc never leaves it)"),
             K(B, 3, "KEYS · LANDING", KeyHints.NewCookBook, "new CookBook"),
             K(B, 3, "KEYS · LANDING", KeyHints.Open, "open"),
             K(B, 3, "KEYS · LANDING", KeyHints.Import, "import a loose file"),
@@ -264,6 +265,8 @@ public static class HelpCatalog
             T(V, 0, "THE VIEWER", "Live or snapshot", "*Live* follows the editor or Rise page; a *snapshot* is a copy that stays."),
             T(V, 0, "THE VIEWER", "In the window", $"Wheel zooms the 2D art; left or middle drag pans. *{KeyHints.CloseDocument}* closes the window."),
             T(V, 0, "THE VIEWER", "Sealed .tin", "View-only: *no save, copy or export*."),
+            K(V, 0, "KEYS · OTHER WINDOWS", KeyHints.ChildWindows, "bring the next window forward"),
+            K(V, 0, "KEYS · OTHER WINDOWS", KeyHints.ChildWindowList, "list the open windows"),
 
             T(V, 1, "OPEN IT", "Pop out", "The Pop out buttons beside previews and the 3D tile."),
             T(V, 1, "OPEN IT", "Tile, row, canvas or 3D tile", $"*{KeyHints.ViewerClick}*, or right-click *Open in viewer*."),
