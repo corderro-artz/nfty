@@ -195,7 +195,7 @@ public partial class SetInspectViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            _status.Say($"Could not save {Number}: {ErrorText.For(ex)}");
+            _status.Warn($"Could not save {Number}: {ErrorText.For(ex)}");
         }
     }
 

@@ -779,7 +779,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                                        or SixLabors.ImageSharp.ImageFormatException)
         {
-            _status.Say($"Could not open {row.Number} in a viewer: {ErrorText.For(ex)}");
+            _status.Warn($"Could not open {row.Number} in a viewer: {ErrorText.For(ex)}");
         }
     }
 
@@ -821,7 +821,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            _status.Say($"Could not save {ShownNumber}: {ErrorText.For(ex)}");
+            _status.Warn($"Could not save {ShownNumber}: {ErrorText.For(ex)}");
         }
     }
 

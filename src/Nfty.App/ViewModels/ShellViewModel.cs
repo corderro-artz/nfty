@@ -107,6 +107,8 @@ public partial class ShellViewModel : ViewModelBase
     public double EffectivePageScale => ChromeScale * ZoomScale;
     /// <summary>The most recent guidance from the current page.</summary>
     [ObservableProperty] private string _statusMessage = "";
+    /// <summary>Changes on every status warning so the footer can replay its attention cue.</summary>
+    [ObservableProperty] private int _statusAttention;
 
     /// <summary>The titlebar's Kitchen chip / crumbs / lock flag are Explorer-specific (the mockup's
     /// landing titlebar has none of them), so the shared shell chrome binds through this rather than
@@ -168,7 +170,7 @@ public partial class ShellViewModel : ViewModelBase
         // or dismisses the card, then closes.
         if (_dialogs.OpenDialogs.OfType<IUnsavedWork>().FirstOrDefault(c => c.HasUnsavedWork || c.IsBusy) is { } card)
         {
-            _status.Say(card.IsBusy
+            _status.Warn(card.IsBusy
                 ? "Wait for the open dialog to finish before closing."
                 : "Save or cancel the open dialog first — closing would lose its changes.");
             return false;
@@ -181,7 +183,7 @@ public partial class ShellViewModel : ViewModelBase
         // Finish the open card before asking a page to present its leave decision.
         if (HasDialog)
         {
-            _status.Say($"Close the open dialog first \u2014 {holders.Count} unsaved "
+            _status.Warn($"Close the open dialog first \u2014 {holders.Count} unsaved "
                 + $"{(holders.Count == 1 ? "change" : "changes")} would be lost.");
             return false;
         }
@@ -250,9 +252,8 @@ public partial class ShellViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsSettingsOpen));
             OnPropertyChanged(nameof(IsHelpOpen));
         };
-        // Two channels on purpose: Report is for buttons that genuinely do nothing yet, Say is for
-        // real guidance. Routing guidance through Report told users a working feature was unbuilt.
         status.Said += m => StatusMessage = m;
+        status.AttentionRequested += () => StatusAttention++;
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenChromeDialog))]

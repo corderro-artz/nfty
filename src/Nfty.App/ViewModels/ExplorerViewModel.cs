@@ -531,7 +531,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         }
         catch (InvalidOperationException ex)
         {
-            _status.Say($"Could not open a viewer: {ErrorText.For(ex)}");
+            _status.Warn($"Could not open a viewer: {ErrorText.For(ex)}");
         }
     }
 
@@ -706,12 +706,12 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     {
         if (!IsEditing)
         {
-            _status.Say($"Editing is locked. Use the lock button to unlock, then {action}.");
+            _status.Warn($"Editing is locked. Use the lock button to unlock, then {action}.");
             return false;
         }
         if (_session.SourcePath is null)
         {
-            _status.Say("This view is read-only because it isn't backed by a .cbk file on disk.");
+            _status.Warn("This view is read-only because it isn't backed by a .cbk file on disk.");
             return false;
         }
         return true;
@@ -766,7 +766,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     private IDisposable? BeginWrite()
     {
         var write = _session.TryBeginWrite();
-        if (write is null) _status.Say("Still saving the last change - try again in a moment.");
+        if (write is null) _status.Warn("Still saving the last change - try again in a moment.");
         return write;
     }
 
@@ -1010,7 +1010,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
                 OpenEditor(i, r);
                 return;
             default:
-                _status.Say("Select a cookbook, recipe or ingredient to add to.");
+                _status.Warn("Select a cookbook, recipe or ingredient to add to.");
                 return;
         }
     }
@@ -1082,7 +1082,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         if (write is null || !CanEditBook("add an ingredient")) return;
         if (!_book.TryRecipe(recipe.Manifest.Id, out var liveRecipe))
         {
-            _status.Say("That recipe was removed while the dialog was open. Select another recipe and try again.");
+            _status.Warn("That recipe was removed while the dialog was open. Select another recipe and try again.");
             return;
         }
         recipe = liveRecipe;
@@ -1285,7 +1285,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         };
         if (target is null)
         {
-            _status.Say("Select the recipe to import the layer into first — a layer belongs to one recipe.");
+            _status.Warn("Select the recipe to import the layer into first — a layer belongs to one recipe.");
             return;
         }
 
@@ -1324,7 +1324,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         };
         if (target is null)
         {
-            _status.Say("Select the recipe to import the image into first - a layer belongs to one recipe.");
+            _status.Warn("Select the recipe to import the image into first - a layer belongs to one recipe.");
             return;
         }
 
@@ -1408,7 +1408,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     {
         var node = FindNode(Root, id);
         if (node is not null) SelectedNode = node;
-        else _status.Say($"“{id}” isn't in the current view (a filter may be hiding it).");
+        else _status.Warn($"“{id}” isn't in the current view (a filter may be hiding it).");
     }
 
     // Delete needs edit-mode ON, a source .cbk to write to, and a recipe/ingredient selected
@@ -1617,7 +1617,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         if (!_book.TryRecipe(recipe.Manifest.Id, out var liveRecipe)
             || liveRecipe.Ingredients.FirstOrDefault(i => i.Manifest.Id == ingredient.Manifest.Id) is not { } liveIngredient)
         {
-            _status.Say("That layer was removed while the dialog was open. Select another layer and try again.");
+            _status.Warn("That layer was removed while the dialog was open. Select another layer and try again.");
             return;
         }
         recipe = liveRecipe;

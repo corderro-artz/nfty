@@ -120,7 +120,7 @@ public sealed partial class RiseViewModel
     {
         if (!CanLeave())
         {
-            _status.Say("Wait for the export to finish.");
+            _status.Warn("Wait for the export to finish.");
             return false;
         }
         CancelDepthPreview();
