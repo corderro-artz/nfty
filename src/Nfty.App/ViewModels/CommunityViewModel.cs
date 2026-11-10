@@ -42,34 +42,13 @@ public enum CommunityEmptyKind
     NeverFetchedOffline,
 }
 
-/// <summary>One choice in the tag tray.</summary>
-public sealed partial class CommunityTagChoice : ObservableObject
-{
-    /// <summary>Creates a choice.</summary>
-    /// <param name="label">The words on the button.</param>
-    /// <param name="value">The tag it selects; empty for "All".</param>
-    public CommunityTagChoice(string label, string value)
-    {
-        Label = label;
-        Value = value;
-    }
-
-    /// <summary>The words on the button.</summary>
-    public string Label { get; }
-
-    /// <summary>The tag it selects; empty for "All".</summary>
-    public string Value { get; }
-
-    /// <summary>Whether it is the tag in force.</summary>
-    [ObservableProperty]
-    private bool _isOn;
-}
-
 /// <summary>The Community page: the shared gallery as a searchable, paged grid with a detail rail.</summary>
 public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 {
-    /// <summary>How many tag buttons the tray holds besides All.</summary>
-    internal const int TrayTags = 4;
+    /// <summary>How many tag chips the tray shows in its row; the rest go in the More tags dropdown. Four chips of
+    /// the stated width, the dropdown button and the TAG label fit the header beside the search box and the sort at
+    /// the page's smallest area (about 1067 px), so this is a measured budget, not a taste.</summary>
+    internal const int TrayFit = 4;
 
     private readonly ICommunityCache _cache;
     private readonly ICommunitySeen _seen;
@@ -153,28 +132,48 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     // ---- search, tag, sort -----------------------------------------------------------------
 
-    /// <summary>The words typed in the search box.</summary>
+    /// <summary>The text in the search box: <c>#tag</c>, <c>@user</c> and plain words. The ONE source of truth for
+    /// what the grid shows; every chip and link only edits this text.</summary>
     [ObservableProperty]
     private string _query = "";
-
-    /// <summary>The tag in force; empty means every tag.</summary>
-    [ObservableProperty]
-    private string _tag = "";
 
     /// <summary>How the grid is ordered.</summary>
     [ObservableProperty]
     private CommunitySort _sort = CommunitySort.RecentlyUpdated;
 
-    /// <summary>The tag tray: All, then the most used tags.</summary>
+    /// <summary>The tag tray's row: the first of the gallery's fixed tags, in the gallery's order.</summary>
     [ObservableProperty]
-    private IReadOnlyList<CommunityTagChoice> _tagChoices = [new CommunityTagChoice("All", "") { IsOn = true }];
+    private IReadOnlyList<CommunityToken> _trayTags = [];
 
-    partial void OnQueryChanged(string value) => Refilter(resetPage: true);
+    /// <summary>The rest of the gallery's tags, offered in the More tags dropdown.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<CommunityToken> _moreTags = [];
 
-    partial void OnTagChanged(string value)
+    /// <summary>Whether the gallery has any tags at all; the tray only loses its ink until the list arrives.</summary>
+    public bool HasTags => TrayTags.Count > 0;
+
+    /// <summary>Whether the gallery has tags beyond the tray's row, so the dropdown has something to hold.</summary>
+    public bool HasMoreTags => MoreTags.Count > 0;
+
+    /// <summary>Whether any tag in the dropdown is in the search box, so the dropdown button shows it is in force.</summary>
+    public bool MoreIsOn => MoreTags.Any(t => t.IsOn);
+
+    partial void OnQueryChanged(string value)
     {
-        foreach (var c in TagChoices) c.IsOn = string.Equals(c.Value, value, StringComparison.Ordinal);
+        MarkTokens();
         Refilter(resetPage: true);
+    }
+
+    /// <summary>Marks every chip and link whose token is in the search box.</summary>
+    private void MarkTokens()
+    {
+        foreach (var c in TrayTags.Concat(MoreTags)) c.IsOn = CommunitySearch.Has(Query, c.Token);
+        foreach (var t in _byId.Values)
+        {
+            t.OwnerLink.IsOn = CommunitySearch.Has(Query, t.OwnerLink.Token);
+            foreach (var l in t.TagLinks) l.IsOn = CommunitySearch.Has(Query, l.Token);
+        }
+        OnPropertyChanged(nameof(MoreIsOn));
     }
 
     partial void OnSortChanged(CommunitySort value)
@@ -194,23 +193,18 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>Whether the grid is ordered by asset count.</summary>
     public bool SortIsAssets => Sort == CommunitySort.Assets;
 
-    /// <summary>Picks a tag from the tray.</summary>
-    /// <param name="tag">The tag, or empty for all.</param>
-    [RelayCommand]
-    private void SelectTag(string? tag) => Tag = tag ?? "";
+    /// <summary>Adds a token (<c>#tag</c> or <c>@user</c>) to the search box, or removes it when it is already there.</summary>
+    /// <param name="token">The token.</param>
+    internal void ToggleToken(string token) => Query = CommunitySearch.Toggle(Query, token);
 
     /// <summary>Picks how the grid is ordered.</summary>
     /// <param name="sort">The order.</param>
     [RelayCommand]
     private void SortBy(CommunitySort sort) => Sort = sort;
 
-    /// <summary>Clears the search words and the tag, which is the click that undoes "nothing matches".</summary>
+    /// <summary>Clears the search box, which is the click that undoes "nothing matches".</summary>
     [RelayCommand]
-    private void ClearSearch()
-    {
-        Query = "";
-        Tag = "";
-    }
+    private void ClearSearch() => Query = "";
 
     // ---- the grid --------------------------------------------------------------------------
 
@@ -277,17 +271,8 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     private void Refilter(bool resetPage)
     {
         if (resetPage) PageIndex = 0;
-        var q = Query.Trim();
-        if (q.StartsWith('@')) q = q[1..];
-
-        IEnumerable<CommunityTile> found = _byId.Values;
-        if (q.Length > 0)
-            found = found.Where(t =>
-                t.Entry.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
-                || t.Entry.Owner.Login.Contains(q, StringComparison.OrdinalIgnoreCase)
-                || t.Entry.Collection.Contains(q, StringComparison.OrdinalIgnoreCase));
-        if (Tag.Length > 0)
-            found = found.Where(t => t.Entry.Tags.Contains(Tag, StringComparer.Ordinal));
+        var q = CommunitySearch.Parse(Query);
+        IEnumerable<CommunityTile> found = _byId.Values.Where(t => CommunitySearch.Matches(t.Entry, q));
 
         _filtered = Sort switch
         {
@@ -333,9 +318,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     /// <summary>The sentence for the emptiness, naming the search when that is the cause.</summary>
     public string EmptyText => EmptyKind switch
     {
-        CommunityEmptyKind.NoMatches => Query.Trim().Length > 0
-            ? $"No collection matches “{Query.Trim()}”."
-            : "No collection carries that tag.",
+        CommunityEmptyKind.NoMatches => $"No collection matches “{Query.Trim()}”.",
         CommunityEmptyKind.EmptyGallery => "Nobody has shared a collection yet.",
         CommunityEmptyKind.NeverFetchedOffline => "The list hasn't been fetched yet, and GitHub can't be reached.",
         _ => "",
@@ -432,7 +415,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
                 continue;
             }
             old?.Dispose();
-            _byId[e.Id] = new CommunityTile(e, _cache, _gate, _bridge);
+            _byId[e.Id] = new CommunityTile(e, _cache, _gate, _bridge, token => ToggleToken(token));
         }
         foreach (var id in _byId.Keys.Where(k => !keep.Contains(k)).ToList())
         {
@@ -447,6 +430,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         if (selectedId is not null) Selected = _byId.GetValueOrDefault(selectedId);
 
         BuildTagTray();
+        MarkTokens();
         RecountMarks();
         Refilter(resetPage: false);
         OnPropertyChanged(nameof(IsOffline));
@@ -455,14 +439,15 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     private void BuildTagTray()
     {
-        var top = _byId.Values.SelectMany(t => t.Entry.Tags).GroupBy(t => t, StringComparer.Ordinal)
-            .OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
-            .Take(TrayTags).Select(g => g.Key).ToList();
-        var choices = new List<CommunityTagChoice> { new("All", "") };
-        choices.AddRange(top.Select(t => new CommunityTagChoice(t, t)));
-        TagChoices = choices;
-        if (Tag.Length > 0 && !top.Contains(Tag, StringComparer.Ordinal)) Tag = "";
-        foreach (var c in choices) c.IsOn = string.Equals(c.Value, Tag, StringComparison.Ordinal);
+        // The gallery's fixed list, in its own order - not the most used ones. Rebuilt only when it changed, so a
+        // refresh does not replace the chips under the pointer.
+        var all = _cache.Tags;
+        if (all.SequenceEqual(TrayTags.Concat(MoreTags).Select(c => c.Label), StringComparer.Ordinal)) return;
+        CommunityToken Chip(string t) => new(t, "#" + t, token => ToggleToken(token));
+        TrayTags = all.Take(TrayFit).Select(Chip).ToList();
+        MoreTags = all.Skip(TrayFit).Select(Chip).ToList();
+        OnPropertyChanged(nameof(HasMoreTags));
+        OnPropertyChanged(nameof(HasTags));
     }
 
     private void RecountMarks()
@@ -531,7 +516,6 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DatesText));
         OnPropertyChanged(nameof(DescriptionText));
         OnPropertyChanged(nameof(RailFacts));
-        OnPropertyChanged(nameof(TagsText));
         NotifyActions();
         BeginRail(newValue);
     }
@@ -553,9 +537,6 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     /// <summary>The description, or a plain line when the sharer wrote none.</summary>
     public string DescriptionText => Selected?.Entry.Description is { Length: > 0 } d ? d : "No description.";
-
-    /// <summary>The tags, or a dash.</summary>
-    public string TagsText => Selected?.Entry.Tags is { Count: > 0 } t ? string.Join(", ", t) : "—";
 
     /// <summary>The rail's fact lines.</summary>
     public IReadOnlyList<string> RailFacts

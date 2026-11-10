@@ -1,16 +1,1 @@
-{
-  "tags": [
-    "abstract",
-    "animals",
-    "characters",
-    "creatures",
-    "food",
-    "icons",
-    "items",
-    "pixel-art",
-    "props",
-    "scenery",
-    "sprites",
-    "vehicles"
-  ]
-}
+{"schemaVersion":1,"tags":["characters","creatures","props","items","scenery","effects","ui","abstract"]}

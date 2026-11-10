@@ -59,7 +59,8 @@ public sealed class CommunityCacheTests : IDisposable
         var second = await cache.RefreshAsync(default);
 
         Assert.Null(first.Notice);
-        Assert.Equal("\"v1\"", f.Seen[1].Headers.IfNoneMatch.Single().ToString());
+        Assert.Equal("\"v1\"", f.Seen.Where(r => r.RequestUri!.AbsolutePath == "/index.json").ElementAt(1)
+            .Headers.IfNoneMatch.Single().ToString());
         Assert.Null(second.Notice);
         Assert.Single(second.Index!.Entries);
         Assert.Equal("\"v1\"", File.ReadAllText(Path.Combine(_root, "index.etag")));
@@ -130,6 +131,65 @@ public sealed class CommunityCacheTests : IDisposable
         var got = await cache.RefreshAsync(default);
         Assert.NotNull(got.Notice);
         Assert.Single(got.Index!.Entries);
+    }
+
+    private static byte[] TagsBytes(params string[] tags) =>
+        System.Text.Encoding.UTF8.GetBytes("{\"schemaVersion\":1,\"tags\":[" + string.Join(",", tags.Select(t => "\"" + t + "\"")) + "]}");
+
+    private static bool IsTags(HttpRequestMessage r) => r.RequestUri!.AbsolutePath == "/tags.json";
+
+    [Fact]
+    public async Task Cache_fetches_tags_beside_the_index_without_a_token()
+    {
+        var f = new Fake(r => IsTags(r) ? Ok(TagsBytes("props", "items"), "\"t1\"") : Ok(IndexBytes(Entry("one"))));
+        var cache = Cache(f);
+        Assert.Empty(cache.Tags);
+
+        var listing = await cache.RefreshAsync(default);
+
+        Assert.Null(listing.Notice);
+        Assert.Equal(["props", "items"], cache.Tags);
+        var req = f.Seen.Single(IsTags);
+        Assert.Equal("https://example.test/tags.json", req.RequestUri!.ToString());
+        Assert.Null(req.Headers.Authorization);
+        // kept on disk: a new cache over the same folder has them before any fetch
+        Assert.Equal(["props", "items"], new CommunityCache(_root, new HttpClient(f), IndexUrl).Tags);
+        // second refresh asks conditionally and keeps them on a 304
+        var f2 = new Fake(r => IsTags(r) ? new HttpResponseMessage(HttpStatusCode.NotModified) : Ok(IndexBytes(Entry("one"))));
+        var again = new CommunityCache(_root, new HttpClient(f2), IndexUrl);
+        await again.RefreshAsync(default);
+        Assert.Equal("\"t1\"", f2.Seen.Single(IsTags).Headers.IfNoneMatch.Single().ToString());
+        Assert.Equal(["props", "items"], again.Tags);
+    }
+
+    [Fact]
+    public async Task A_failed_tags_fetch_keeps_the_cached_list()
+    {
+        var mode = 0;
+        var f = new Fake(r =>
+        {
+            if (!IsTags(r)) return Ok(IndexBytes(Entry("one")));
+            return mode switch
+            {
+                0 => Ok(TagsBytes("props")),
+                1 => throw new HttpRequestException("down"),
+                2 => Ok("{nope"u8.ToArray()),
+                3 => Ok(System.Text.Encoding.UTF8.GetBytes("{\"schemaVersion\":99,\"tags\":[\"x\"]}")),
+                4 => Ok(new byte[CommunityCache.MaxTagsBytes + 1]),
+                _ => new HttpResponseMessage(HttpStatusCode.InternalServerError),
+            };
+        });
+        var cache = Cache(f);
+        await cache.RefreshAsync(default);
+
+        for (mode = 1; mode <= 5; mode++)
+        {
+            var listing = await cache.RefreshAsync(default);
+            Assert.Null(listing.Notice);                       // the index refresh is untouched
+            Assert.Single(listing.Index!.Entries);
+            Assert.Equal(["props"], cache.Tags);
+        }
+        Assert.Equal(["props"], new CommunityCache(_root, new HttpClient(f), IndexUrl).Tags);
     }
 
     private static (CommunityFile file, byte[] body) PreviewOf(byte fill, int size = 16)

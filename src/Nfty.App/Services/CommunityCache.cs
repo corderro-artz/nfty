@@ -22,6 +22,9 @@ public interface ICommunityCache
     /// <summary>The cached listing, or null when nothing is cached.</summary>
     CommunityListing? Cached { get; }
 
+    /// <summary>The gallery's fixed tag list (its <c>tags.json</c>): what was last fetched or cached, empty until then.</summary>
+    IReadOnlyList<string> Tags { get; }
+
     /// <summary>The local path of a verified preview picture, fetching it when needed; null when it cannot be had.</summary>
     /// <param name="file">The preview the entry points at.</param>
     /// <param name="ct">Stops the fetch.</param>
@@ -40,6 +43,9 @@ public sealed partial class CommunityCache : ICommunityCache
     /// <summary>The largest list body that is read (16 MB).</summary>
     public const long MaxIndexBytes = 16L * 1024 * 1024;
 
+    /// <summary>The largest tag list body that is read (64 KB).</summary>
+    public const long MaxTagsBytes = 64L * 1024;
+
     private static readonly TimeSpan Stall = TimeSpan.FromSeconds(30);
 
     [GeneratedRegex("^[0-9a-f]{64}$")]
@@ -52,6 +58,7 @@ public sealed partial class CommunityCache : ICommunityCache
     private readonly Func<DateTimeOffset> _clock;
     private CommunityListing? _cached;
     private bool _loaded;
+    private IReadOnlyList<string>? _tags;
 
     /// <summary>Creates the cache under <paramref name="root"/>.</summary>
     /// <param name="root">The <c>community</c> folder. Tests MUST pass a temp directory.</param>
@@ -76,6 +83,9 @@ public sealed partial class CommunityCache : ICommunityCache
 
     private string IndexPath => Path.Combine(_root, "index.json");
     private string EtagPath => Path.Combine(_root, "index.etag");
+    private Uri TagsUrl => new(_indexUrl, "tags.json");
+    private string TagsPath => Path.Combine(_root, "tags.json");
+    private string TagsEtagPath => Path.Combine(_root, "tags.etag");
     private string PreviewDir => Path.Combine(_root, "previews");
 
     /// <inheritdoc />
@@ -106,7 +116,64 @@ public sealed partial class CommunityCache : ICommunityCache
     }
 
     /// <inheritdoc />
+    public IReadOnlyList<string> Tags => _tags ??= LoadTags();
+
+    private IReadOnlyList<string> LoadTags()
+    {
+        try
+        {
+            if (!File.Exists(TagsPath)) return [];
+            using var fs = File.OpenRead(TagsPath);
+            return CommunityTags.Read(fs).Tags;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException
+                                      or UnsupportedSchemaVersionException)
+        { return []; }
+    }
+
+    /// <inheritdoc />
     public async Task<CommunityListing> RefreshAsync(CancellationToken ct)
+    {
+        var listing = await RefreshIndexAsync(ct).ConfigureAwait(false);
+        await RefreshTagsAsync(ct).ConfigureAwait(false);
+        return listing;
+    }
+
+    /// <summary>Fetches <c>tags.json</c> beside the index, token-free and conditionally. Any failure keeps the cached list and is not reported: tags are a convenience, never a reason the list fails.</summary>
+    private async Task RefreshTagsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var current = Tags;
+            using var req = new HttpRequestMessage(HttpMethod.Get, TagsUrl);
+            if (current.Count > 0 && ReadEtag(TagsEtagPath) is { } etag
+                && System.Net.Http.Headers.EntityTagHeaderValue.TryParse(etag, out var tag))
+                req.Headers.IfNoneMatch.Add(tag);
+
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return;   // includes 304: the cached list stands
+            if (resp.Content.Headers.ContentLength is > MaxTagsBytes) return;
+            var body = await ReadCappedAsync(resp, MaxTagsBytes, ct).ConfigureAwait(false);
+            if (body is null) return;
+
+            CommunityTags parsed;
+            try { parsed = CommunityTags.Read(new MemoryStream(body)); }
+            catch (Exception e) when (e is InvalidDataException or UnsupportedSchemaVersionException) { return; }
+
+            Directory.CreateDirectory(_root);
+            WriteAtomic(TagsPath, body);
+            var newTag = resp.Headers.ETag?.ToString();
+            if (newTag is not null) WriteAtomic(TagsEtagPath, System.Text.Encoding.UTF8.GetBytes(newTag));
+            else { try { File.Delete(TagsEtagPath); } catch (IOException) { } }
+            _tags = parsed.Tags;
+        }
+        catch (Exception e) when (e is HttpRequestException or IOException or UnauthorizedAccessException
+                                      or TimeoutException || (e is OperationCanceledException && !ct.IsCancellationRequested))
+        {
+        }
+    }
+
+    private async Task<CommunityListing> RefreshIndexAsync(CancellationToken ct)
     {
         var cached = Cached;
         try
@@ -158,9 +225,10 @@ public sealed partial class CommunityCache : ICommunityCache
         ? new CommunityListing(null, _clock(), notice)
         : cached with { Notice = notice };
 
-    private string? ReadEtag()
+    private string? ReadEtag(string? path = null)
     {
-        try { return File.Exists(EtagPath) ? File.ReadAllText(EtagPath).Trim() : null; }
+        path ??= EtagPath;
+        try { return File.Exists(path) ? File.ReadAllText(path).Trim() : null; }
         catch (IOException) { return null; }
     }
 

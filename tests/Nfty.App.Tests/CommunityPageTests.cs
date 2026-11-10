@@ -13,6 +13,7 @@ internal sealed class FakeCommunityCache : ICommunityCache
 {
     public CommunityListing? Next { get; set; }
     public CommunityListing? Cached { get; set; }
+    public IReadOnlyList<string> Tags { get; set; } = [];
     public string? PreviewPath { get; set; }
     public HashSet<string> MissingPreviews { get; } = [];
     public string SetsDir { get; set; } = Path.Combine(Path.GetTempPath(), "nfty-fake-community-sets");
@@ -122,7 +123,9 @@ public class CommunityPageTests
         vm.Query = "@BOB";
         Assert.Equal(["Robots"], Names(vm));
 
-        vm.Query = "carol";
+        vm.Query = "carol";                                       // an owner is found with @, not as a word
+        Assert.Empty(vm.Tiles);
+        vm.Query = "@carol";
         Assert.Equal(["Plants"], Names(vm));
 
         vm.Query = "nothing like it";
@@ -139,7 +142,7 @@ public class CommunityPageTests
             E("d", "Bob", assets: 999, tags: ["robots"])]);
         using var vm = await CommunityFixtures.Opened(listing);
 
-        vm.SelectTagCommand.Execute("pets");
+        vm.ToggleToken("#pets");
         vm.SortByCommand.Execute(CommunitySort.Name);
         Assert.Equal(["Amy", "Mia", "Zed"], Names(vm));
 
@@ -149,11 +152,8 @@ public class CommunityPageTests
         vm.Query = "m";                                           // Amy, Mia - and not Zed
         Assert.Equal(["Amy", "Mia"], Names(vm));
 
-        vm.SelectTagCommand.Execute("");
         vm.Query = "";
         Assert.Equal(["Bob", "Amy", "Mia", "Zed"], Names(vm));    // 999, 300, 50, 10
-        Assert.Contains(vm.TagChoices, c => c.Value == "pets" && !c.IsOn);
-        Assert.True(vm.TagChoices[0].IsOn);
     }
 
     [Fact]
@@ -339,7 +339,7 @@ public class CommunityPageTests
         var tile = vm.Tiles[0];
 
         Assert.Equal("1,234 · 16 x 16 · " + SizeText.Of(4_194_304), tile.FactsText);
-        Assert.Equal("@alice", tile.OwnerText);
+        Assert.Equal("@alice", tile.OwnerLink.Label);
     }
 
     [Fact]

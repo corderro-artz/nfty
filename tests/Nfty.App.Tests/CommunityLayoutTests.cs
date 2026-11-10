@@ -56,10 +56,13 @@ public class CommunityLayoutTests
 
     private static Rect RectIn(Control c, Visual ancestor) => new(c.TranslatePoint(default, ancestor)!.Value, c.Bounds.Size);
 
+    /// <summary>The gallery's shipped tag list, so the tray and its More tags dropdown are laid out in every sweep.</summary>
+    internal static readonly string[] GalleryTags = ["characters", "creatures", "props", "items", "scenery", "effects", "ui", "abstract"];
+
     private static CommunityViewModel Page(CommunityListing listing, string sheetDir, ICommunitySeen? seen = null,
         IGitHubAccount? account = null)
     {
-        var cache = new FakeCommunityCache { Next = listing, PreviewPath = CommunityFixtures.Sheet(sheetDir) };
+        var cache = new FakeCommunityCache { Next = listing, PreviewPath = CommunityFixtures.Sheet(sheetDir), Tags = GalleryTags };
         var vm = new CommunityViewModel(cache, seen ?? new CommunitySeen(Directory.CreateTempSubdirectory("nfty-seen-").FullName),
             account ?? new FakeGitHubAccount(), new FakeNav(), new FakeDialogs(), new StatusService(), _ => Task.CompletedTask);
         UiThreadWait.For(vm.PendingRefresh);
@@ -74,7 +77,7 @@ public class CommunityLayoutTests
         var dir = TempSheetDir();
         var seen = new CommunitySeen(Directory.CreateTempSubdirectory("nfty-seen-").FullName, () => CommunityFixtures.T0);
         var list = Enumerable.Range(0, entries).Select(i => CommunityFixtures.Entry($"e{i:00}", $"Collection {i:00}",
-            login: i % 2 == 0 ? "alice" : "bob", assets: 40 + i * 33, tags: i % 3 == 0 ? ["pets"] : ["robots", "pixel"],
+            login: i % 2 == 0 ? "alice" : "bob", assets: 40 + i * 33, tags: i % 3 == 0 ? ["creatures", "scenery"] : ["props", "items"],
             models: i % 2 == 0, book: i % 3 == 0, created: CommunityFixtures.T0.AddDays(i % 4 == 0 ? 2 : -3),
             updated: CommunityFixtures.T0.AddDays(i), description: string.Join(' ', Enumerable.Repeat("A long sentence that wraps.", 30))))
             .ToList();
@@ -112,6 +115,33 @@ public class CommunityLayoutTests
             Assert.False(gone.IsLoading);
             Assert.Single(view.GetVisualDescendants().OfType<Border>(), b => b.Classes.Contains("tmissing") && b.IsVisible
                 && b.Bounds.Width > 0 && b.GetVisualAncestors().OfType<Border>().Any(a => a.Classes.Contains("cpreview")));
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void The_tag_tray_fits_the_header_at_the_smallest_window_and_the_dropdown_lists_the_rest()
+    {
+        using var vm = RiskyPage(online: true);
+        var (window, view) = Show(vm);
+        try
+        {
+            var more = view.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "More tags");
+            var header = (Control)view.GetVisualDescendants().OfType<Grid>().First(g => g.Height == 36);
+            var search = view.FindControl<TextBox>("SearchBox")!;
+            var sort = view.GetVisualDescendants().OfType<Button>().Single(b => b.Content as string == "Updated");
+            var rMore = RectIn(more, header);
+            Assert.True(rMore.Right <= RectIn(sort, header).X, "the tray must end before the sort tray begins");
+            Assert.True(RectIn(search, header).Right < rMore.X - 40, "the tray must leave the search box its width");
+            Assert.True(rMore.Right <= header.Bounds.Width);
+            Assert.Equal(72, more.Bounds.Width);
+
+            // the dropdown holds the overflow tags (its content binds through the flyout's own data context)
+            more.Flyout!.ShowAt(more);
+            Dispatcher.UIThread.RunJobs();
+            var items = (ItemsControl)((Border)((Flyout)more.Flyout!).Content!).Child!;
+            Assert.Equal(vm.MoreTags.Count, items.ItemCount);
+            more.Flyout!.Hide();
         }
         finally { window.Close(); }
     }

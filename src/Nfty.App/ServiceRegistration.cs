@@ -235,8 +235,8 @@ public static class ServiceRegistration
             source, sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IGitHubAccount>(),
             sp.GetRequiredService<ICommunityCache>(), sp.GetRequiredService<IShareRepo>(),
             sp.GetRequiredService<IShareChecker>(), bridge: sp.GetRequiredService<IImageBridge>(),
-            // The gallery's tags.json arrives with ICommunityCache.Tags in a follow-up; until then none are offered.
-            tags: () => [],
+            // The gallery's own tag list, as the cache last fetched or kept it.
+            tags: () => sp.GetRequiredService<ICommunityCache>().Tags,
             connect: () => sp.GetRequiredService<IDialogService>().ShowAsync<object>(
                 new SettingsDialogViewModel(sp.GetRequiredService<IDialogService>(),
                     sp.GetRequiredService<IParallelismSetting>(), sp.GetRequiredService<IAppSettings>(),

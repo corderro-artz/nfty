@@ -30,9 +30,23 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
     /// <param name="cache">Where the preview picture comes from.</param>
     /// <param name="gate">The page's one decode limit.</param>
     /// <param name="bridge">Converts a decoded cell to an Avalonia bitmap.</param>
-    public CommunityTile(CommunityEntry entry, ICommunityCache cache, ThumbnailGate gate, IImageBridge bridge)
+    /// <param name="toggle">What clicking the owner or a tag link does: toggles that token in the search box. Null makes the links inert.</param>
+    public CommunityTile(CommunityEntry entry, ICommunityCache cache, ThumbnailGate gate, IImageBridge bridge,
+        Action<string>? toggle = null)
     {
         Entry = entry;
+        var t = toggle ?? (_ => { });
+        OwnerLink = new CommunityToken("@" + entry.Owner.Login, "@" + entry.Owner.Login, t);
+        TagLinks = entry.Tags.Select(tag => new CommunityToken("#" + tag, "#" + tag, t)).ToList();
+        int used = Math.Min(OwnerLink.Label.Length, TileOwnerChars);
+        var fit = new List<CommunityToken>();
+        foreach (var link in TagLinks)
+        {
+            used += 1 + link.Label.Length;
+            if (used > TileLineChars) break;
+            fit.Add(link);
+        }
+        TileTagLinks = fit;
         _cache = cache;
         _gate = gate;
         _bridge = bridge;
@@ -44,8 +58,24 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
     /// <summary>The collection's name.</summary>
     public string Name => Entry.Name;
 
-    /// <summary>The sharer, as <c>@login</c>.</summary>
-    public string OwnerText => "@" + Entry.Owner.Login;
+    /// <summary>The sharer as a link: clicking writes <c>@login</c> into the search box.</summary>
+    public CommunityToken OwnerLink { get; }
+
+    /// <summary>Every tag as a link: clicking writes <c>#tag</c> into the search box.</summary>
+    public IReadOnlyList<CommunityToken> TagLinks { get; }
+
+    /// <summary>The tags that fit WHOLE on the tile's one reserved line beside the owner (a link cut mid-word reads as a
+    /// defect); the rail lists them all. The line is mono type, so its room is a count of characters.</summary>
+    public IReadOnlyList<CommunityToken> TileTagLinks { get; }
+
+    /// <summary>How many mono characters the tile's owner and tag line holds, a gap counted as one.</summary>
+    internal const int TileLineChars = 24;
+
+    /// <summary>How many characters the owner link may take of the tile's line; longer logins are trimmed.</summary>
+    internal const int TileOwnerChars = 13;
+
+    /// <summary>Whether the entry carries no tags, so the rail can say so.</summary>
+    public bool HasNoTags => TagLinks.Count == 0;
 
     /// <summary>How many assets, how big, how heavy: <c>600 · 32 x 32 · 4.0 MB</c>.</summary>
     public string FactsText => string.Create(CultureInfo.InvariantCulture,

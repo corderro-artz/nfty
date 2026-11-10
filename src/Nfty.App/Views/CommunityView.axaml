@@ -26,28 +26,54 @@
         <Grid ColumnDefinitions="Auto,*">
           <Path Grid.Column="0" Classes="ico sm" Data="{StaticResource IconSearch}" VerticalAlignment="Center" />
           <TextBox Grid.Column="1" x:Name="SearchBox" Text="{Binding Query}" Classes="bare" Margin="8,0,0,0"
-                   VerticalAlignment="Center" PlaceholderText="Find a collection…"
-                   ToolTip.Tip="Search the gallery" />
+                   VerticalAlignment="Center" PlaceholderText="#tag, @user or a name"
+                   ToolTip.Tip="Search by #tag, @user or a name. Terms combine: #props @alice chest finds alice's chests tagged props." />
         </Grid>
       </Border>
 
-      <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+      <!-- The gallery's fixed tag list. Each chip writes its #tag into the search box (and shows on while
+           it is there); chips past the row's budget live in the More tags dropdown. Every chip a stated
+           width, the whole tray present even before the list arrives (it only loses its ink). -->
+      <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                  Classes.cgone="{Binding !HasTags}">
         <TextBlock Classes="seglbl" Text="TAG" />
-        <Border Classes="seg tiny" VerticalAlignment="Center" ToolTip.Tip="Show one tag only.">
-          <ItemsControl ItemsSource="{Binding TagChoices}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:CommunityTagChoice">
-                <Button Classes="seg-b tiny" Width="56" Classes.on="{Binding IsOn}"
-                        Command="{Binding $parent[UserControl].((vm:CommunityViewModel)DataContext).SelectTagCommand}"
-                        CommandParameter="{Binding Value}" ToolTip.Tip="{Binding Label}">
-                  <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                </Button>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+        <Border Classes="seg tiny" VerticalAlignment="Center"
+                ToolTip.Tip="Add or remove a #tag in the search box.">
+          <StackPanel Orientation="Horizontal">
+            <ItemsControl ItemsSource="{Binding TrayTags}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CommunityToken">
+                  <Button Classes="seg-b tiny" Width="72" Classes.on="{Binding IsOn}"
+                          Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding Token}">
+                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Classes="seg-b tiny" Width="72" Content="More tags" Classes.on="{Binding MoreIsOn}"
+                    Classes.cgone="{Binding !HasMoreTags}" ToolTip.Tip="The rest of the gallery's tags.">
+              <Button.Flyout>
+                <Flyout Placement="BottomEdgeAlignedRight">
+                  <Border Classes="seg tiny">
+                    <ItemsControl ItemsSource="{Binding MoreTags}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CommunityToken">
+                          <Button Classes="seg-b tiny" Width="120" HorizontalContentAlignment="Left"
+                                  Classes.on="{Binding IsOn}" Command="{Binding ToggleCommand}"
+                                  ToolTip.Tip="{Binding Token}">
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Border>
+                </Flyout>
+              </Button.Flyout>
+            </Button>
+          </StackPanel>
         </Border>
       </StackPanel>
 
@@ -117,7 +143,24 @@
                     </Panel>
                   </Border>
                   <TextBlock Classes="cname" Text="{Binding Name}" />
-                  <TextBlock Classes="cmeta" Text="{Binding OwnerText}" />
+                  <!-- ONE reserved line: the owner, then the first two tags, each a link that writes its
+                       token into the search box. Clipped, never wrapped; the rail lists every tag. -->
+                  <Grid ColumnDefinitions="Auto,*" Height="14" ClipToBounds="True">
+                    <Button Grid.Column="0" Classes="clink" MaxWidth="84" Content="{Binding OwnerLink.Label}"
+                            Classes.on="{Binding OwnerLink.IsOn}" Command="{Binding OwnerLink.ToggleCommand}"
+                            ToolTip.Tip="Show only this person's collections" />
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding TileTagLinks}" Margin="6,0,0,0">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CommunityToken">
+                          <Button Classes="clink" Content="{Binding Label}" Classes.on="{Binding IsOn}"
+                                  Command="{Binding ToggleCommand}" ToolTip.Tip="Show only this tag" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Grid>
                   <TextBlock Classes="cmeta" Text="{Binding FactsText}" />
                 </StackPanel>
               </Button>
@@ -170,7 +213,9 @@
                         Margin="0,4,0,6">
             <StackPanel Spacing="6" Margin="0,0,6,0">
               <TextBlock Text="{Binding Selected.Name}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" />
-              <TextBlock Classes="cmeta" Text="{Binding Selected.OwnerText}" />
+              <Button Classes="clink" HorizontalAlignment="Left" Content="{Binding Selected.OwnerLink.Label}"
+                      Classes.on="{Binding Selected.OwnerLink.IsOn}" Command="{Binding Selected.OwnerLink.ToggleCommand}"
+                      ToolTip.Tip="Show only this person's collections" />
               <TextBlock Classes="cmeta" Text="{Binding DatesText}" TextTrimming="None" TextWrapping="Wrap" />
               <TextBlock Classes="zp" Text="{Binding DescriptionText}" TextWrapping="Wrap" TextAlignment="Left" Margin="0,4,0,4" />
               <ItemsControl ItemsSource="{Binding RailFacts}">
@@ -180,7 +225,18 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Classes="cmeta" Text="{Binding TagsText}" TextWrapping="Wrap" TextTrimming="None" />
+              <ItemsControl ItemsSource="{Binding Selected.TagLinks}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CommunityToken">
+                    <Button Classes="clink" Margin="0,0,8,3" Content="{Binding Label}" Classes.on="{Binding IsOn}"
+                            Command="{Binding ToggleCommand}" ToolTip.Tip="Show only this tag" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="cmeta" Text="No tags." IsVisible="{Binding Selected.HasNoTags}" />
             </StackPanel>
           </ScrollViewer>
 

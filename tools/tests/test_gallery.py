@@ -346,6 +346,15 @@ class CheckTests(unittest.TestCase):
         s.entry["tags"] = ["props", "memes"]
         self.assertEqual([g.say("UnknownTag", "memes")], s.run().problems)
 
+    def test_the_repos_tag_list_is_the_one_check_enforces(self):
+        tags = json.loads((ROOT / "tools" / "gallery" / "repo" / "tags.json").read_text(encoding="utf-8"))
+        s = self.sc()
+        s.tags = tags
+        s.entry["tags"] = ["characters", "props"]
+        self.assertEqual([], s.run().problems)
+        s.entry["tags"] = ["props", "pixel-art"]          # not in the gallery's list
+        self.assertEqual([g.say("UnknownTag", "pixel-art")], s.run().problems)
+
     def test_duplicate_fingerprint_by_another_owner_fails(self):
         s = self.sc()
         s.base = [(s.make_entry(slug="theirs", owner=(42, "ann"), created="2026-10-01T00:00:00+00:00",
@@ -645,6 +654,28 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(g.Ts("2026-11-09T21:02:00+02:00").ticks, g.Ts("2026-11-09T19:02:00Z").ticks)
         with self.assertRaises(g.Unreadable):
             g.Ts("2026-13-09T14:02:00Z")
+
+
+class TagsFileTests(unittest.TestCase):
+    """tags.json is read by the app (CommunityTags.Read) and published beside index.json."""
+    REPO = ROOT / "tools" / "gallery" / "repo"
+
+    def test_the_list_obeys_the_apps_rules(self):
+        data = json.loads((self.REPO / "tags.json").read_text(encoding="utf-8"))
+        self.assertEqual(1, data["schemaVersion"])
+        tags = data["tags"]
+        self.assertLessEqual(len(tags), 32)
+        self.assertEqual(len(tags), len(set(tags)))
+        for t in tags:
+            self.assertRegex(t, r"^[a-z0-9][a-z0-9-]{0,23}$")
+        self.assertEqual(["characters", "creatures", "props", "items", "scenery", "effects", "ui", "abstract"], tags)
+
+    def test_the_site_build_publishes_tags_beside_the_index(self):
+        yml = (self.REPO / ".github" / "workflows" / "publish.yml").read_text(encoding="utf-8")
+        self.assertIn("> site/index.json", yml)
+        self.assertIn("cp tags.json site/tags.json", yml)
+        self.assertRegex(yml, r'paths:[\s\S]*"tags\.json"')      # editing the list redeploys the site
+        self.assertIn("path: site", yml)
 
 
 class FetchTests(unittest.TestCase):

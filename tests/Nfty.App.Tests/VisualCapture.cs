@@ -1503,6 +1503,11 @@ public partial class VisualCapture
             using var none = CommunityLayoutTests.RiskyPage(online: true);
             none.Query = "zzzz";
             CaptureSettled(new Views.CommunityView { DataContext = none }, none, variant, $"community-nomatches-{key}.png", area);
+
+            // A tag from the dropdown and an owner in the box: the chip and links show on, the grid is narrowed.
+            using var searched = CommunityLayoutTests.RiskyPage(online: true);
+            searched.Query = "#scenery @alice";
+            CaptureSettled(new Views.CommunityView { DataContext = searched }, searched, variant, $"community-search-{key}.png", area);
         }
     }
 
