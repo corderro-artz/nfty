@@ -58,6 +58,13 @@ public sealed class GitHubShareClient(HttpClient http, string token, CommunityEn
         return Parse(reply, Repo);
     }
 
+    /// <summary>
+    /// Deletes a repository. Needs the <c>delete_repo</c> scope, which sharing does not ask for, so GitHub usually
+    /// refuses; the only caller is a rollback that already treats a refusal as best effort.
+    /// </summary>
+    public async Task DeleteRepoAsync(string owner, string name, CancellationToken ct) =>
+        await SendAsync(HttpMethod.Delete, Api("repos", owner, name), null, ct).ConfigureAwait(false);
+
     /// <summary>Every item of a branch's tree, recursively.</summary>
     public async Task<IReadOnlyList<GitHubTreeItem>> GetTreeAsync(string owner, string repo, string branch, CancellationToken ct)
     {
