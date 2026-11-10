@@ -22,7 +22,8 @@ public sealed partial class CommunityCache
             var file = JsonSerializer.Deserialize<PendingFile>(File.ReadAllBytes(PendingPath), Json.Options);
             // Anything that does not read as a record this build wrote is dropped: a pending list is a convenience, and a
             // half-understood one would show the wrong tile.
-            return file is { SchemaVersion: 1 } ? file.Pending.Where(p => p is { Slug.Length: > 0, ClosedReasons: not null }).ToList() : [];
+            return file is { SchemaVersion: 1, Pending: not null }
+                ? file.Pending.Where(p => p is { Slug.Length: > 0, ClosedReasons: not null }).ToList() : [];
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         { return []; }

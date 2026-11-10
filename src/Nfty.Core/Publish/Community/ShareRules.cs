@@ -36,10 +36,17 @@ public static class ShareRules
 
     private static string N(long n) => n.ToString("N0", CultureInfo.InvariantCulture);
 
-    // Megabytes as SizeText computes them, but a whole number prints whole ("214 MB", not "214.0 MB").
-    private static string Size(long bytes) => bytes >= 1024L * 1024
-        ? string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024:0.#} MB")
-        : SizeText.Of(bytes);
+    // Megabytes to one decimal, ROUNDED UP (so 209,715,201 B never reads as the 200 MB limit it is over), and a whole
+    // number prints whole ("214 MB", not "214.0 MB"). Integer arithmetic: no floating point can tip a boundary.
+    private static string Size(long bytes)
+    {
+        if (bytes < 1024L * 1024) return SizeText.Of(bytes);
+        long tenths = (bytes * 10 + 1024L * 1024 - 1) / (1024L * 1024);
+        long whole = tenths / 10, frac = tenths % 10;
+        return frac == 0
+            ? string.Create(CultureInfo.InvariantCulture, $"{whole} MB")
+            : string.Create(CultureInfo.InvariantCulture, $"{whole}.{frac} MB");
+    }
 
     /// <summary>The canvas is past the limit.</summary>
     public static string CanvasTooLarge(int width, int height) =>
@@ -160,6 +167,9 @@ public static class ShareRules
     public static string RepoDuplicateRelease(string tag) =>
         $"Your nfty-public has two releases for \"{tag}\". Remove one on GitHub, then share again.";
 
+    /// <summary>nfty-public.json lists a share whose Release tag nfty would not have written.</summary>
+    public static string RepoManifestDamaged => "Your nfty-public.json lists a release nfty didn't make, so nfty can't tell which files are yours. Restore it on GitHub, then share again.";
+
     /// <summary>The repository changed between the scan and the removal.</summary>
     public static string RepoChanged => "Your nfty-public changed. Check it again.";
 
@@ -239,6 +249,9 @@ public static class ShareRules
 
     /// <summary>An entry's slug disagrees with its file name.</summary>
     public static string EntryNameMismatch => "The share's name doesn't match its file name in the gallery.";
+
+    /// <summary>An entry names an owner other than the account that submitted it.</summary>
+    public static string EntryOwnerMismatch => "The share names a different owner than the account that submitted it.";
 
     /// <summary>The GitHub account is too young to share.</summary>
     public static string AccountTooYoung =>

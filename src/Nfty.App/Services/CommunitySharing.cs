@@ -22,11 +22,11 @@ public interface IShareBackend
 {
     /// <summary>Shares, updates or swaps.</summary>
     /// <param name="request">What to share.</param>
-    /// <param name="pendingSupersededTag">A superseded Release whose replacing pull request is still open, or null.</param>
+    /// <param name="protectedTags">The Release tags the scan must keep (<see cref="ShareProtection.Tags"/>).</param>
     /// <param name="progress">Progress, in order.</param>
     /// <param name="ct">Stops the run and rolls it back.</param>
     /// <returns>The pull request and what to do once it merges.</returns>
-    Task<ShareResult> ShareAsync(ShareRequest request, string? pendingSupersededTag, IProgress<ShareProgress>? progress, CancellationToken ct);
+    Task<ShareResult> ShareAsync(ShareRequest request, IReadOnlyCollection<string> protectedTags, IProgress<ShareProgress>? progress, CancellationToken ct);
 
     /// <summary>Opens a pull request deleting one of the account's entries.</summary>
     /// <param name="slug">The share.</param>
@@ -83,13 +83,13 @@ public sealed class GitHubShareBackend : IShareBackend
     }
 
     /// <inheritdoc />
-    public async Task<ShareResult> ShareAsync(ShareRequest request, string? pendingSupersededTag, IProgress<ShareProgress>? progress,
+    public async Task<ShareResult> ShareAsync(ShareRequest request, IReadOnlyCollection<string> protectedTags, IProgress<ShareProgress>? progress,
         CancellationToken ct)
     {
         var client = Client();
         // The share run checks the account's age, so it reads the whole account rather than the cached id.
         var user = await client.GetViewerAsync(ct).ConfigureAwait(false);
-        return await CommunityShare.RunAsync(client, user, request, _endpoints, _tempRoot, progress, ct, pendingSupersededTag)
+        return await CommunityShare.RunAsync(client, user, request, _endpoints, _tempRoot, progress, ct, protectedTags)
             .ConfigureAwait(false);
     }
 
@@ -199,15 +199,15 @@ public sealed class CommunitySharing : ICommunitySharing
         {
             long owner = await _account.EnsureUserIdAsync(ct).ConfigureAwait(false) ?? throw new CommunityException(ShareRules.NotConnected);
             string login = _account.Login ?? throw new CommunityException(ShareRules.NotConnected);
-            // An update whose predecessor's Release is still waiting on an earlier pull request: the scan must allow it.
-            string? waiting = Pending.Where(p => !p.IsUnshare && !p.Finished && !p.Closed && p.SupersededTag is not null)
-                .Select(p => p.SupersededTag).FirstOrDefault();
+            // What the gallery lists for this account and what an open pull request names must survive the scan: while an update
+            // is open the list still says v1 and nfty-public.json already says v2.
+            var protectedTags = ShareProtection.Tags(_cache.Cached?.Index, Pending, owner);
 
-            var result = await _backend.ShareAsync(request, waiting, progress, ct).ConfigureAwait(false);
+            var result = await _backend.ShareAsync(request, protectedTags, progress, ct).ConfigureAwait(false);
 
             Add(new PendingRecord(PendingRecord.ShareKind, result.PullNumber, result.PullUrl.ToString(), result.Slug, owner, login,
                 info.Name, info.Assets, info.Width, info.Height, info.Models, info.IncludesCookBook, info.SetBytes,
-                result.Pending.SupersededTag, result.Pending.ReplacedTag, info.ListedAtSubmit, false, _clock(), false, []));
+                result.Pending.SupersededTag, result.Pending.ReplacedTag, info.ListedAtSubmit, false, _clock(), false, [], result.Tag));
             return result;
         }
         finally { _gate.Release(); }

@@ -109,17 +109,19 @@ public static class CommunityShare
     /// <param name="tempRoot">A folder to work in; the run cleans up what it makes there.</param>
     /// <param name="progress">Progress, in order.</param>
     /// <param name="ct">Stops the run (and rolls it back).</param>
-    /// <param name="pendingSupersededTag">The tag of a superseded Release whose replacing pull request is still open, so the scan allows it.</param>
+    /// <param name="protectedTags">Release tags the scan must never call extras: what the gallery lists for the account and what any
+    /// open pull request names (<see cref="PublicRepoScan.FetchAsync"/>). Empty only when nothing is listed or pending.</param>
     /// <param name="clock">The time stamped on the entry; tests inject one.</param>
     /// <param name="delay">The wait between polls of a new fork; tests inject one.</param>
     /// <returns>The pull request and what to do once it merges.</returns>
     /// <exception cref="CommunityException">Anything that keeps the share out, in <see cref="ShareRules"/>' words.</exception>
     public static async Task<ShareResult> RunAsync(
         GitHubShareClient client, GitHubUser user, ShareRequest request, CommunityEndpoints endpoints, string tempRoot,
-        IProgress<ShareProgress>? progress, CancellationToken ct, string? pendingSupersededTag = null,
+        IProgress<ShareProgress>? progress, CancellationToken ct, IReadOnlyCollection<string> protectedTags,
         Func<DateTimeOffset>? clock = null, Func<TimeSpan, CancellationToken, Task>? delay = null)
     {
         ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(protectedTags);
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -138,7 +140,7 @@ public static class CommunityShare
 
             // 0. The scan: anything not allowed stops the run before a byte is uploaded.
             Report(ShareStage.Scanning, 0);
-            var snapshot = await PublicRepoScan.FetchAsync(client, login, pendingSupersededTag, ct).ConfigureAwait(false);
+            var snapshot = await PublicRepoScan.FetchAsync(client, login, protectedTags, ct).ConfigureAwait(false);
             if (snapshot is not null)
             {
                 var scan = PublicRepoScan.Scan(snapshot);
@@ -197,7 +199,9 @@ public static class CommunityShare
 
             // 4. Duplicates, against the published list and the gallery's open pull requests (untrusted: used for this only).
             var index = await ReadIndexAsync(client, ct).ConfigureAwait(false);
-            var previous = index.Entries.FirstOrDefault(e => e.Owner.Id == user.Id && e.Slug == slug) ?? same;
+            // The history the gallery checks dates against is the PUBLISHED list's: a share nfty-public lists but the gallery
+            // never took (refused, or removed since) has none, so a fresh share starts its dates over.
+            var previous = index.Entries.FirstOrDefault(e => e.Owner.Id == user.Id && e.Slug == slug);
             var now = clock();
             var candidate = new CommunityEntry(
                 CommunitySchema.Current, slug, new CommunityOwner(user.Id, login), $"{login}/{Repo}", tag,
@@ -436,7 +440,10 @@ public static class CommunityShare
     {
         try { return await client.GetIndexAsync(ct).ConfigureAwait(false); }
         catch (InvalidDataException) { throw new CommunityException(ShareRules.ListDamaged); }
-        catch (UnsupportedSchemaVersionException ex) { throw new CommunityException(ex.Message); }
+        catch (UnsupportedSchemaVersionException ex)
+        {
+            throw new CommunityException(ex.Found > ex.Supported ? ShareRules.IndexTooNew : ShareRules.ListTooOld(ex.Found));
+        }
     }
 
     private static string EntryPath(long ownerId, string slug) =>

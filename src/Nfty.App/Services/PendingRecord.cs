@@ -28,11 +28,12 @@ namespace Nfty.App.Services;
 /// <param name="SubmittedAt">When it was opened.</param>
 /// <param name="Closed">Whether the pull request was closed without merging.</param>
 /// <param name="ClosedReasons">The gallery's reasons, one line each, when <paramref name="Closed"/>.</param>
+/// <param name="Tag">The Release tag the share run made (the NEW version), which the scan must not call an extra while the pull request is open; null in a record an earlier build wrote.</param>
 public sealed record PendingRecord(
     string Kind, int PullNumber, string PullUrl, string Slug, long OwnerId, string Login, string Name,
     int Assets, int Width, int Height, bool Models, bool IncludesCookBook, long SetBytes,
     string? SupersededTag, string? ReplacedTag, bool ListedAtSubmit, bool Finished, DateTimeOffset SubmittedAt,
-    bool Closed, IReadOnlyList<string> ClosedReasons)
+    bool Closed, IReadOnlyList<string> ClosedReasons, string? Tag = null)
 {
     /// <summary>The kind of a share.</summary>
     public const string ShareKind = "share";

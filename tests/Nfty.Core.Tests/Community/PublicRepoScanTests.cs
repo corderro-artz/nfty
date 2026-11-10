@@ -33,7 +33,7 @@ public class PublicRepoScanTests
         public List<GitHubRelease> Releases = [Rel(1, "cat")];
         public List<string> Tags = ["cat-v1"];
         public PublicRepoManifest? Manifest = new(1, [Entry("cat")]);
-        public string? Pending;
+        public string[] Pending = [];
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class PublicRepoScanTests
     public void A_superseded_release_passes_only_while_pending()
     {
         void Old(Parts p) { p.Releases.Add(Rel(2, "cat", 0)); p.Tags.Add("cat-v0"); }
-        Assert.Empty(PublicRepoScan.Scan(Clean(p => { Old(p); p.Pending = "cat-v0"; })).Extras);
+        Assert.Empty(PublicRepoScan.Scan(Clean(p => { Old(p); p.Pending = ["cat-v0"]; })).Extras);
         var without = PublicRepoScan.Scan(Clean(Old));
         Assert.Equal([RepoExtraKind.Release, RepoExtraKind.Tag], without.Extras.Select(e => e.Kind));
     }
@@ -167,16 +167,16 @@ public class PublicRepoScanTests
     public async Task Fetch_answers_null_when_the_repo_does_not_exist()
     {
         var fake = new FakeGitHub().On(HttpMethod.Get, Repo, HttpStatusCode.NotFound, "{}");
-        Assert.Null(await PublicRepoScan.FetchAsync(Client(fake), "me", null, default));
+        Assert.Null(await PublicRepoScan.FetchAsync(Client(fake), "me", [], default));
     }
 
     [Fact]
     public async Task Fetch_reads_a_damaged_manifest_as_none()
     {
         var fake = Script("{\"tree\":[]}", "[{\"name\":\"main\"}]", "[]", "[]", "not json");
-        var snap = await PublicRepoScan.FetchAsync(Client(fake), "me", "t", default);
+        var snap = await PublicRepoScan.FetchAsync(Client(fake), "me", ["t"], default);
         Assert.Null(snap!.Manifest);
-        Assert.Equal("t", snap.PendingSupersededTag);
+        Assert.Equal(["t"], snap.ProtectedTags);
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class PublicRepoScanTests
             new RepoExtra(RepoExtraKind.Tag, "old-v1", null, null),
             new RepoExtra(RepoExtraKind.Release, "old-v1", 1, 11),
         };
-        await PublicRepoScan.RemoveAsync(Client(fake), "me", list, default);
+        await PublicRepoScan.RemoveAsync(Client(fake), "me", list, [], default);
 
         var deletes = fake.Requests.Where(r => r.Method == HttpMethod.Delete).Select(r => r.Path).ToArray();
         Assert.Equal([Repo + "/releases/11", Repo + "/git/refs/tags/old-v1", Repo + "/contents/dir/a.bin", Repo + "/git/refs/heads/side"], deletes);
@@ -217,7 +217,7 @@ public class PublicRepoScanTests
         fake.On(HttpMethod.Delete, Repo + "/releases/assets/12", HttpStatusCode.NoContent, "")
             .On(HttpMethod.Delete, Repo + "/git/refs/heads/side", HttpStatusCode.NoContent, "");
         await PublicRepoScan.RemoveAsync(Client(fake), "me",
-            [new RepoExtra(RepoExtraKind.Branch, "side", null, null), new RepoExtra(RepoExtraKind.Asset, "junk.zip", 1, 12)], default);
+            [new RepoExtra(RepoExtraKind.Branch, "side", null, null), new RepoExtra(RepoExtraKind.Asset, "junk.zip", 1, 12)], [], default);
         Assert.Equal([Repo + "/releases/assets/12", Repo + "/git/refs/heads/side"],
             fake.Requests.Where(r => r.Method == HttpMethod.Delete).Select(r => r.Path));
         fake.AssertAllConsumed();
@@ -235,7 +235,7 @@ public class PublicRepoScanTests
     {
         var fake = Script(CleanTree, "[{\"name\":\"main\"}]", $"[{CatRelease}]", "[{\"name\":\"cat-v1\"}]", CatManifest);
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            PublicRepoScan.RemoveAsync(Client(fake), "me", [new RepoExtra(kind, name, null, id)], default));
+            PublicRepoScan.RemoveAsync(Client(fake), "me", [new RepoExtra(kind, name, null, id)], [], default));
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
     }
 
@@ -247,7 +247,7 @@ public class PublicRepoScanTests
     {
         var fake = Script(CleanTree, "[{\"name\":\"main\"}]", $"[{CatRelease}]", "[{\"name\":\"cat-v1\"}]", CatManifest);
         var ex = await Assert.ThrowsAsync<CommunityException>(() =>
-            PublicRepoScan.RemoveAsync(Client(fake), "me", [new RepoExtra(kind, name, null, id)], default));
+            PublicRepoScan.RemoveAsync(Client(fake), "me", [new RepoExtra(kind, name, null, id)], [], default));
         Assert.Equal(ShareRules.RepoChanged, ex.Message);
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
     }
@@ -257,7 +257,7 @@ public class PublicRepoScanTests
     {
         var fake = Script(CleanTree, "[{\"name\":\"main\"}]", $"[{CatRelease}]", "[{\"name\":\"cat-v1\"}]", CatManifest);
         await PublicRepoScan.RemoveAsync(Client(fake), "me", [new RepoExtra(RepoExtraKind.File, "never-existed.txt", null, null),
-            new RepoExtra(RepoExtraKind.Branch, "ghost", null, null), new RepoExtra(RepoExtraKind.Release, "x-v1", null, 99)], default);
+            new RepoExtra(RepoExtraKind.Branch, "ghost", null, null), new RepoExtra(RepoExtraKind.Release, "x-v1", null, 99)], [], default);
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
     }
 
@@ -266,7 +266,7 @@ public class PublicRepoScanTests
     {
         var fake = Script(DirtyTree, "[{\"name\":\"main\"}]", DirtyReleases, "[]");
         await Assert.ThrowsAsync<ArgumentException>(() => PublicRepoScan.RemoveAsync(Client(fake), "me",
-            [new RepoExtra(RepoExtraKind.File, "junk.txt", 2, null), new RepoExtra(RepoExtraKind.File, "README.md", 1, null)], default));
+            [new RepoExtra(RepoExtraKind.File, "junk.txt", 2, null), new RepoExtra(RepoExtraKind.File, "README.md", 1, null)], [], default));
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
     }
 
@@ -275,7 +275,7 @@ public class PublicRepoScanTests
     {
         var fake = Script(DirtyTree, "[{\"name\":\"main\"}]", DirtyReleases, "[]", "not json");
         var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.RemoveAsync(Client(fake), "me",
-            [new RepoExtra(RepoExtraKind.File, "junk.txt", 2, null)], default));
+            [new RepoExtra(RepoExtraKind.File, "junk.txt", 2, null)], [], default));
         Assert.Equal(ShareRules.RepoNotOurs, ex.Message);
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
     }
@@ -285,9 +285,66 @@ public class PublicRepoScanTests
     {
         var fake = Script(CleanTree, "[{\"name\":\"main\"}]", DirtyReleases, "[{\"name\":\"old-v1\"}]");
         var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.RemoveAsync(Client(fake), "me",
-            [new RepoExtra(RepoExtraKind.Release, "old-v1", 1, 11)], default, pendingTag: "old-v1"));
+            [new RepoExtra(RepoExtraKind.Release, "old-v1", 1, 11)], ["old-v1"], default));
         Assert.Equal(ShareRules.RepoChanged, ex.Message);
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
+    }
+
+    // ---- protected tags (the live version while an update waits) -------------------------------------------------
+
+    // nfty-public.json already names v2 while the gallery still lists v1: v1 is the LIVE share, never an extra.
+    private static void OpenUpdate(Parts p, params string[] protectedTags)
+    {
+        p.Releases = [Rel(1, "cat", 1), Rel(2, "cat", 2)];
+        p.Tags = ["cat-v1", "cat-v2"];
+        p.Manifest = new PublicRepoManifest(1, [Entry("cat", 2)]);
+        p.Pending = protectedTags;
+    }
+
+    [Fact]
+    public void The_live_version_of_an_open_update_is_an_extra_only_when_nothing_protects_it()
+    {
+        Assert.Equal([RepoExtraKind.Release, RepoExtraKind.Tag], PublicRepoScan.Scan(Clean(p => OpenUpdate(p))).Extras.Select(e => e.Kind));
+        Assert.Empty(PublicRepoScan.Scan(Clean(p => OpenUpdate(p, "cat-v1"))).Extras);
+    }
+
+    [Fact]
+    public void Two_open_updates_offer_neither_the_live_version_nor_the_first_pending_one()
+    {
+        var scan = PublicRepoScan.Scan(Clean(p =>
+        {
+            p.Releases = [Rel(1, "cat", 1), Rel(2, "cat", 2), Rel(3, "cat", 3)];
+            p.Tags = ["cat-v1", "cat-v2", "cat-v3"];
+            p.Manifest = new PublicRepoManifest(1, [Entry("cat", 3)]);
+            p.Pending = ["cat-v1", "cat-v2"];
+        }));
+        Assert.Empty(scan.Extras);
+    }
+
+    [Fact]
+    public async Task Removing_the_live_version_of_an_open_update_is_refused()
+    {
+        var releases = "[{\"id\":1,\"tag_name\":\"cat-v1\",\"assets\":[{\"id\":10,\"name\":\"cat.set\",\"size\":1}]},"
+            + "{\"id\":2,\"tag_name\":\"cat-v2\",\"assets\":[{\"id\":20,\"name\":\"cat.set\",\"size\":1}]}]";
+        var fake = Script(CleanTree, "[{\"name\":\"main\"}]", releases, "[{\"name\":\"cat-v1\"},{\"name\":\"cat-v2\"}]",
+            Encoding.UTF8.GetString(PublicRepoManifest.Write(new PublicRepoManifest(1, [Entry("cat", 2)]))));
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.RemoveAsync(Client(fake), "me",
+            [new RepoExtra(RepoExtraKind.Release, "cat-v1", 1, 1)], ["cat-v1"], default));
+        Assert.Equal(ShareRules.RepoChanged, ex.Message);
+        Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
+    }
+
+    [Fact]
+    public void A_listed_release_that_is_not_slug_dash_version_blocks_and_never_makes_asset_extras()
+    {
+        var scan = PublicRepoScan.Scan(Clean(p =>
+        {
+            p.Manifest = new PublicRepoManifest(1, [Entry("cat") with { Release = "other-tag" }]);
+            p.Releases = [new GitHubRelease(1, "other-tag", [new GitHubAsset(10, "cat.set", 1), new GitHubAsset(11, "preview.png", 1), new GitHubAsset(12, "secret.bin", 1)], "me", "nfty-public")];
+            p.Tags = ["other-tag"];
+        }));
+        Assert.Equal(ShareRules.RepoManifestDamaged, scan.Blocker);
+        Assert.DoesNotContain(scan.Extras, e => e.Kind == RepoExtraKind.Asset);
     }
 
     // ---- submodules ----------------------------------------------------------------------------------------------
@@ -306,7 +363,7 @@ public class PublicRepoScanTests
             "{\"path\":\"junk.txt\",\"type\":\"blob\",\"sha\":\"j\",\"size\":2},{\"path\":\"vendor\",\"type\":\"commit\",\"sha\":\"c\"}]}";
         var fake = Script(tree, "[{\"name\":\"main\"}]", "[]", "[]");
         var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.RemoveAsync(Client(fake), "me",
-            [new RepoExtra(RepoExtraKind.File, "junk.txt", 2, null), new RepoExtra(RepoExtraKind.File, "vendor", null, null)], default));
+            [new RepoExtra(RepoExtraKind.File, "junk.txt", 2, null), new RepoExtra(RepoExtraKind.File, "vendor", null, null)], [], default));
         Assert.Equal(ShareRules.RepoSubmodule("vendor"), ex.Message);
         Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
     }
@@ -329,7 +386,7 @@ public class PublicRepoScanTests
         {
             var fake = Script(CleanTree, "[{\"name\":\"main\"}]", two, "[{\"name\":\"cat-v1\"}]", CatManifest);
             var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.RemoveAsync(Client(fake), "me",
-                [new RepoExtra(RepoExtraKind.Release, "cat-v1", null, id)], default));
+                [new RepoExtra(RepoExtraKind.Release, "cat-v1", null, id)], [], default));
             Assert.Equal(ShareRules.RepoChanged, ex.Message);
             Assert.DoesNotContain(fake.Requests, r => r.Method == HttpMethod.Delete);
         }
@@ -343,7 +400,7 @@ public class PublicRepoScanTests
     public async Task Fetch_turns_a_schema_it_cannot_read_into_a_house_sentence(int version, bool newer)
     {
         var fake = Script("{\"tree\":[]}", "[{\"name\":\"main\"}]", "[]", "[]", $"{{\"schemaVersion\":{version},\"shares\":[]}}");
-        var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.FetchAsync(Client(fake), "me", null, default));
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => PublicRepoScan.FetchAsync(Client(fake), "me", [], default));
         Assert.Equal(newer ? ShareRules.RepoNewerNfty : ShareRules.RepoNotOurs, ex.Message);
     }
 }

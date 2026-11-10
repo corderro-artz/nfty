@@ -13,6 +13,15 @@ public class ShareRulesTests
         Assert.Equal("214 MB — the gallery takes up to 200 MB. Leave out 3D models (−160 MB) or share fewer assets.",
             ShareRules.SetTooLarge(224_395_264, modelsBytes: 167_772_160));
 
+    [Fact] public void A_size_just_over_the_limit_never_reads_as_the_limit()
+    {
+        // 209,715,201 B is 200.0000009 MB: rounded to nearest it would read "200 MB — the gallery takes up to 200 MB".
+        Assert.StartsWith("200.1 MB — the gallery takes up to 200 MB.", ShareRules.SetTooLarge(209_715_201, 0));
+        Assert.Equal("200.1 MB", ShareRules.SizeWords(209_715_201));
+        Assert.Equal("200 MB", ShareRules.SizeWords(209_715_200));
+        Assert.Equal("1.3 MB", ShareRules.SizeWords(1_363_148));
+    }
+
     [Fact] public void Size_sentence_has_no_models_clause_without_models() =>
         Assert.DoesNotContain("3D models", ShareRules.SetTooLarge(224_395_264, 0));
 

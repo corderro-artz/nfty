@@ -11,7 +11,6 @@ Everything here mirrors ``src/Nfty.Core/Publish/Community`` and says so where it
   ``CommunityDates`` and ``PublicRepoScan.Scan``.
 """
 import datetime
-import decimal
 import re
 
 # ---- limits (ShareRules constants) ------------------------------------------------------------
@@ -54,6 +53,8 @@ SENTENCES = {
     "RepoExtras": "Your nfty-public holds things the gallery doesn't allow. Remove them to share.",
     "RepoSubmodule": "'{}' is a submodule; remove it on GitHub, then share again.",
     "RepoDuplicateRelease": "Your nfty-public has two releases for \"{}\". Remove one on GitHub, then share again.",
+    "RepoManifestDamaged": "Your nfty-public.json lists a release nfty didn't make, so nfty can't tell which files are yours. "
+                           "Restore it on GitHub, then share again.",
     "HistoryTooLarge": "Your nfty-public's history holds about {} MB of deleted files. "
                        "Delete the repository on GitHub and share again; nfty will make a fresh one.",
     "LinkNotOpened": "This gallery entry's link isn't one nfty opens.",
@@ -63,6 +64,7 @@ SENTENCES = {
     "EntryFilesNotAllowed": "A share can only add, update or remove your own entries in the gallery.",
     "EntryUnreadable": "The share's entry file isn't one the gallery can read.",
     "EntryNameMismatch": "The share's name doesn't match its file name in the gallery.",
+    "EntryOwnerMismatch": "The share names a different owner than the account that submitted it.",
     "AccountTooYoung": "Your GitHub account is under 30 days old; the gallery takes shares from older accounts.",
     "Blocked": "The gallery can't list this share.",
     "OneNewShareADay": "The gallery takes one new share a day. Try again tomorrow.",
@@ -87,10 +89,9 @@ def thousands(n):
 
 
 def size_text(n):
-    """``ShareRules.Size`` for sizes of a megabyte and up ("214 MB", "1.5 MB"); half away from zero as .NET does."""
-    mb = decimal.Decimal(n / 1024.0 / 1024).quantize(decimal.Decimal("0.1"), rounding=decimal.ROUND_HALF_UP)
-    text = f"{mb:f}"
-    return (text[:-2] if text.endswith(".0") else text) + " MB"
+    """``ShareRules.Size`` for sizes of a megabyte and up ("214 MB", "1.5 MB"); rounded UP to a tenth, in integers."""
+    tenths = (n * 10 + 1024 * 1024 - 1) // (1024 * 1024)
+    return f"{tenths // 10} MB" if tenths % 10 == 0 else f"{tenths // 10}.{tenths % 10} MB"
 
 
 def set_too_large(n):
@@ -402,6 +403,8 @@ def scan(snapshot):
             listed.append(s["release"])
     listed = listed[:MAX_SHARES]
     allowed = set(listed) | set(snapshot.get("pending", []))
+    # A share whose release tag is not <slug>-v<N> is a manifest nfty did not write; its files can't be told apart.
+    damaged = {x["release"] for x in shares if not re.fullmatch(re.escape(x["slug"]) + r"-v[0-9]+", x["release"])}
 
     releases = snapshot["releases"]
     counts = {}
@@ -421,6 +424,8 @@ def scan(snapshot):
             release_extras.append(Extra("release", tag, total, r["id"]))
             continue
         kept.add(tag)
+        if tag in damaged:
+            continue
         owned = next((s["slug"] for s in shares if s["release"] == tag), None)
         slug = owned if owned is not None else _VERSION_SUFFIX.sub("", tag)
         for a in r.get("assets", []):
@@ -441,6 +446,8 @@ def scan(snapshot):
         blocker = say("HistoryTooLarge", thousands((repo["size"] + 512) // 1024))
     elif duplicated:
         blocker = say("RepoDuplicateRelease", next(r["tag_name"] for r in releases if r["tag_name"] in duplicated))
+    elif damaged:
+        blocker = say("RepoManifestDamaged")
     else:
         blocker = None
     return extras, blocker

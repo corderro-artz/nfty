@@ -36,6 +36,15 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
         string.Create(CultureInfo.InvariantCulture,
             $"cols={Columns};rows={Rows};cell={CellWidth}x{CellHeight};count={Count}");
 
+    /// <summary>Whether the grid's cells stay inside a picture: its columns and rows of cells fit the width and height, and it holds as many cells as it claims.</summary>
+    /// <param name="width">The picture's width.</param>
+    /// <param name="height">The picture's height.</param>
+    /// <returns>False for a grid that describes more picture than there is (a hostile or damaged chunk), which no reader should slice by.</returns>
+    public bool FitsWithin(int width, int height) =>
+        Columns > 0 && Rows > 0 && CellWidth > 0 && CellHeight > 0 && Count >= 0
+        && (long)Columns * CellWidth <= width && (long)Rows * CellHeight <= height
+        && Count <= (long)Columns * Rows;
+
     /// <summary>Reads chunk text back into a grid.</summary>
     /// <param name="text">The chunk text.</param>
     /// <returns>The grid, or null when anything is missing or malformed.</returns>

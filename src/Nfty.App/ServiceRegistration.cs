@@ -236,7 +236,7 @@ public static class ServiceRegistration
         // The community share card. Connect GitHub… opens Settings on its PUBLISHING page, where the
         // device flow lives, so there is one place the account is connected. The run itself is
         // the community sharing service (serialized app-wide, remembering the pull request as pending).
-        services.AddSingleton<IShareRepo>(sp => new GitHubShareRepo(sp.GetRequiredService<IGitHubAccount>()));
+        services.AddSingleton<IShareRepo>(sp => new GitHubShareRepo(sp.GetRequiredService<IGitHubAccount>(), sp.GetRequiredService<ICommunityCache>()));
         services.AddSingleton<IShareChecker>(sp => new ShareChecker(sp.GetRequiredService<IParallelismSetting>()));
         services.AddSingleton<Func<ShareSource, ShareDialogViewModel>>(sp => source => new ShareDialogViewModel(
             source, sp.GetRequiredService<IDialogService>(), sp.GetRequiredService<IGitHubAccount>(),

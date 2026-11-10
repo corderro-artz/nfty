@@ -10,11 +10,12 @@ namespace Nfty.Core.Publish.Community;
 /// <param name="Releases">Every release with its files.</param>
 /// <param name="Tags">Every tag name.</param>
 /// <param name="Manifest">The repository's <c>nfty-public.json</c>, or null when it is missing or not one nfty wrote.</param>
-/// <param name="PendingSupersededTag">The tag of a superseded Release whose replacing pull request is still open, or null.</param>
+/// <param name="ProtectedTags">Release tags the gallery or an open pull request still depends on, which are never extras
+/// even when <c>nfty-public.json</c> does not list them (the live version while an update is open, the new one while it is).</param>
 public sealed record RepoSnapshot(
     GitHubRepo Repo, IReadOnlyList<GitHubTreeItem> Tree, IReadOnlyList<string> Branches,
     IReadOnlyList<GitHubRelease> Releases, IReadOnlyList<string> Tags,
-    PublicRepoManifest? Manifest, string? PendingSupersededTag);
+    PublicRepoManifest? Manifest, IReadOnlyCollection<string> ProtectedTags);
 
 /// <summary>What kind of thing the repository holds that the gallery does not allow.</summary>
 public enum RepoExtraKind
@@ -59,8 +60,19 @@ public static partial class PublicRepoScan
     /// <summary>The preview asset every Release holds.</summary>
     public const string PreviewAsset = "preview.png";
 
+    /// <summary>The most protected tags one scan honors: three shares, each with a live and a pending version, with room to spare.</summary>
+    public const int MaxProtectedTags = ShareRules.MaxShares * 4;
+
     [GeneratedRegex(@"-v\d+$")]
     private static partial Regex VersionSuffix();
+
+    /// <summary>Whether a Release tag has the shape <c>&lt;slug&gt;-v&lt;N&gt;</c> every share's tag has.</summary>
+    /// <param name="tag">The tag.</param>
+    /// <param name="slug">The share's slug.</param>
+    /// <returns>True when it is exactly that.</returns>
+    internal static bool IsVersionTag(string tag, string slug) =>
+        tag.StartsWith(slug + "-v", StringComparison.Ordinal) && tag.Length > slug.Length + 2
+        && tag.AsSpan(slug.Length + 2).IndexOfAnyExceptInRange('0', '9') < 0;
 
     /// <summary>Applies the 3.3 table to a snapshot.</summary>
     /// <param name="snapshot">What was read from the repository.</param>
@@ -91,7 +103,10 @@ public static partial class PublicRepoScan
         var shares = snapshot.Manifest?.Shares ?? [];
         var listed = shares.Select(s => s.Release).Distinct(StringComparer.Ordinal).Take(ShareRules.MaxShares).ToList();
         var allowedTags = new HashSet<string>(listed, StringComparer.Ordinal);
-        if (snapshot.PendingSupersededTag is { } pending) allowedTags.Add(pending);
+        foreach (var kept in (snapshot.ProtectedTags ?? []).Distinct(StringComparer.Ordinal).Take(MaxProtectedTags)) allowedTags.Add(kept);
+
+        // A share whose Release tag is not <slug>-v<N> is a manifest nfty did not write; what its files are is unknowable.
+        var damaged = shares.Where(s => !IsVersionTag(s.Release, s.Slug)).Select(s => s.Release).ToHashSet(StringComparer.Ordinal);
 
         // Two Releases on one allowed tag: which is the live share's can't be told, so neither is offered for removal.
         var duplicated = snapshot.Releases.Where(r => allowedTags.Contains(r.Tag)).GroupBy(r => r.Tag, StringComparer.Ordinal)
@@ -108,6 +123,7 @@ public static partial class PublicRepoScan
                 releaseExtras.Add(new RepoExtra(RepoExtraKind.Release, release.Tag, total, release.Id));
                 continue;
             }
+            if (damaged.Contains(release.Tag)) continue;
             string slug = shares.FirstOrDefault(s => s.Release == release.Tag)?.Slug ?? VersionSuffix().Replace(release.Tag, "");
             foreach (var asset in release.Assets)
                 if (asset.Name != slug + ".set" && asset.Name != PreviewAsset)
@@ -124,6 +140,7 @@ public static partial class PublicRepoScan
             : snapshot.Repo.Private ? ShareRules.RepoPrivate
             : snapshot.Repo.SizeKb > ShareRules.MaxHistoryKb ? ShareRules.HistoryTooLarge(snapshot.Repo.SizeKb)
             : duplicated.Count > 0 ? ShareRules.RepoDuplicateRelease(snapshot.Releases.Select(r => r.Tag).First(duplicated.Contains))
+            : damaged.Count > 0 ? ShareRules.RepoManifestDamaged
             : null;
         return new RepoScan(extras, blocker);
     }
@@ -135,11 +152,14 @@ public static partial class PublicRepoScan
     /// </summary>
     /// <param name="client">The GitHub client.</param>
     /// <param name="login">The signed-in account, which owns the repository.</param>
-    /// <param name="pendingTag">The superseded Release's tag while its replacing pull request is open, or null.</param>
+    /// <param name="protectedTags">Release tags that are never extras: every one the gallery lists for the account, and every one an
+    /// open pull request names (the live version while an update waits, and the new one). Pass an empty set only when nothing is pending.</param>
     /// <param name="ct">Cancellation.</param>
-    public static async Task<RepoSnapshot?> FetchAsync(GitHubShareClient client, string login, string? pendingTag, CancellationToken ct)
+    public static async Task<RepoSnapshot?> FetchAsync(GitHubShareClient client, string login,
+        IReadOnlyCollection<string> protectedTags, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(protectedTags);
         var repo = await client.GetRepoAsync(login, RepoName, ct).ConfigureAwait(false);
         if (repo is null) return null;
         var tree = await client.GetTreeAsync(login, RepoName, repo.DefaultBranch, ct).ConfigureAwait(false);
@@ -157,7 +177,7 @@ public static partial class PublicRepoScan
                 throw new CommunityException(ex.Found > ex.Supported ? ShareRules.RepoNewerNfty : ShareRules.RepoNotOurs);
             }
         }
-        return new RepoSnapshot(repo, tree, branches, releases, tags, manifest, pendingTag);
+        return new RepoSnapshot(repo, tree, branches, releases, tags, manifest, protectedTags);
     }
 
     private static bool Present(RepoSnapshot s, RepoExtra e) => e.Kind switch
@@ -179,21 +199,23 @@ public static partial class PublicRepoScan
     /// <param name="client">The GitHub client.</param>
     /// <param name="login">The signed-in account, which owns the repository.</param>
     /// <param name="extras">What to delete, as the scan listed it.</param>
+    /// <param name="protectedTags">The tags kept out of reach (see <see cref="FetchAsync"/>): the live version while an update waits, and the new one.</param>
     /// <param name="ct">Cancellation.</param>
-    /// <param name="pendingTag">The superseded Release's tag while its replacing pull request is open (kept out of reach).</param>
     /// <exception cref="ArgumentException">An item is README.md, nfty-public.json or the default branch.</exception>
     /// <exception cref="CommunityException">The repository is not nfty's, changed since the scan, or an item can't be removed (a submodule).</exception>
-    public static async Task RemoveAsync(GitHubShareClient client, string login, IReadOnlyList<RepoExtra> extras, CancellationToken ct, string? pendingTag = null)
+    public static async Task RemoveAsync(GitHubShareClient client, string login, IReadOnlyList<RepoExtra> extras,
+        IReadOnlyCollection<string> protectedTags, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(extras);
+        ArgumentNullException.ThrowIfNull(protectedTags);
         if (extras.Count == 0) return;
 
         foreach (var e in extras)
             if (e.Kind == RepoExtraKind.File && (e.Name == ReadmeFile || e.Name == ManifestFile))
                 throw new ArgumentException("README.md and nfty-public.json are never removed.", nameof(extras));
 
-        var snapshot = await FetchAsync(client, login, pendingTag, ct).ConfigureAwait(false)
+        var snapshot = await FetchAsync(client, login, protectedTags, ct).ConfigureAwait(false)
             ?? throw new CommunityException(ShareRules.RepoNotOurs);
         if (snapshot.Manifest is null) throw new CommunityException(ShareRules.RepoNotOurs);
         foreach (var e in extras)

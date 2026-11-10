@@ -112,23 +112,35 @@ public interface IShareRepo
 public sealed class GitHubShareRepo : IShareRepo
 {
     private readonly IGitHubAccount _account;
+    private readonly ICommunityCache? _cache;
 
     /// <summary>Makes the seam.</summary>
     /// <param name="account">The GitHub connection; its client is asked for on every call, so a reconnect is picked up.</param>
-    public GitHubShareRepo(IGitHubAccount account)
+    /// <param name="cache">The published list and the pending pull requests, which say which Releases are live or about to be
+    /// (<see cref="ShareProtection"/>); null protects nothing, for a caller with nothing pending.</param>
+    public GitHubShareRepo(IGitHubAccount account, ICommunityCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(account);
         _account = account;
+        _cache = cache;
     }
 
     private GitHubShareClient Client() =>
         _account.Client() ?? throw new CommunityException(ShareRules.NotConnected);
 
-    /// <inheritdoc />
-    public Task<RepoSnapshot?> FetchAsync(string login, CancellationToken ct) =>
-        PublicRepoScan.FetchAsync(Client(), login, null, ct);
+    // The live share of an open update is still the gallery's, so the card's scan and its Remove must both keep it.
+    private async Task<IReadOnlyCollection<string>> ProtectedAsync(CancellationToken ct)
+    {
+        if (_cache is null) return [];
+        long owner = await _account.EnsureUserIdAsync(ct).ConfigureAwait(false) ?? throw new CommunityException(ShareRules.NotConnected);
+        return ShareProtection.Tags(_cache.Cached?.Index, _cache.Pending, owner);
+    }
 
     /// <inheritdoc />
-    public Task RemoveAsync(string login, IReadOnlyList<RepoExtra> extras, CancellationToken ct) =>
-        PublicRepoScan.RemoveAsync(Client(), login, extras, ct);
+    public async Task<RepoSnapshot?> FetchAsync(string login, CancellationToken ct) =>
+        await PublicRepoScan.FetchAsync(Client(), login, await ProtectedAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task RemoveAsync(string login, IReadOnlyList<RepoExtra> extras, CancellationToken ct) =>
+        await PublicRepoScan.RemoveAsync(Client(), login, extras, await ProtectedAsync(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
 }

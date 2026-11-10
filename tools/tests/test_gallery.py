@@ -316,7 +316,7 @@ class CheckTests(unittest.TestCase):
         s = self.sc()  # the download was aborted mid-stream
         s.fetch = {"set": {"status": "toolarge", "bytes": 209_715_201}}
         s.set_path = s.tmp / "absent.set"
-        self.assertRefused(s.run(), "200 MB — the gallery takes up to 200 MB. Share fewer assets.")
+        self.assertRefused(s.run(), "200.1 MB — the gallery takes up to 200 MB. Share fewer assets.")
 
     def test_links_in_description_fail(self):
         for field, value in (("description", "see https://example.com"), ("description", "visit WWW.example.com"),
@@ -413,6 +413,47 @@ class CheckTests(unittest.TestCase):
                 self.assertRefused(update(self.sc(), created, updated), g.say("DatesMismatch"))
         # an hour ahead exactly is allowed, as in CommunityDates
         self.assertEqual([], update(self.sc(), "2026-11-01T00:00:00+00:00", "2026-11-09T15:05:00+00:00").problems)
+
+    def test_a_gone_entry_can_be_restored_with_fresh_dates(self):
+        # spec 4.6: the gallery dropped the entry (gone), so sharing it again starts its history over
+        def restore(created, updated):
+            s = self.sc()
+            s.base = [(s.make_entry(fingerprint="4" * 64, created="2026-10-01T00:00:00+00:00",
+                                    updated="2026-10-02T00:00:00+00:00"), True)]
+            s.entry = s.make_entry(created=created, updated=updated)
+            return s.run()
+        self.assertEqual([], restore("2026-11-09T14:02:00+00:00", "2026-11-09T14:02:00+00:00").problems)
+        # still a new share: dates cannot be split or backdated
+        self.assertRefused(restore("2026-11-09T14:00:00+00:00", "2026-11-09T14:02:00+00:00"), g.say("DatesMismatch"))
+        self.assertRefused(restore("2026-01-01T00:00:00+00:00", "2026-01-01T00:00:00+00:00"), g.say("DatesMismatch"))
+
+    def test_entry_owner_login_must_be_the_author(self):
+        s = self.sc()
+        s.entry["owner"]["login"] = "mallory"
+        self.assertRefused(s.run(), g.say("EntryOwnerMismatch"))
+        s = self.sc()
+        s.entry["owner"]["login"] = "SomeOne"  # GitHub logins compare case-insensitively
+        self.assertNotIn(g.say("EntryOwnerMismatch"), s.run().problems)
+
+    def test_a_bogus_preview_grid_is_refused(self):
+        for grid in ("embedded: cols=80;rows=4;cell=32x32;count=29\n",   # wider than the picture
+                     "embedded: cols=8;rows=40;cell=32x32;count=29\n",   # taller than the picture
+                     "embedded: cols=8;rows=4;cell=32x32;count=33\n"):   # more cells than the grid holds
+            with self.subTest(grid):
+                s = self.sc()
+                s.grid = grid
+                self.assertEqual([g.say("PreviewBad")], s.run().problems)
+
+    def test_a_listed_release_that_is_not_slug_dash_version_blocks_the_scan(self):
+        entry = self.sc().make_entry(release="other-tag")
+        extras, blocker = g.scan({
+            "repo": {"default_branch": "main", "private": False, "size": 10},
+            "tree": [], "branches": ["main"], "tags": ["other-tag"], "manifest": [entry], "pending": [],
+            "releases": [{"id": 1, "tag_name": "other-tag", "assets": [
+                {"id": 2, "name": "vapor-chests.set", "size": 1}, {"id": 3, "name": "preview.png", "size": 1},
+                {"id": 4, "name": "secret.bin", "size": 1}]}]})
+        self.assertEqual(g.say("RepoManifestDamaged"), blocker)
+        self.assertEqual([], [x for x in extras if x.kind == "asset"])
 
     def test_new_entry_dates_cannot_be_backdated_or_split(self):
         s = self.sc()
@@ -615,7 +656,10 @@ class SentenceTests(unittest.TestCase):
         self.assertEqual("214 MB", g.size_text(224_395_264))
         self.assertEqual("200 MB", g.size_text(209_715_200))
         self.assertEqual("1.5 MB", g.size_text(1_572_864))
-        self.assertEqual("1.3 MB", g.size_text(1_363_149))  # 1.2999 rounds to 1.3
+        self.assertEqual("1.3 MB", g.size_text(1_363_148))  # 1.29999 rounds up to 1.3
+        # a size just over the limit never reads as the limit
+        self.assertEqual("200.1 MB", g.size_text(209_715_201))
+        self.assertTrue(g.set_too_large(209_715_201).startswith("200.1 MB — the gallery takes up to 200 MB."))
 
 
 class IndexTests(unittest.TestCase):

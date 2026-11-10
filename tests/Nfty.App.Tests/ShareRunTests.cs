@@ -21,7 +21,7 @@ internal sealed class ScriptedBackend : IShareBackend
     public Exception? FailWith { get; set; }
     public Exception? PullFails { get; set; }
     public int NextPull { get; set; } = 12;
-    public string? LastSuperseded { get; private set; }
+    public IReadOnlyCollection<string> LastProtected { get; private set; } = [];
 
     private async Task Enter(CancellationToken ct)
     {
@@ -33,11 +33,11 @@ internal sealed class ScriptedBackend : IShareBackend
         finally { Interlocked.Decrement(ref _running); }
     }
 
-    public async Task<ShareResult> ShareAsync(ShareRequest request, string? pendingSupersededTag, IProgress<ShareProgress>? progress,
+    public async Task<ShareResult> ShareAsync(ShareRequest request, IReadOnlyCollection<string> protectedTags, IProgress<ShareProgress>? progress,
         CancellationToken ct)
     {
         Shared.Add(request);
-        LastSuperseded = pendingSupersededTag;
+        LastProtected = protectedTags;
         progress?.Report(new ShareProgress(ShareStage.Exporting, 0.5));
         await Enter(ct);
         if (FailWith is { } fail) throw fail;
@@ -270,6 +270,34 @@ public class ShareRunTests
         rig.Backend.Gate = null;
         await rig.Sharing.ShareAsync(Request("Next"), Info("Next"), null, CancellationToken.None);
         Assert.Single(rig.Sharing.Pending);
+    }
+
+    [Fact]
+    public async Task A_run_is_told_the_live_version_and_every_open_pull_requests_tag_to_keep()
+    {
+        using var rig = new Rig();
+        var live = Mine("new-pets") with { Release = "new-pets-v1" };
+        rig.Cache.Cached = CommunityFixtures.Listing([live]);
+
+        await rig.Sharing.ShareAsync(Request(replace: true), Info(listed: true), null, CancellationToken.None);
+        Assert.Equal(["new-pets-v1"], rig.Backend.LastProtected.Order(StringComparer.Ordinal));
+        Assert.Equal("new-pets-v1", Assert.Single(rig.Sharing.Pending).Tag);
+
+        // a second update before the first merges: the first one's new tag is protected too (the fake names every run's tag v1,
+        // and supersedes v0)
+        await rig.Sharing.ShareAsync(Request(replace: true), Info(listed: true), null, CancellationToken.None);
+        Assert.Contains("new-pets-v1", rig.Backend.LastProtected);
+        Assert.Contains("new-pets-v0", rig.Backend.LastProtected);
+    }
+
+    [Fact]
+    public void A_pending_file_with_no_list_reads_as_nothing_pending()
+    {
+        string root = Directory.CreateTempSubdirectory("nfty-pending-null-").FullName;
+        File.WriteAllText(Path.Combine(root, "pending.json"), "{\"schemaVersion\":1,\"pending\":null}");
+        Assert.Empty(new CommunityCache(root).Pending);
+        File.WriteAllText(Path.Combine(root, "pending.json"), "{\"schemaVersion\":1}");
+        Assert.Empty(new CommunityCache(root).Pending);
     }
 
     [Fact]

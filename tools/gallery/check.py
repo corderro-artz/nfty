@@ -176,8 +176,13 @@ def evaluate(inp, cli):
     if entry["owner"]["id"] != aid:
         v.add(g.say("EntryFilesNotAllowed"))
         return v
+    if str(entry["owner"].get("login", "")).lower() != str(login).lower():
+        v.add(g.say("EntryOwnerMismatch"))
+        return v
     previous = prev_by_slug.get(slug)
     is_new = previous is None
+    # 4.6: an entry the gallery dropped (status gone) is restored as a fresh share, dates and all.
+    dates_previous = None if mine.get(slug) else previous
 
     # 4.1 #2-#5 who is sharing.
     if pr_created.ticks < g.Ts(author["created_at"]).ticks + g.MIN_ACCOUNT_AGE_DAYS * DAY * g.TICKS:
@@ -205,9 +210,9 @@ def evaluate(inp, cli):
             v.add(g.say("OneNewShareADay"))
 
     # 5.1 dates.
-    if g.dates_problem(entry, previous, pr_created):
+    if g.dates_problem(entry, dates_previous, pr_created):
         v.add(g.say("DatesMismatch"))
-    elif is_new and (entry["created"] != entry["updated"]
+    elif dates_previous is None and (entry["created"] != entry["updated"]
                      or g.Ts(entry["updated"]).ticks < pr_created.ticks - NEW_SHARE_LOOKBACK * g.TICKS):
         v.add(g.say("DatesMismatch"))
 
@@ -357,8 +362,13 @@ def _check_preview(v, cli, path, entry, canvas):
         v.add(g.say("HashMismatch"))
         return
     code, out = cli(["sheet", "grid", path])  # decodes the picture and reads the grid it carries
-    m = re.search(r"^embedded: .*?cell=(\d+)x(\d+)", out, re.M)
-    if code != 0 or not m or (int(m.group(1)), int(m.group(2))) != tuple(canvas):
+    m = re.search(r"^embedded: .*?cols=(\d+);rows=(\d+);cell=(\d+)x(\d+);count=(\d+)", out, re.M)
+    if code != 0 or not m:
+        v.add(bad)
+        return
+    cols, rows, cw, ch, count = (int(x) for x in m.groups())
+    # the grid must describe this picture: cells that fit inside it, and no more cells than the grid holds
+    if (cw, ch) != tuple(canvas) or cols * cw > dims[0] or rows * ch > dims[1] or count > cols * rows:
         v.add(bad)
 
 

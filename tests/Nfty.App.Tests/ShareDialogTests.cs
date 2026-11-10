@@ -134,7 +134,7 @@ internal static class ShareFixtures
         var tags = list.Select(e => e.Release).ToList();
         edit?.Invoke(tree, branches, releases, tags);
         return new RepoSnapshot(new GitHubRepo("me/nfty-public", false, "main", 40), tree, branches, releases, tags,
-            new PublicRepoManifest(1, list), null);
+            new PublicRepoManifest(1, list), []);
     }
 
     public static string Slug => ShareSlug.Of(Collection);

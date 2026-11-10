@@ -88,6 +88,30 @@ public class CommunityPreviewTests : IDisposable
     }
 
     [Fact]
+    public async Task Check_refuses_a_grid_bigger_than_the_picture_it_sits_in()
+    {
+        string dest = Path.Combine(_dir.FullName, "preview.png");
+        await CommunityPreview.WriteAsync(Items(4, 4), dest, CancellationToken.None); // an 8 x 8 sheet of 4 px cells
+        SheetGrid.WriteInto(dest, new SheetGrid(80, 2, 4, 4, 4));   // 320 px of columns in an 8 px picture
+        Assert.Equal(new[] { ShareRules.PreviewBad }, CommunityPreview.Check(dest, 4, 4));
+        SheetGrid.WriteInto(dest, new SheetGrid(2, 80, 4, 4, 4));   // 320 px of rows
+        Assert.Equal(new[] { ShareRules.PreviewBad }, CommunityPreview.Check(dest, 4, 4));
+        SheetGrid.WriteInto(dest, new SheetGrid(2, 2, 4, 4, 4));    // the true grid is fine again
+        Assert.Empty(CommunityPreview.Check(dest, 4, 4));
+    }
+
+    [Fact]
+    public void FitsWithin_asks_whether_the_cells_stay_inside_the_picture()
+    {
+        Assert.True(new SheetGrid(2, 2, 4, 4, 4).FitsWithin(8, 8));
+        Assert.True(new SheetGrid(2, 2, 4, 4, 3).FitsWithin(9, 9));
+        Assert.False(new SheetGrid(2, 2, 4, 4, 4).FitsWithin(7, 8));
+        Assert.False(new SheetGrid(2, 2, 4, 4, 4).FitsWithin(8, 7));
+        Assert.False(new SheetGrid(2, 2, 4, 4, 5).FitsWithin(8, 8)); // more cells than the grid holds
+        Assert.False(new SheetGrid(int.MaxValue, 2, 4, 4, 1).FitsWithin(8, 8)); // never overflows
+    }
+
+    [Fact]
     public async Task Check_refuses_a_file_over_two_megabytes()
     {
         string dest = Path.Combine(_dir.FullName, "preview.png");

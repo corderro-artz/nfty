@@ -75,8 +75,9 @@ public class CommunityShareTests : IDisposable
 
     private static GitHubShareClient Client(FakeGitHub fake) => new(fake.Client(), "tok", Ends);
 
-    private static Task<ShareResult> Run(FakeGitHub fake, string tempRoot, ShareRequest request, CancellationToken ct = default) =>
-        CommunityShare.RunAsync(Client(fake), Me, request, Ends, tempRoot, null, ct, null, () => Now, (_, _) => Task.CompletedTask);
+    private static Task<ShareResult> Run(FakeGitHub fake, string tempRoot, ShareRequest request, CancellationToken ct = default,
+        IReadOnlyCollection<string>? protectedTags = null) =>
+        CommunityShare.RunAsync(Client(fake), Me, request, Ends, tempRoot, null, ct, protectedTags ?? [], () => Now, (_, _) => Task.CompletedTask);
 
     private static string IndexJson(params CommunityEntry[] entries) =>
         Encoding.UTF8.GetString(CommunityIndex.Write(new CommunityIndex(1, Now, entries)));
@@ -301,6 +302,34 @@ public class CommunityShareTests : IDisposable
         Assert.Equal(OldCreated, entry.Created);
         Assert.Equal(Now, entry.Updated);
         Assert.Equal("chest-demo-v2", entry.Release);
+    }
+
+    [Fact]
+    public async Task A_first_share_the_gallery_refused_starts_its_dates_over_when_shared_again()
+    {
+        string set = CookedSet();
+        // nfty-public.json still lists the refused v1 (the gallery's list never did), so sharing again is an update of it.
+        var refused = Entry("chest-demo", "Chest Demo");
+        var fake = Existing(new FakeGitHub(), refused);
+        Gallery_(fake);
+        Publish(fake, ManifestJson(refused), 12, "chest-demo-v2");
+        Submit(fake, "entries/7/chest-demo.json", "old");
+
+        await Run(fake, Path.Combine(Fresh(), "t"), Request(set, replaceShared: true));
+
+        var entry = JsonSerializer.Deserialize<CommunityEntry>(PutContent(fake.To(Fork + "/contents/entries/7/chest-demo.json").Single(r => r.Method == Put)), Json.Options)!;
+        Assert.Equal(Now, entry.Created);
+        Assert.Equal(Now, entry.Updated);
+    }
+
+    [Fact]
+    public async Task A_list_from_a_newer_nfty_is_the_house_sentence_not_the_exception_text()
+    {
+        string set = CookedSet();
+        var fake = NoRepo(new FakeGitHub())
+            .Ok(Get, "/nfty-gallery/index.json", "{\"schemaVersion\":99,\"generated\":\"2026-11-09T12:00:00+00:00\",\"entries\":[]}");
+        var ex = await Assert.ThrowsAsync<CommunityException>(() => Run(fake, Path.Combine(Fresh(), "t"), Request(set)));
+        Assert.Equal(ShareRules.IndexTooNew, ex.Message);
     }
 
     [Fact]

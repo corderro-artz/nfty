@@ -78,6 +78,8 @@ public static class CommunityPreview
 
             var grid = SheetGrid.Read(pngPath);
             if (grid is null || grid.CellWidth != canvasW || grid.CellHeight != canvasH) return bad;
+            // A grid that claims more picture than there is would have a reader cropping outside it.
+            if (!grid.FitsWithin(info.Width, info.Height)) return bad;
 
             return Array.Empty<string>();
         }
