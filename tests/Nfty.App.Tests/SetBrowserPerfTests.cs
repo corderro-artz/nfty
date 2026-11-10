@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -124,6 +125,112 @@ public class SetBrowserPerfTests
             Perf.Disable();
             if (dir.Length > 0) Directory.Delete(dir, recursive: true);
         }
+    }
+
+    /// <summary>Measures the maximize shape: one jump from 1280x720 to 2560x1400, then back.</summary>
+    /// <remarks>
+    /// Measured (500 assets, headless): a maximize realizes ~135 tiles in ONE layout pass and costs
+    /// 0.8-1.0 s, ~300 MB. Not decoding (96 decodes, 34 ms total) and not re-chunking more than once
+    /// (one rebuild per row-length change). It is per-control style matching: a Border or TextBlock
+    /// costs ~0.4 ms and ~140 KB to realize against this stylesheet (237 Border selectors), a Panel or
+    /// Image ~0.04 ms. So the lever is controls per tile: the tile's two placeholder Borders became one.
+    /// </remarks>
+    [AvaloniaFact]
+    public void Where_the_time_goes_maximizing_a_500_asset_set()
+    {
+        Perf.Enable();
+        var dir = "";
+        try
+        {
+            var loaded = BigSet(out dir);
+            using var vm = new SetBrowserViewModel(loaded);
+            var view = new Views.SetBrowserView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1280, Height = 720 };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            PumpDecodes();
+            Perf.Reset();
+            for (var i = 0; i < 3; i++)
+            {
+                using (Perf.Measure("60 maximize 1280x720 -> 2560x1400"))
+                {
+                    window.Width = 2560; window.Height = 1400;
+                    Dispatcher.UIThread.RunJobs();
+                }
+                PumpDecodes();
+                using (Perf.Measure("61 restore 2560x1400 -> 1280x720"))
+                {
+                    window.Width = 1280; window.Height = 720;
+                    Dispatcher.UIThread.RunJobs();
+                }
+                PumpDecodes();
+            }
+            window.Close();
+            _out.WriteLine(Perf.Report());
+        }
+        finally
+        {
+            Perf.Disable();
+            if (dir.Length > 0) Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// A tile realizes ONE placeholder marker, not one per state.
+    /// </summary>
+    /// <remarks>
+    /// Machine-independent guard for the maximize cost: realizing a Border costs ~0.4 ms, a maximized
+    /// window realizes ~135 tiles, so a second always-present Border per tile is ~50 ms a maximize.
+    /// </remarks>
+    [AvaloniaFact]
+    public void A_tile_carries_one_placeholder_marker()
+    {
+        var loaded = BigSet(out var dir);
+        using var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            var view = new Views.SetBrowserView { DataContext = vm };
+            var window = new Window { Content = view, Width = 1280, Height = 720 };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            try
+            {
+                var list = view.GetVisualDescendants().OfType<ListBox>().First(l => l.Name == "TilesList");
+                var tiles = list.GetVisualDescendants().OfType<Button>().Count(b => b.DataContext is SetItemRow);
+                var marks = list.GetVisualDescendants().OfType<Border>()
+                    .Count(b => b.Classes.Contains("tload") || b.Classes.Contains("tmissing"));
+                Assert.True(tiles > 0);
+                Assert.Equal(tiles, marks);
+            }
+            finally { window.Close(); }
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>
+    /// A maximize rebuilds the rows once, and a further resize to the same row length reuses them.
+    /// </summary>
+    [AvaloniaFact]
+    public void A_maximize_rebuilds_the_rows_once()
+    {
+        var loaded = BigSet(out var dir);
+        using var vm = new SetBrowserViewModel(loaded);
+        try
+        {
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            var small = RowChunkConverter.Instance.Convert([vm.Items, 932d], typeof(object), null, ci);
+            var big = RowChunkConverter.Instance.Convert([vm.Items, 2212d], typeof(object), null, ci);
+            var bigger = RowChunkConverter.Instance.Convert([vm.Items, 2216d], typeof(object), null, ci);
+            Assert.NotSame(small, big);
+            Assert.Same(big, bigger);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    private static void PumpDecodes()
+    {
+        var sw = Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < 300) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(5); }
     }
 
     /// <summary>

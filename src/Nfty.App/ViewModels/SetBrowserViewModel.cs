@@ -84,6 +84,16 @@ public partial class SetItemRow : ObservableObject, IDisposable
     /// </remarks>
     public bool ImageMissing => _imageMissing;
 
+    /// <summary>Whether the tile's one marker (breathing diamond while loading, static warning diamond
+    /// when the file is missing) is on screen.</summary>
+    /// <remarks>One control for both states: every Border realized costs ~0.4 ms against the app's
+    /// stylesheet, a tile is the unit this grid realizes hundreds of, so the two placeholders share
+    /// one.</remarks>
+    public bool ShowsMark => _thumbnail is null || _imageMissing;
+
+    /// <summary>The marker's tooltip: set only when the image file is missing, null otherwise.</summary>
+    public string? MarkTip => _imageMissing ? "This asset's image file is missing from the Set folder" : null;
+
     /// <summary>The off-thread decode this row started, so a test can settle it before tearing down
     /// instead of leaving its posted continuation to land in whichever test pumps next. Completed
     /// when none was started; the result is posted AFTER this completes, so pump once more.</summary>
@@ -151,6 +161,8 @@ public partial class SetItemRow : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(Thumbnail));
                 OnPropertyChanged(nameof(IsLoading));
                 OnPropertyChanged(nameof(ImageMissing));
+                OnPropertyChanged(nameof(ShowsMark));
+                OnPropertyChanged(nameof(MarkTip));
             });
         });
     }

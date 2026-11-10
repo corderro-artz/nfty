@@ -95,7 +95,7 @@ public class MissingAssetImageTests
                 PumpUntil(() => vm.Items.All(i => !i.IsLoading));
 
                 var marks = view.GetVisualDescendants().OfType<Border>()
-                    .Where(b => b.Classes.Contains("tmissing") && b.IsVisible)
+                    .Where(b => IsMissingMark(b) && b.IsVisible)
                     .ToList();
 
                 // One on the tile, one in the rail — the rail is describing the selected asset,
@@ -105,7 +105,7 @@ public class MissingAssetImageTests
 
                 // The loading pulse is NOT what a missing file gets: a pulse means "coming".
                 Assert.DoesNotContain(view.GetVisualDescendants().OfType<Border>(),
-                    b => b.Classes.Contains("tload") && b.IsVisible);
+                    b => b.Classes.Contains("tload") && !b.Classes.Contains("miss") && b.IsVisible);
             }
             finally { vm.Dispose(); window.Close(); }
         }
@@ -130,11 +130,15 @@ public class MissingAssetImageTests
                 PumpUntil(() => vm.Items.All(i => !i.IsLoading));
 
                 Assert.DoesNotContain(view.GetVisualDescendants().OfType<Border>(),
-                    b => b.Classes.Contains("tmissing") && b.IsVisible);
+                    b => IsMissingMark(b) && b.IsVisible);
                 Assert.All(vm.Items, i => Assert.False(i.ImageMissing));
             }
             finally { vm.Dispose(); window.Close(); }
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+
+    // A tile's marker is one Border (`tload`, plus `miss` when the file is gone); the rail's is `tmissing`.
+    private static bool IsMissingMark(Border b) =>
+        b.Classes.Contains("tmissing") || (b.Classes.Contains("tload") && b.Classes.Contains("miss"));
 }

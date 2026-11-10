@@ -169,13 +169,8 @@
                                  pulse in place reads as texture instead. It is also the nfty
                                  diamond, so an unfilled tile looks like part of the product rather
                                  than a hole in it. -->
-                            <Border Classes="tload" IsVisible="{Binding IsLoading}" />
-                            <!-- And the mark for a file that is not coming at all. Reading Thumbnail
-                                 is what starts the decode, so the binding order here matters: the
-                                 Image below asks for it, and this flag is only meaningful once that
-                                 has answered. -->
-                            <Border Classes="tmissing" IsVisible="{Binding ImageMissing}"
-                                    ToolTip.Tip="This asset's image file is missing from the Set folder" />
+                            <Border Classes="tload" Classes.miss="{Binding ImageMissing}"
+                                    IsVisible="{Binding ShowsMark}" ToolTip.Tip="{Binding MarkTip}" />
                             <Image Source="{Binding Thumbnail}" Width="120" Height="120"
                                    Stretch="UniformToFill" />
                           </Panel>
