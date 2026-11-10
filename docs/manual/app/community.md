@@ -28,12 +28,18 @@ allowance, which is why the limits below exist. They keep nfty a polite user of 
 ## Browse and search
 
 1. Press **Browse the community gallery** on the [opening screen](opening-screen.md). The list is
-   fetched once and kept, so the next visit opens at once, even offline. A status line under the title
-   says when it was fetched (`Updated 14:02`) and how many collections are new or updated.
-2. Page through the tiles. **SORT** offers **Updated** (newest change first, the default), **Name** and
-   **Assets**. The **TAG** tray shows the most-used tags as chips; **More tags** lists the rest.
-3. Type in the search box (`#tag, @user or a name`). Three kinds of word combine, and a tile must match
-   all of them:
+   fetched once and kept, so the next visit opens at once, even offline. The status line beside the
+   pager, at the foot of the grid, says when it was fetched (`Updated 14:02`) and how many collections
+   are new or updated.
+2. Page through the tiles with **Previous** and **Next**. **SORT** offers **Updated** (newest change
+   first, the default), **Name** and **Assets**.
+3. The **TAGS** row under the title shows the gallery's first five tags as chips, each with how many
+   collections carry it. Clicking a chip adds its `#tag` to the search, and the chip turns accent while it
+   is there; clicking it again takes it out. **+3 more** (the count follows the gallery) opens the
+   **tag picker**: every tag with its count, a **Filter tags** box (++enter++ adds the first match) and
+   **Clear tags**, which takes every tag out of the search and leaves names and `@owners` alone.
+4. Type in the search box (`#tag, @user or a name`; ++ctrl+k++ or ++slash++ jumps to it). Three kinds of
+   word combine, and a tile must match all of them:
 
     | You type | Matches |
     |---|---|
@@ -43,8 +49,29 @@ allowance, which is why the limits below exist. They keep nfty a polite user of 
 
     Clicking a tag chip, a tag, or an owner's name on a tile just edits the same text. **Clear search**
     empties it.
-4. Click a tile to see its details on the right: preview, owner, dates, assets, canvas, tags, description,
-   and whether a CookBook or 3D models are included. **Refresh** fetches the list again.
+5. Click a tile to see its details on the right: preview, owner, dates, assets, canvas, tags, description,
+   and whether a CookBook or 3D models are included. **Refresh**, at the top right, fetches the list again.
+
+**Back**, at the top left, returns to the opening screen, and so do the **nfty** mark in the title bar
+and ++ctrl+w++. Leaving stops a download that is still running.
+
+### Keys
+
+The page takes the keyboard as it opens. Letters are shortcuts only while you are not typing in a box.
+
+| Keys | Does |
+|---|---|
+| ++ctrl+k++ or ++slash++ | Focus the search box |
+| ++t++ | Open the tag picker |
+| Arrow keys | Move the selection a tile or a row; past the last tile on a page, the page turns |
+| ++page-up++ / ++page-down++, ++home++ / ++end++ | Previous / next page, first / last page |
+| ++enter++ | Download the selected collection |
+| ++r++ | Fetch the list again |
+| ++esc++ | Clear the search; once it is clear, go back |
+| ++alt+left++ | Go back |
+
+The same list is on the **Community** tab of the Quick Reference (++ctrl+slash++) and in
+[Keyboard shortcuts](../reference/shortcuts.md#community-gallery).
 
 Each tile carries one mark, never two: **New** for a collection shared since your first visit,
 **Updated** for one changed since you last selected it, **Pending** for a share of yours the gallery has

@@ -4,7 +4,7 @@ Every key and mouse gesture in the app. On a Mac, ++ctrl++ below is ++cmd++, ++a
 and the viewer's ++ctrl++-click is a middle-click instead.
 
 The app carries this list too: press ++ctrl+slash++, or click **?** at the right of the status bar, for
-the **Quick Reference**. It has four tabs (**Basics**, **Editor**, **Rise & 3D**, **Viewer & runtime**)
+the **Quick Reference**. It has five tabs (**Basics**, **Editor**, **Rise & 3D**, **Viewer & runtime**, **Community**)
 and a search box (++slash++ jumps to it; ++enter++ opens the first match; ++esc++ clears it, then
 closes the sheet).
 
@@ -24,7 +24,7 @@ closes the sheet).
 | Keys | Does |
 |---|---|
 | ++ctrl+slash++ | Open the Quick Reference |
-| ++ctrl+w++ | Close the open CookBook or Set |
+| ++ctrl+w++ | Close the open CookBook or Set, or leave the community gallery |
 | ++ctrl+t++ | Switch between light and dark |
 | ++ctrl+plus++ / ++ctrl+minus++ | Zoom the whole window in or out |
 | ++ctrl+0++ | Window zoom back to 100% |
@@ -120,6 +120,25 @@ The Rise page's 3D tile and the viewer's 3D half, while focused.
 | Left- or middle-button drag | Pan the 2D picture |
 | ++ctrl+w++ | Close the viewer window |
 | ++esc++ | Close a dialog open in the viewer |
+
+## Community gallery
+
+| Keys | Does |
+|---|---|
+| ++ctrl+k++ or ++slash++ | Focus the search box |
+| ++t++ | Open the tag picker |
+| ++left++ / ++right++ / ++up++ / ++down++ | Move the selection a tile or a row; crossing an edge turns the page |
+| ++page-up++ / ++page-down++ | Previous / next page |
+| ++home++ / ++end++ | First / last page |
+| ++enter++ | Download the selected collection (a focused tile is selected first) |
+| ++r++ or ++f5++ | Fetch the list again |
+| ++esc++ | Clear the search; with the search empty, go back to the opening screen |
+| ++alt+left++ | Go back to the opening screen |
+| ++enter++ (tag picker filter) | Add the first matching tag to the search |
+| ++esc++ (tag picker filter) | Clear the filter, then close the picker |
+
+The **nfty** mark at the left of the title bar, and **Back** at the top left of the page, lead back to
+the opening screen too.
 
 ## Set browser and inspector
 
