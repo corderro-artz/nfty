@@ -142,3 +142,54 @@ no recovery for a lost passphrase. Passphrases must be at least 12 characters wh
 
 An export with renamed files cannot be extended without mixing names. Extend the source Set, then
 export again.
+
+## Community gallery
+
+### "Your GitHub account is under 30 days old; the gallery takes shares from older accounts."
+
+Sharing needs an account at least 30 days old. Browsing and downloading are unaffected. Try again when
+the account is old enough.
+
+### "You share 3 collections, the most the gallery takes. Pick one to replace."
+
+Each account holds three shares. On the Share card pick the one to give up (nothing is removed until
+you press **Share**), or [unshare](../app/community.md#unshare) one first.
+
+### "You already have a repository called nfty-public that nfty didn't make."
+
+nfty only adopts an `nfty-public` repository it made (one with a `nfty-public.json`). Rename or remove
+yours on GitHub, then share again; nfty makes a fresh one. A private `nfty-public` is refused too: the
+gallery reads only public repositories, so make it public or replace it.
+
+### "Your nfty-public holds things the gallery doesn't allow."
+
+The repository may hold only `README.md`, `nfty-public.json` and your shares' releases. Press
+**Remove these…** to delete what nfty can, after confirming. A submodule, a duplicate release, or
+history past about 5 MB can't be cleaned by nfty; the card says what to do on GitHub, which for history
+means deleting the repository and sharing again.
+
+### "This Set is already in the gallery, shared by @…" or "Nothing changed since you shared…"
+
+The gallery refuses a Set someone has already listed, and an update that changes nothing. Cook or edit
+the Set so it differs, or leave the existing share as it is.
+
+### "The gallery takes one new share a day."
+
+Updates don't count, new shares do. Try again tomorrow.
+
+### "GitHub can't be reached."
+
+The Community page then shows the last list it saved, with its time, and Download and Share need the
+network. If the message says `GitHub is limiting requests`, wait the minutes it names. After connecting
+again, press **Refresh**. If sharing says `Reconnect GitHub to share.`, connect again in
+[Settings](../app/settings.md#publishing).
+
+### A share stays Pending, or turns Closed
+
+The gallery checks a share within a few minutes. If it is still **Pending** later, **Refresh**. A
+**Closed** tile means the gallery turned the request away; select it to read the reasons, fix them and
+share again, then **Dismiss** the old request.
+
+### A sealed Set can't be shared
+
+`Sealed Sets can't be shared or come from the gallery.` Share the unsealed Set instead.

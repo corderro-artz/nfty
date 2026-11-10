@@ -204,6 +204,7 @@ nav:
       - publishing/export.md
       - publishing/marketplace.md
       - publishing/ipfs.md
+      - publishing/share-to-the-gallery.md
       - publishing/sealed-critique.md
   - Embedding:
       - embedding/index.md

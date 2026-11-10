@@ -10,6 +10,7 @@ copy, and who that somebody is decides what goes in it. Your cooked Set is never
 | Hand a collection to a buyer, a collaborator, or keep a backup | [Export a Set](export.md) |
 | List it on OpenSea or mint it from a contract | [Prepare marketplace metadata](marketplace.md), then [upload to IPFS](ipfs.md) |
 | Upload the art and metadata to IPFS and get your contract's `baseURI` | [Upload to IPFS](ipfs.md) |
+| Share it with other nfty users, free, from inside the app | [Share a Set to the community gallery](share-to-the-gallery.md) |
 | Send it for review without handing over the files | [Send a sealed copy for critique](sealed-critique.md) |
 | Let a game or server roll assets at runtime instead | [Menus and tickets](../embedding/menus-and-tickets.md) |
 

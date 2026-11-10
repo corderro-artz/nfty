@@ -36,6 +36,18 @@ Where the export card's **Upload** sends a collection. See
 | **PINATA KEY** | Paste the key's JWT and press **Save**. It goes to your system's credential store (Windows Credential Manager, the macOS keychain, or the Secret Service on Linux through `secret-tool`) and nowhere else; the card shows only `••••` and the last four characters. **Forget** removes it. Without a credential store nfty refuses to save and says what to install; it never falls back to a file. |
 | **CONNECTION** | Whether nfty can reach the chosen service now. Checked when the card opens, when the provider or key changes, and on **Test connection**. |
 
+**GITHUB** is the account the [community gallery](community.md) shares under. It reads `not connected`
+or `Connected as @you`.
+
+| Control | Does |
+|---|---|
+| **Connect GitHub…** | Starts GitHub's device sign-in. The card shows a short code, with **Copy code** and **Open GitHub**; type the code on github.com and approve nfty, while the card says `Waiting for you to approve nfty on GitHub…`. **Cancel** abandons it. nfty never sees your password. |
+| **Disconnect** | Forgets the account on this machine. Your `nfty-public` repository and shares stay on GitHub. |
+
+The token is kept in the system credential store (shown as **KEPT IN**), never in a file; without one
+nfty says what to install. Browsing and downloading need no connection. See
+[Share a Set to the community gallery](../publishing/share-to-the-gallery.md).
+
 ## DATA
 
 | Setting | Does |

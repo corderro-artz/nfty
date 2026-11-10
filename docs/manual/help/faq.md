@@ -2,7 +2,21 @@
 
 **Does nfty need an account or a network connection?**
 nfty runs entirely on your machine with no account. Uploading to Pinata needs a Pinata account; a
-local IPFS node needs none.
+local IPFS node needs none. The [community gallery](../app/community.md) needs a network connection;
+browsing and downloading need no account, sharing needs a GitHub account at least 30 days old.
+
+**What does sharing to the community gallery put on GitHub?**
+The packed `.set` and a preview picture in a Release, and a listing, all in a `nfty-public` repository
+under your account, plus an entry in the gallery's index. The CookBook goes only if you tick **Include
+source CookBook**. Your GitHub name shows beside the share. See
+[the community gallery](../app/community.md#what-is-public).
+
+**How many collections can I share, and how big?**
+Three per account, each up to 512 × 512 pixels, 1,000 assets and 200 MB packed. See
+[Limits](../app/community.md#limits), or check a Set with [`nfty share check`](../reference/cli.md#share-check).
+
+**Can I share a sealed Set?**
+No. `Sealed Sets can't be shared or come from the gallery.`
 
 **Does nfty mint, deploy a contract, or list on a marketplace?**
 No. It produces the files a drop needs, can upload them to IPFS, and gives you the `baseURI` and

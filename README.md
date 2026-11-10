@@ -115,6 +115,7 @@ generated against a string seed, and published as images plus two sets of per-as
 | Built-in pixel editor | Brush, eraser, shapes, line, flood fill, select-and-move, undo/redo — over a value-map or a color raster |
 | Dual metadata | Standards-pure OpenSea `metadata/NNNN.json` plus a rich `nfty/NNNN.json` with DNA, seed, rarity and per-layer color |
 | Export and sealing | Four independent content axes, a plan you read before it writes, and AES-256-GCM sealing for a view-only handoff |
+| Community gallery | Browse, download and share cooked Sets with other nfty users from inside the app; sharing uses your own GitHub account, browsing needs none |
 | Extend | Re-open a cooked Set, add to it, and recompute rarity across the whole collection |
 | Open formats | Ordinary ZIP archives: authoring files and Menus use `manifest.json`, Sets use `set.json`, sealed exports use `seal.json` plus encrypted payload |
 
@@ -385,6 +386,7 @@ dotnet run --project src/Nfty.Cli -- --help
 | `remove rule` | Remove one incompatibility rule, addressed by its 1-based position |
 | `set chance\|depth\|variant\|recipe\|cookbook\|voxel-ready` | Change a layer's absent chance, a variant's depth map or weight, a recipe's weight, book metadata; snap partial alpha |
 | `remove ingredient\|variant\|recipe` | Remove a layer, variant or recipe |
+| `share check <set>` | Check a Set against the community gallery's rules (canvas, assets, size, archive safety) before sharing |
 | `sheet grid <png>` | Read, set or clear the grid a spritesheet carries |
 
 Errors surface as a message, never a stack trace — add `--verbose` for the trace.
@@ -426,6 +428,9 @@ detail pane, a Set browser over cooked output, and an **Ingredient Editor** with
   under and over the art while you draw.
 - **A gesture previews the pixels it will commit**, not an outline standing in for them — the shape
   tools fill, and a line commits at the brush's size in the brush's ink.
+- **The community gallery** lists Sets other people shared. Browse from the opening screen, search with
+  `#tag`, `@user` or a name, download one into the Set browser, and share your own from **Share…** with a
+  connected GitHub account. Details are in the [manual](https://www.vaporsoft.dev/nfty/docs/app/community/).
 - **Pixel art scales with nearest neighbor.** Imports must match the canvas; cooking preserves that
   size. Previews and the viewer's integer-scale exports keep crisp pixels without smoothing.
 
