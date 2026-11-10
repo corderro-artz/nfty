@@ -447,4 +447,37 @@ public class CommunityLayoutTests
         }
         finally { window.Close(); }
     }
+
+    [AvaloniaFact]
+    public void The_rail_has_no_scrollbar_and_keeps_its_links_in_view_with_a_long_description()
+    {
+        var dir = TempSheetDir();
+        var entry = CommunityFixtures.Entry("long", "A collection with a rather long name that wraps", login: "alice",
+            tags: ["characters", "creatures", "props", "scenery", "effects"],
+            description: string.Join(' ', Enumerable.Repeat("A long sentence that wraps.", 60)));
+        var vm = Page(CommunityFixtures.Listing([entry]), dir);
+        vm.SelectCommand.Execute(vm.Tiles[0]);
+        var (window, view) = Show(vm);
+        try
+        {
+            var rail = Named<Border>(view, "rules-panel");
+            Assert.DoesNotContain(rail.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ScrollBar>(), b => b.IsVisible);
+            var links = rail.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("clink") && b.IsVisible).ToList();
+            Assert.Equal(6, links.Count);   // @owner + five tags
+            foreach (var l in links)
+            {
+                var r = RectIn(l, rail);
+                Assert.True(r.Width > 0 && r.Left >= 0 && r.Right <= rail.Bounds.Width && r.Top >= 0 && r.Bottom <= rail.Bounds.Height,
+                    $"{l.Content} is outside the rail: {r} in {rail.Bounds.Size}");
+            }
+            var desc = view.FindControl<Border>("RailDescription")!;
+            var download = rail.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("accent"));
+            Assert.True(RectIn(desc, rail).Bottom <= RectIn(download, rail).Top, "the description runs under the actions");
+            var text = desc.GetVisualDescendants().OfType<TextBlock>().First(t => t.Classes.Contains("zp"));
+            var idn = view.FindControl<StackPanel>("RailIdentity")!;
+            Assert.True(desc.Bounds.Height >= 43, $"the description has no room: rail={rail.Bounds.Height} identity={idn.Bounds.Height} desc={desc.Bounds.Height} dl={RectIn(download, rail)}");
+            Assert.True(text.Bounds.Height > 12 && text.Bounds.Height <= desc.Bounds.Height + 0.5, $"the description is not drawn: {text.Bounds.Height} in {desc.Bounds.Height}");
+        }
+        finally { window.Close(); }
+    }
 }

@@ -560,6 +560,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(DatesText));
         OnPropertyChanged(nameof(DescriptionText));
+        OnPropertyChanged(nameof(DescriptionMoreOpacity));
         OnPropertyChanged(nameof(RailFacts));
         NotifyActions();
         BeginRail(newValue);
@@ -582,6 +583,10 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     /// <summary>The description, or a plain line when the sharer wrote none.</summary>
     public string DescriptionText => Selected?.Entry.Description is { Length: > 0 } d ? d : "No description.";
+
+    /// <summary>Ink for the rail's "hover for the full text" line: shown when the description is long enough that the
+    /// rail's three lines may not hold it. The line is always laid out, so this moves nothing.</summary>
+    public double DescriptionMoreOpacity => DescriptionText.Length > 60 ? 1 : 0;
 
     /// <summary>The rail's fact lines.</summary>
     public IReadOnlyList<string> RailFacts

@@ -5093,7 +5093,7 @@
 
   <!-- The rail's large preview: fixed height so the rail is one shape for every collection. -->
   <Style Selector="Border.cshot">
-    <Setter Property="Height" Value="150" />
+    <Setter Property="Height" Value="90" />
     <Setter Property="Background" Value="{DynamicResource TileBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
     <Setter Property="BorderThickness" Value="1" />

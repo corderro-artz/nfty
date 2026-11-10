@@ -195,7 +195,7 @@
                    HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                    Margin="24" IsVisible="{Binding !HasSelection}" />
 
-        <Grid RowDefinitions="Auto,*,Auto" Margin="12" Classes.cgone="{Binding !HasSelection}">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="12" Classes.cgone="{Binding !HasSelection}">
           <StackPanel Grid.Row="0" Spacing="3">
             <Border x:Name="RailShot" Classes="cshot"
                     ToolTip.Tip="Scroll the wheel to step through the preview's cells.">
@@ -209,38 +209,53 @@
             <TextBlock Classes="derived" Height="14" Text="{Binding CellText}" />
           </StackPanel>
 
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                        Margin="0,4,0,6">
-            <StackPanel Spacing="6" Margin="0,0,6,0">
-              <TextBlock Text="{Binding Selected.Name}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap" />
-              <Button Classes="clink" HorizontalAlignment="Left" Content="{Binding Selected.OwnerLink.Label}"
-                      Classes.on="{Binding Selected.OwnerLink.IsOn}" Command="{Binding Selected.OwnerLink.ToggleCommand}"
-                      ToolTip.Tip="Show only this person's collections" />
-              <TextBlock Classes="cmeta" Text="{Binding DatesText}" TextTrimming="None" TextWrapping="Wrap" />
-              <TextBlock Classes="zp" Text="{Binding DescriptionText}" TextWrapping="Wrap" TextAlignment="Left" Margin="0,4,0,4" />
-              <ItemsControl ItemsSource="{Binding RailFacts}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="x:String">
-                    <TextBlock Classes="cmeta" Text="{Binding}" />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <ItemsControl ItemsSource="{Binding Selected.TagLinks}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:CommunityToken">
-                    <Button Classes="clink" Margin="0,0,8,3" Content="{Binding Label}" Classes.on="{Binding IsOn}"
-                            Command="{Binding ToggleCommand}" ToolTip.Tip="Show only this tag" />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Classes="cmeta" Text="No tags." IsVisible="{Binding Selected.HasNoTags}" />
-            </StackPanel>
-          </ScrollViewer>
+          <!-- The identity, pinned: nothing here scrolls, so the owner and tag links are always in view. The
+               facts run together on wrapped lines to keep the block short. -->
+          <StackPanel x:Name="RailIdentity" Grid.Row="1" Spacing="4" Margin="0,4,0,0">
+            <TextBlock Text="{Binding Selected.Name}" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"
+                       TextTrimming="CharacterEllipsis" MaxLines="1" ToolTip.Tip="{Binding Selected.Name}" />
+            <Button Classes="clink" HorizontalAlignment="Left" Content="{Binding Selected.OwnerLink.Label}"
+                    Classes.on="{Binding Selected.OwnerLink.IsOn}" Command="{Binding Selected.OwnerLink.ToggleCommand}"
+                    ToolTip.Tip="Show only this person's collections" />
+            <TextBlock Classes="cmeta" Text="{Binding DatesText}" TextTrimming="None" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding RailFacts}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Classes="cmeta" Text="{Binding}" Margin="0,0,10,0" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Selected.TagLinks}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CommunityToken">
+                  <Button Classes="clink" Margin="0,0,8,3" Content="{Binding Label}" Classes.on="{Binding IsOn}"
+                          Command="{Binding ToggleCommand}" ToolTip.Tip="Show only this tag" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="cmeta" Text="No tags." IsVisible="{Binding Selected.HasNoTags}" />
+          </StackPanel>
 
-          <StackPanel Grid.Row="2" Spacing="6">
+          <!-- The description takes whatever height is left and wraps to it; what does not fit ends in an
+               ellipsis, and the whole text is on the tooltip. No scroller, so no bar. -->
+          <Border x:Name="RailDescription" Grid.Row="2" ClipToBounds="True" Margin="0,2,0,6" Background="Transparent"
+                  ToolTip.Tip="{Binding DescriptionText}">
+            <StackPanel Spacing="1">
+              <TextBlock Classes="zp" Text="{Binding DescriptionText}" TextWrapping="Wrap" TextAlignment="Left"
+                         TextTrimming="WordEllipsis" MaxLines="2" FontSize="11" LineHeight="14" />
+              <!-- Wrapping does not draw an ellipsis, so a long description says it goes on. Reserved, inked only when long. -->
+              <TextBlock x:Name="RailMore" Classes="cmeta" Height="14" Text="... hover for the full text"
+                         Opacity="{Binding DescriptionMoreOpacity}" />
+            </StackPanel>
+          </Border>
+
+          <StackPanel Grid.Row="3" Spacing="6">
             <!-- Why Download is off. Reserved two lines, so the buttons never move. -->
             <TextBlock Classes="cwarn" Height="30" Text="{Binding DownloadNote}" TextTrimming="CharacterEllipsis"
                        ToolTip.Tip="{Binding DownloadNote}" />
