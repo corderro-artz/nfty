@@ -1125,21 +1125,20 @@
   <Style Selector="Border.ship TextBlock.part.pending">
     <Setter Property="Opacity" Value="0.5" />
   </Style>
-  <!-- PackageCard (Controls/PackageCard.cs): the manifest drawn once for every host. Name and size, a hairline,
-       then the parts as a grid of equal cells - glyph, name, count right-aligned. -->
+  <!-- PackageCard (Controls/PackageCard.cs): the manifest drawn once for every host. Name, pager and size on one
+       line, then the parts as TILES in a width-adaptive grid: each a small panel with its glyph, its name and its
+       count, so the parts read as things, not as columns of tab-spaced text. -->
   <Style Selector="Border.ship.pkg">
-    <Setter Property="Padding" Value="12,7,12,7" />
+    <Setter Property="Padding" Value="12,8,12,8" />
   </Style>
-  <Style Selector="Border.pkgrule">
-    <Setter Property="Height" Value="1" />
-    <Setter Property="Margin" Value="0,5,0,3" />
-    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+  <Style Selector="Border.pkgtile">
+    <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Padding" Value="7,0,8,0" />
   </Style>
-  <Style Selector="Grid.pkgcell">
-    <Setter Property="Margin" Value="0,0,14,0" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Grid.pkgcell Path.ico">
+  <Style Selector="Border.pkgtile Path.ico">
     <Setter Property="Stroke" Value="{DynamicResource FgMutedBrush}" />
   </Style>
   <Style Selector="TextBlock.pkgname">

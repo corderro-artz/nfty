@@ -57,7 +57,7 @@
 
               <!-- THE MANIFEST: SetExporter.Plan, the list the share writes, in the Export card's own block. -->
               <ctl:PackageCard Title="{Binding Slug, StringFormat={}{0}.set}" Size="{Binding PlanSize}" Parts="{Binding PlanParts}"
-                               Columns="2" SizeTip="The files as they sit on disk. The gallery's limit is on the packed .set, under GALLERY LIMITS." />
+                               MinTileWidth="150" MaxRows="2" SizeTip="The files as they sit on disk. The gallery's limit is on the packed .set, under GALLERY LIMITS." />
 
               <!-- THE GALLERY'S LIMITS: a table, one row each - a mark (within, past, not known yet), what is measured,
                    the figure and what to do about it, the limit. Every row always laid out; only ink changes. -->

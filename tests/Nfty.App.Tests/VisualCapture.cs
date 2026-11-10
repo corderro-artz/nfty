@@ -1565,6 +1565,46 @@ public partial class VisualCapture
         }
     }
 
+    /// <summary>The shared manifest card at a narrow, a middle and a wide width, every part shown and paged to one row,
+    /// so its adaptive columns and its pager can be judged from a frame.</summary>
+    [AvaloniaFact]
+    public void Capture_package_card()
+    {
+        if (Dir is null) return;
+        string[] parts = ["ChestDemo.cbk", "images/  100 files", "metadata/  100 files", "3D models (100)", "nfty/  100 files",
+                          "set.json", "collection.json", "spritesheet.png  10 x 10 cells, 1.2 MB"];
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            var key = variant.Key.ToString()!.ToLowerInvariant();
+            var stack = new StackPanel { Spacing = 18, Margin = new Thickness(20) };
+            foreach (var (width, rows) in new[] { (300.0, 0), (300.0, 1), (520.0, 0), (520.0, 2), (900.0, 0), (900.0, 1) })
+            {
+                stack.Children.Add(new TextBlock
+                {
+                    Text = $"{width:0}px · " + (rows == 0 ? "every part" : $"MaxRows {rows}"),
+                    Classes = { "plabel" },
+                });
+                stack.Children.Add(new Controls.PackageCard
+                {
+                    Width = width, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                    Title = "chest-demo.set", Size = "10.9 MB", Parts = parts, MaxRows = rows,
+                });
+            }
+            var window = new Window
+            {
+                RequestedThemeVariant = variant,
+                Content = stack,
+                Background = Application.Current!.TryGetResource("BgBrush", variant, out var bg) ? (IBrush)bg! : Brushes.Magenta,
+                SizeToContent = SizeToContent.WidthAndHeight,
+            };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            Dispatcher.UIThread.RunJobs();
+            window.CaptureRenderedFrame()!.Save(Path.Combine(Dir!, $"package-card-{key}.png"), PngBitmapEncoderOptions.Default);
+            window.Close();
+        }
+    }
+
     /// <summary>The share card while it runs, once it is submitted and when it fails, at the area a modal really gets.</summary>
     [AvaloniaFact]
     public void Capture_share_run()

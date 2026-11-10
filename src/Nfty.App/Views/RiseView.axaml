@@ -679,11 +679,13 @@
                scroll to. Bottom-anchored, so the button stays where it is whatever the manifest
                above it says. -->
           <StackPanel Grid.Row="2" Spacing="9" Margin="13,0,13,13" IsVisible="{Binding IsExportTab}">
-            <!-- The shared PackageCard: name and size, then the parts on one row (a single model or a batch says three things at most). -->
+            <!-- The shared PackageCard: one row of tiles, paged; the rail snaps to whole sections, so its height is budgeted. -->
             <ctl:PackageCard MinHeight="64" Title="{Binding ManifestTitle}" Size="{Binding ManifestSize}"
-                             SizePending="{Binding IsSizePending}" Parts="{Binding ManifestParts}" Columns="3">
+                             SizePending="{Binding IsSizePending}" Parts="{Binding ManifestParts}" MinTileWidth="96" MaxRows="1">
               <ctl:PackageCard.Footer>
-                <TextBlock Classes="caveat" Text="{Binding ExportProblem}" />
+                <!-- Last in the card, which is bottom-anchored: appearing grows the card upward and moves nothing below. -->
+                <TextBlock Classes="caveat" Text="{Binding ExportProblem}" Margin="0,5,0,0"
+                           IsVisible="{Binding ExportProblem, Converter={x:Static ObjectConverters.IsNotNull}}" />
               </ctl:PackageCard.Footer>
             </ctl:PackageCard>
             <Button Classes="accent quiet" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"

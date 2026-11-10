@@ -1,29 +1,31 @@
 using System.Collections;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 
 namespace Nfty.App.Controls;
 
 /// <summary>
-/// What a file about to be written holds: its name and size over a hairline, then its parts as an aligned grid -
-/// a glyph, the part's name, and its count on the right (<c>images/ … 100 files</c>). The one drawing of a
-/// manifest, used by the Export card, the Share card and the Rise page's export rail.
+/// What a file about to be written holds: its name and size, then its parts as TILES - a glyph, the part's name, its
+/// count as a badge (<c>images/ · 100 files</c>). The one drawing of a manifest, used by the Export card, the Share card
+/// and the Rise page's export rail.
 /// </summary>
 /// <remarks>
 /// <para><b>Parts are Core's strings, read, not reworded.</b> <c>ExportPlan.Parts()</c> writes
 /// <c>images/  100 files</c>, <c>set.json</c>, <c>3D models (100)</c>, <c>spritesheet.png  8 x 4 cells, 1 MB</c>; the
 /// card splits each at its double space (or its trailing count in brackets) into a name and a detail, so the CLI and
 /// the card still say the identical thing - only the layout differs. A part it cannot split is a name alone.</para>
-/// <para><b>A grid, not a run.</b> The wrapped run it replaces broke between parts wherever the width ran out,
-/// so the same plan drew differently on each screen and nothing lined up. Columns are stated
-/// (<see cref="Columns"/>), every cell is one height, and a long name trims with the whole part on its tooltip.</para>
+/// <para><b>The width decides the columns; the host decides the rows.</b> Tiles are never narrower than
+/// <see cref="MinTileWidth"/>, and as many sit side by side as fit, so the same card is two columns in a narrow rail
+/// and five in a wide window, every tile one height, organized the same way. A host short of height sets
+/// <see cref="MaxRows"/>: the card is then exactly that many rows tall whichever page shows, and the header carries the
+/// app's pager (<c>1/2 ‹ ›</c>, present and disabled at one page, never absent). <c>0</c> shows every part.</para>
 /// <para>Anything a host needs under the parts (the Export card's consequences, the Rise rail's problem line) goes
-/// in <see cref="Footer"/>.</para>
+/// in <see cref="Footer"/>, which takes the remaining height.</para>
 /// </remarks>
 public partial class PackageCard : Border
 {
@@ -42,8 +44,12 @@ public partial class PackageCard : Border
     /// <summary>The parts, as Core words them.</summary>
     public static readonly StyledProperty<IEnumerable?> PartsProperty = AvaloniaProperty.Register<PackageCard, IEnumerable?>(nameof(Parts));
 
-    /// <summary>How many parts sit side by side.</summary>
-    public static readonly StyledProperty<int> ColumnsProperty = AvaloniaProperty.Register<PackageCard, int>(nameof(Columns), 2);
+    /// <summary>The narrowest a tile may be; the width fits as many columns as this allows.</summary>
+    public static readonly StyledProperty<double> MinTileWidthProperty =
+        AvaloniaProperty.Register<PackageCard, double>(nameof(MinTileWidth), 160);
+
+    /// <summary>The most rows shown at once; more parts than fit page behind the header's pager. 0 shows every part.</summary>
+    public static readonly StyledProperty<int> MaxRowsProperty = AvaloniaProperty.Register<PackageCard, int>(nameof(MaxRows));
 
     /// <summary>What sits under the parts, if anything.</summary>
     public static readonly StyledProperty<Control?> FooterProperty = AvaloniaProperty.Register<PackageCard, Control?>(nameof(Footer));
@@ -63,20 +69,32 @@ public partial class PackageCard : Border
     /// <inheritdoc cref="PartsProperty"/>
     public IEnumerable? Parts { get => GetValue(PartsProperty); set => SetValue(PartsProperty, value); }
 
-    /// <inheritdoc cref="ColumnsProperty"/>
-    public int Columns { get => GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
+    /// <inheritdoc cref="MinTileWidthProperty"/>
+    public double MinTileWidth { get => GetValue(MinTileWidthProperty); set => SetValue(MinTileWidthProperty, value); }
+
+    /// <inheritdoc cref="MaxRowsProperty"/>
+    public int MaxRows { get => GetValue(MaxRowsProperty); set => SetValue(MaxRowsProperty, value); }
 
     /// <inheritdoc cref="FooterProperty"/>
     public Control? Footer { get => GetValue(FooterProperty); set => SetValue(FooterProperty, value); }
 
-    /// <summary>One cell's height; every cell is this tall, so rows line up across columns and hosts.</summary>
-    public const double CellHeight = 18;
+    /// <summary>One tile's height; every tile is this tall, so rows line up across columns and hosts.</summary>
+    public const double TileHeight = 20;
 
-    private readonly TextBlock _title = new() { TextTrimming = TextTrimming.CharacterEllipsis };
-    private readonly TextBlock _size = new() { VerticalAlignment = VerticalAlignment.Center };
-    private readonly UniformGrid _grid = new();
+    /// <summary>The gap between tiles, both ways.</summary>
+    public const double TileGap = 5;
+
+    // Title and size BOTTOM-aligned: two sizes centered in the pager-tall row miss one baseline by 2px.
+    private readonly TextBlock _title = new() { TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Bottom };
+    private readonly TextBlock _size = new() { VerticalAlignment = VerticalAlignment.Bottom };
+    private readonly StackPanel _pager = new() { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _pageLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _prev = new() { Content = "‹" };
+    private readonly Button _next = new() { Content = "›" };
+    private readonly TilePanel _tiles = new();
     private readonly ContentControl _footer = new();
     private INotifyCollectionChanged? _watched;
+    private int _page;
 
     /// <inheritdoc />
     protected override Type StyleKeyOverride => typeof(Border);
@@ -88,7 +106,12 @@ public partial class PackageCard : Border
         SizeTipProperty.Changed.AddClassHandler<PackageCard>((c, _) => c.UpdateHeader());
         SizePendingProperty.Changed.AddClassHandler<PackageCard>((c, _) => c.UpdateHeader());
         PartsProperty.Changed.AddClassHandler<PackageCard>((c, _) => c.Watch());
-        ColumnsProperty.Changed.AddClassHandler<PackageCard>((c, _) => c.Rebuild());
+        MinTileWidthProperty.Changed.AddClassHandler<PackageCard>((c, _) => c._tiles.MinTileWidth = c.MinTileWidth);
+        MaxRowsProperty.Changed.AddClassHandler<PackageCard>((c, _) =>
+        {
+            c._tiles.MaxRows = c.MaxRows;
+            c._pager.IsVisible = c.MaxRows > 0;   // a property of the host, set once: never toggles at run time
+        });
         FooterProperty.Changed.AddClassHandler<PackageCard>((c, e) => c._footer.Content = e.NewValue);
     }
 
@@ -99,27 +122,68 @@ public partial class PackageCard : Border
         Classes.Add("pkg");
         _title.Classes.Add("fn");
         _size.Classes.Add("part");
+        _pageLabel.Classes.Add("pglabel");
+        _prev.Classes.Add("pgbtn");
+        _next.Classes.Add("pgbtn");
+        ToolTip.SetTip(_prev, "Previous parts");
+        ToolTip.SetTip(_next, "More parts");
+        _prev.Click += (_, _) => Turn(-1);
+        _next.Click += (_, _) => Turn(+1);
+        _pager.Children.Add(_pageLabel);
+        _pager.Children.Add(_prev);
+        _pager.Children.Add(_next);
+        _pager.IsVisible = false;
 
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 12, Margin = new Thickness(0, 0, 0, 5) };
         head.Children.Add(_title);
-        Grid.SetColumn(_size, 1);
+        Grid.SetColumn(_pager, 1);
+        head.Children.Add(_pager);
+        Grid.SetColumn(_size, 2);
         head.Children.Add(_size);
 
-        var rule = new Border();
-        rule.Classes.Add("pkgrule");
+        _tiles.MinTileWidth = MinTileWidth;
+        _tiles.CapacityChanged += (_, _) => UpdatePager();
 
         // Rows, not a stack: the footer takes the STAR row, so a host that pins the card's height (the Export card)
         // hands its footer a real height to scroll inside, rather than an infinite one.
-        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*") };
+        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*") };
         layout.Children.Add(head);
-        Grid.SetRow(rule, 1);
-        layout.Children.Add(rule);
-        Grid.SetRow(_grid, 2);
-        layout.Children.Add(_grid);
-        Grid.SetRow(_footer, 3);
+        Grid.SetRow(_tiles, 1);
+        layout.Children.Add(_tiles);
+        Grid.SetRow(_footer, 2);
         layout.Children.Add(_footer);
         Child = layout;
         Rebuild();
+    }
+
+    /// <summary>Which page of parts shows, from 0.</summary>
+    public int Page => _page;
+
+    /// <summary>How many pages the parts take at the current width (1 when every part shows).</summary>
+    public int PageCount => _tiles.Capacity <= 0 ? 1 : Math.Max(1, (int)Math.Ceiling(_tiles.Children.Count / (double)_tiles.Capacity));
+
+    /// <summary>Shows the next (+1) or previous (-1) page, within the pages there are.</summary>
+    /// <param name="by">How many pages to move.</param>
+    public void Turn(int by)
+    {
+        int page = Math.Clamp(_page + by, 0, PageCount - 1);
+        if (page == _page) return;
+        _page = page;
+        _tiles.First = _page * _tiles.Capacity;
+        UpdatePager();
+    }
+
+    private void UpdatePager()
+    {
+        int pages = PageCount;
+        if (_page > pages - 1)
+        {
+            _page = pages - 1;
+            _tiles.First = _page * _tiles.Capacity;
+        }
+        _pageLabel.Text = string.Create(CultureInfo.InvariantCulture, $"{_page + 1}/{pages}");
+        _prev.IsEnabled = _page > 0;
+        _next.IsEnabled = _page < pages - 1;
     }
 
     private void UpdateHeader()
@@ -143,22 +207,20 @@ public partial class PackageCard : Border
 
     private void Rebuild()
     {
-        _grid.Children.Clear();
-        _grid.Columns = Math.Max(1, Columns);
-        if (Parts is null) return;
-        foreach (var item in Parts)
-        {
-            if (item?.ToString() is not { Length: > 0 } text) continue;
-            _grid.Children.Add(Cell(text));
-        }
+        _tiles.Children.Clear();
+        _page = 0;
+        _tiles.First = 0;
+        if (Parts is not null)
+            foreach (var item in Parts)
+                if (item?.ToString() is { Length: > 0 } text)
+                    _tiles.Children.Add(Tile(text));
+        UpdatePager();
     }
 
-    private static Control Cell(string text)
+    private static Control Tile(string text)
     {
         var (name, detail) = Split(text);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 6, Height = CellHeight };
-        grid.Classes.Add("pkgcell");
-        ToolTip.SetTip(grid, text);
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing = 7 };
 
         var glyph = new Avalonia.Controls.Shapes.Path();
         glyph.Classes.Add("ico");
@@ -172,11 +234,16 @@ public partial class PackageCard : Border
         Grid.SetColumn(label, 1);
         grid.Children.Add(label);
 
-        var count = new TextBlock { Text = detail };
+        // The NAME is what identifies a part, so the count gives way first: capped, trimmed, whole on the tooltip.
+        var count = new TextBlock { Text = detail, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 74, Margin = new Thickness(6, 0, 0, 0) };
         count.Classes.Add("pkgdetail");
         Grid.SetColumn(count, 2);
         grid.Children.Add(count);
-        return grid;
+
+        var tile = new Border { Child = grid };
+        tile.Classes.Add("pkgtile");
+        ToolTip.SetTip(tile, text);
+        return tile;
     }
 
     /// <summary>Splits a part into its name and its detail, as Core words them.</summary>
@@ -193,7 +260,7 @@ public partial class PackageCard : Border
 
     /// <summary>Which glyph a part draws: a folder for a folder, the Rise mark for models, the type mark for a book.</summary>
     /// <param name="name">The part's name.</param>
-    /// <returns>The icon key, or null for a plain file.</returns>
+    /// <returns>The icon key, or null for a fact rather than a file.</returns>
     public static string? GlyphOf(string name) =>
         name.EndsWith('/') ? "IconFolderOpen"
         : name.StartsWith("3D models", StringComparison.Ordinal) ? "IconRise"
@@ -205,4 +272,74 @@ public partial class PackageCard : Border
 
     [GeneratedRegex(@"^(.*?)\s*\((\d[\d,]*)\)$")]
     private static partial Regex BracketCount();
+
+    /// <summary>
+    /// The tiles: as many columns as the width allows at <see cref="MinTileWidth"/>, each tile <see cref="TileHeight"/>
+    /// tall; with <see cref="MaxRows"/> set, a window of that many rows starting at <see cref="First"/>, the rest
+    /// arranged at nothing. Its height depends on the part COUNT and the width only, never on which page shows.
+    /// </summary>
+    internal sealed class TilePanel : Panel
+    {
+        private double _minTile = 140;
+        private int _maxRows;
+        private int _first;
+
+        public double MinTileWidth { get => _minTile; set { _minTile = Math.Max(40, value); InvalidateMeasure(); } }
+
+        public int MaxRows { get => _maxRows; set { _maxRows = Math.Max(0, value); InvalidateMeasure(); } }
+
+        public int First { get => _first; set { _first = Math.Max(0, value); InvalidateArrange(); } }
+
+        /// <summary>How many tiles show at once (every one when <see cref="MaxRows"/> is 0).</summary>
+        public int Capacity { get; private set; }
+
+        public int Columns { get; private set; } = 1;
+
+        public event EventHandler? CapacityChanged;
+
+        private (int Cols, int Rows) Shape(double width)
+        {
+            int n = Children.Count;
+            int cols = double.IsFinite(width) && width > 0
+                ? Math.Max(1, (int)((width + TileGap) / (_minTile + TileGap)))
+                : Math.Max(1, n);
+            cols = Math.Min(cols, Math.Max(1, n));
+            int rows = n == 0 ? 0 : (int)Math.Ceiling(n / (double)cols);
+            if (_maxRows > 0) rows = Math.Min(rows, _maxRows);
+            return (cols, rows);
+        }
+
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            var (cols, rows) = Shape(availableSize.Width);
+            double tileW = double.IsFinite(availableSize.Width)
+                ? (availableSize.Width - TileGap * (cols - 1)) / cols
+                : _minTile;
+            foreach (var c in Children) c.Measure(new Size(tileW, TileHeight));
+            double width = double.IsFinite(availableSize.Width) ? availableSize.Width : cols * _minTile + (cols - 1) * TileGap;
+            return new Size(width, rows == 0 ? 0 : rows * TileHeight + (rows - 1) * TileGap);
+        }
+
+        protected override Size ArrangeOverride(Size finalSize)
+        {
+            var (cols, rows) = Shape(finalSize.Width);
+            int capacity = _maxRows > 0 ? cols * rows : Children.Count;
+            double tileW = (finalSize.Width - TileGap * (cols - 1)) / cols;
+            for (int i = 0; i < Children.Count; i++)
+            {
+                int k = i - (_maxRows > 0 ? _first : 0);
+                if (k < 0 || k >= capacity) { Children[i].Arrange(default); Children[i].IsVisible = false; continue; }
+                Children[i].IsVisible = true;
+                int row = k / cols, col = k % cols;
+                Children[i].Arrange(new Rect(col * (tileW + TileGap), row * (TileHeight + TileGap), tileW, TileHeight));
+            }
+            Columns = cols;
+            if (capacity != Capacity)
+            {
+                Capacity = capacity;
+                CapacityChanged?.Invoke(this, EventArgs.Empty);
+            }
+            return finalSize;
+        }
+    }
 }
