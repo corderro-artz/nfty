@@ -99,33 +99,41 @@
          far left. -->
     <ctl:WindowFrame.TitleRight>
      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-      <!-- Other windows (pop-out viewers, galleries). A fixed-width slot that is always laid out and
-           only INKED when a window is open, so the titlebar never reflows. In full screen nothing on
-           the desktop can reach a window behind the shell, so this is the way back to one: a click
-           lists them, choosing one raises it. -->
-      <Button x:Name="ChildWindowsButton" Classes="vchip winchip" Classes.has="{Binding HasChildWindows}" Width="44"
+      <!-- Other windows (pop-out viewers, galleries): a badge carrying its own count. A fixed-width
+           slot, always laid out and only INKED when a window is open, so the titlebar never reflows.
+           Left click brings back the window used last, or puts it away when it is already up; right
+           click (or Ctrl+Shift+W) lists every window to pick one. In full screen nothing on the
+           desktop can reach a window behind the shell, so this is the way back to one. -->
+      <Button x:Name="ChildWindowsButton" Classes="winchip" Classes.has="{Binding HasChildWindows}"
               IsHitTestVisible="{Binding HasChildWindows}" Focusable="False"
+              Command="{Binding ToggleLastChildWindowCommand}"
               ToolTip.Tip="{Binding ChildWindowsTip}">
-        <Button.Flyout>
+        <Button.ContextFlyout>
           <Flyout Placement="BottomEdgeAlignedRight" ShowMode="Standard">
-            <ItemsControl ItemsSource="{Binding ChildWindowItems}" MinWidth="220" MaxWidth="360">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button Classes="winrow" Command="{Binding ActivateCommand}"
-                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Column="1" Classes="sbar" Text="{Binding Hint}" />
-                    </Grid>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel Spacing="4" MinWidth="240" MaxWidth="360">
+              <TextBlock Classes="plabel" Margin="10,4,10,2" Text="OTHER WINDOWS" />
+              <ItemsControl ItemsSource="{Binding ChildWindowItems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Classes="winrow" Command="{Binding ActivateCommand}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+                        <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Classes="sbar" Text="{Binding Hint}" VerticalAlignment="Center" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
           </Flyout>
-        </Button.Flyout>
-        <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+        </Button.ContextFlyout>
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
-          <TextBlock Classes="sbar" Text="{Binding ChildWindowCountText}" VerticalAlignment="Center" />
+          <Border Classes="wincount">
+            <TextBlock Text="{Binding ChildWindowCountText}" />
+          </Border>
         </StackPanel>
       </Button>
       <Button Classes="lockflag" VerticalAlignment="Center" Margin="0,0,12,0"

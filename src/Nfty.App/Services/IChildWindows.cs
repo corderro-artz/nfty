@@ -11,6 +11,13 @@ public sealed class ChildWindowEntry
 
     /// <summary>Raises the window above everything else, restoring it if minimized.</summary>
     public required Action Activate { get; init; }
+
+    /// <summary>Whether the window is up in front of the reader (not minimized, and on top or the one just
+    /// left by the click on the badge). Null = unknown, which the badge reads as "not shown".</summary>
+    public Func<bool>? IsShown { get; init; }
+
+    /// <summary>Puts the window away (minimizes it), or null when the head cannot.</summary>
+    public Action? Hide { get; init; }
 }
 
 /// <summary>
@@ -35,6 +42,17 @@ public interface IChildWindows
     /// <summary>Brings the next window forward, cycling in the order of <see cref="Windows"/>.</summary>
     /// <returns>The window activated, or null when none is open.</returns>
     ChildWindowEntry? ActivateNext();
+
+    /// <summary>The window used last: the one most recently raised or focused, else the newest.</summary>
+    ChildWindowEntry? Last { get; }
+
+    /// <summary>Records that a window was just raised or focused, so it becomes <see cref="Last"/>.</summary>
+    /// <param name="entry">The window.</param>
+    void Touch(ChildWindowEntry entry);
+
+    /// <summary>The badge's left click: puts <see cref="Last"/> away when it is shown, else raises it.</summary>
+    /// <returns>The window toggled, or null when none is open.</returns>
+    ChildWindowEntry? ToggleLast();
 }
 
 /// <inheritdoc cref="IChildWindows"/>
@@ -42,6 +60,25 @@ public sealed class ChildWindows : IChildWindows
 {
     private readonly List<ChildWindowEntry> _windows = [];
     private int _next;
+    private ChildWindowEntry? _last;
+
+    /// <inheritdoc />
+    public ChildWindowEntry? Last => _last is not null && _windows.Contains(_last) ? _last : _windows.LastOrDefault();
+
+    /// <inheritdoc />
+    public void Touch(ChildWindowEntry entry)
+    {
+        if (_windows.Contains(entry)) _last = entry;
+    }
+
+    /// <inheritdoc />
+    public ChildWindowEntry? ToggleLast()
+    {
+        if (Last is not { } entry) return null;
+        if (entry.Hide is not null && entry.IsShown?.Invoke() == true) entry.Hide();
+        else { entry.Activate(); _last = entry; }
+        return entry;
+    }
 
     /// <inheritdoc />
     public IReadOnlyList<ChildWindowEntry> Windows => _windows;
@@ -66,6 +103,7 @@ public sealed class ChildWindows : IChildWindows
         var entry = _windows[_next];
         _next = (_next + 1) % _windows.Count;
         entry.Activate();
+        _last = entry;
         return entry;
     }
 

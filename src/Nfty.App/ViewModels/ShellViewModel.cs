@@ -227,8 +227,8 @@ public partial class ShellViewModel : ViewModelBase
     public string ChildWindowsTip => ChildWindowItems.Count switch
     {
         0 => "No other windows are open",
-        1 => $"1 other window  ·  {KeyHints.ChildWindows}  ·  {KeyHints.ChildWindowList}",
-        var n => $"{n} other windows  ·  {KeyHints.ChildWindows} cycles  ·  {KeyHints.ChildWindowList} lists",
+        1 => $"1 other window. Click shows or hides it; right-click lists it  ·  {KeyHints.ChildWindows}",
+        var n => $"{n} other windows. Click shows or hides the last one; right-click lists them all  ·  {KeyHints.ChildWindows} cycles  ·  {KeyHints.ChildWindowList} lists",
     };
 
     /// <summary>Raised when the chord asks for the list; the view opens its menu on the badge.</summary>
@@ -246,7 +246,19 @@ public partial class ShellViewModel : ViewModelBase
 
     /// <summary>Rebuilds <see cref="ChildWindowItems"/> from the registry.</summary>
     public void RefreshChildWindows() =>
-        ChildWindowItems = _childWindows.Windows.Select(w => new ChildWindowItem(w, () => ChildWindowMenuCloseRequested?.Invoke())).ToList();
+        ChildWindowItems = _childWindows.Windows.Select(w => new ChildWindowItem(w, () =>
+        {
+            _childWindows.Touch(w);
+            ChildWindowMenuCloseRequested?.Invoke();
+        })).ToList();
+
+    /// <summary>The badge's left click: brings back the window used last, or puts it away when it is
+    /// already up in front.</summary>
+    [RelayCommand]
+    private void ToggleLastChildWindow()
+    {
+        if (_childWindows.ToggleLast() is null) _status.Say("No other windows are open.");
+    }
 
     /// <summary>Opens the list of other windows (Ctrl+Shift+W). Says so when there are none.</summary>
     [RelayCommand]

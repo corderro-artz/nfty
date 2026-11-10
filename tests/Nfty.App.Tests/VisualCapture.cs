@@ -105,6 +105,19 @@ public partial class VisualCapture
             Capture(new Views.ShellChromeView { DataContext = shell }, variant,
                 $"shell-{variant.Key.ToString()!.ToLowerInvariant()}.png",
                 width: 1416, height: 864);   // MainWindow's real size — 1180x720 scaled by BaseScale
+
+            // Full screen with two viewers open: the full-screen button's exit glyph and the
+            // other-windows badge inked with its count.
+            var reg = new ChildWindows();
+            reg.Register(new ChildWindowEntry { Title = () => "Viewer — chest #12", Hint = () => "live", Activate = () => { } });
+            reg.Register(new ChildWindowEntry { Title = () => "Gallery — Vapor Pets", Hint = () => "snapshot", Activate = () => { } });
+            var fsNav = new FakeNav();
+            var fs = new ShellViewModel(fsNav, dialogs, new ThemeService(), new StatusService(), childWindows: reg)
+            { IsFullScreen = true };
+            fsNav.To(explorer);                           // the lock flag beside the badge
+            fs.RefreshChildWindows();
+            Capture(new Views.ShellChromeView { DataContext = fs }, variant,
+                $"shell-fullscreen-{variant.Key.ToString()!.ToLowerInvariant()}.png", width: 1416, height: 864);
         }
     }
 

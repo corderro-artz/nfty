@@ -92,7 +92,12 @@ public sealed class DesktopViewerHost : IViewerHost
     private void Register(ViewerWindow window, ViewerViewModel vm)
     {
         if (_children is null) return;
-        var token = _children.Register(new ChildWindowEntry
+        // "Shown" must survive the click on the badge itself: pressing it activates the MAIN window,
+        // deactivating the viewer a moment before the command runs. A viewer that was in front until
+        // just now still counts as in front, so the click puts it away instead of raising it again.
+        var leftFront = DateTime.MinValue;
+        window.Deactivated += (_, _) => leftFront = DateTime.UtcNow;
+        var entry = new ChildWindowEntry
         {
             Title = () => string.IsNullOrWhiteSpace(vm.Title) ? "Viewer" : vm.Title,
             Hint = () => vm.LiveBadge,
@@ -101,7 +106,12 @@ public sealed class DesktopViewerHost : IViewerHost
                 if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
                 window.Activate();
             },
-        });
+            IsShown = () => window.WindowState != WindowState.Minimized
+                && (window.IsActive || window.Topmost || DateTime.UtcNow - leftFront < TimeSpan.FromMilliseconds(600)),
+            Hide = () => window.WindowState = WindowState.Minimized,
+        };
+        var token = _children.Register(entry);
+        window.Activated += (_, _) => _children.Touch(entry);
         window.Closed += (_, _) => token.Dispose();
     }
 

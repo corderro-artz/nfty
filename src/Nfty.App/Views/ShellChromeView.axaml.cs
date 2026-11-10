@@ -51,10 +51,10 @@ public partial class ShellChromeView : UserControl
 
     /// <summary>Opens the other-windows list on its badge (Ctrl+Shift+W).</summary>
     private void OpenChildWindowMenu() =>
-        this.FindControl<Button>("ChildWindowsButton")?.Flyout?.ShowAt(this.FindControl<Button>("ChildWindowsButton")!);
+        this.FindControl<Button>("ChildWindowsButton")?.ContextFlyout?.ShowAt(this.FindControl<Button>("ChildWindowsButton")!);
 
     /// <summary>Folds the list once a window was chosen from it.</summary>
-    private void CloseChildWindowMenu() => this.FindControl<Button>("ChildWindowsButton")?.Flyout?.Hide();
+    private void CloseChildWindowMenu() => this.FindControl<Button>("ChildWindowsButton")?.ContextFlyout?.Hide();
 
     private void ObserveShell(ShellViewModel? shell)
     {

@@ -132,15 +132,16 @@ public class ChildWindowTests
             var badge = view.GetVisualDescendants().OfType<Button>().First(b => b.Name == "ChildWindowsButton");
             shell.ShowChildWindowsCommand.Execute(null);
             Dispatcher.UIThread.RunJobs();
-            Assert.True(badge.Flyout!.IsOpen);
+            var menu = (Flyout)badge.ContextFlyout!;      // the list is the badge's right-click menu
+            Assert.True(menu.IsOpen);
 
-            var flyoutContent = ((Flyout)badge.Flyout).Content as Control;
+            var flyoutContent = menu.Content as Control;
             var row = flyoutContent!.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("winrow"));
             row.Command!.Execute(null);
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal(1, raised);
-            Assert.False(badge.Flyout.IsOpen);
+            Assert.False(menu.IsOpen);
         }
         finally { window.Close(); }
     }
@@ -186,5 +187,61 @@ public class ChildWindowTests
     {
         Assert.Contains(HelpCatalog.Entries, e => e.Cap == KeyHints.ChildWindows);
         Assert.Contains(HelpCatalog.Entries, e => e.Cap == KeyHints.ChildWindowList);
+    }
+
+    private sealed class Win
+    {
+        public bool Shown; public int Raised, Hidden;
+        public ChildWindowEntry Entry(string title) => new()
+        {
+            Title = () => title, Activate = () => { Raised++; Shown = true; },
+            IsShown = () => Shown, Hide = () => { Hidden++; Shown = false; },
+        };
+    }
+
+    [Fact]
+    public void A_left_click_raises_the_last_window_and_a_second_puts_it_away()
+    {
+        var reg = new ChildWindows();
+        var a = new Win(); var b = new Win();
+        var ea = a.Entry("a"); var eb = b.Entry("b");
+        reg.Register(ea); reg.Register(eb);
+        Assert.Same(eb, reg.Last);                   // nothing used yet: the newest
+
+        reg.Touch(ea);                               // the reader focused "a"
+        Assert.Same(ea, reg.ToggleLast());
+        Assert.Equal((1, 0), (a.Raised, a.Hidden));  // not shown: raised
+        reg.ToggleLast();
+        Assert.Equal((1, 1), (a.Raised, a.Hidden));  // shown: put away
+        reg.ToggleLast();
+        Assert.Equal((2, 1), (a.Raised, a.Hidden));  // and back
+        Assert.Equal(0, b.Raised + b.Hidden);        // the other window never touched
+    }
+
+    [Fact]
+    public void Picking_from_the_list_makes_that_window_the_last_one()
+    {
+        var reg = new ChildWindows();
+        var a = new Win(); var b = new Win();
+        reg.Register(a.Entry("a")); reg.Register(b.Entry("b"));
+        var shell = Shell(reg);
+        shell.RefreshChildWindows();
+        shell.ChildWindowItems[0].ActivateCommand.Execute(null);   // "a" from the list
+        Assert.Equal("a", reg.Last!.Title());
+        a.Shown = true;
+        shell.ToggleLastChildWindowCommand.Execute(null);           // left click: put "a" away
+        Assert.Equal(1, a.Hidden);
+    }
+
+    [Fact]
+    public void A_closed_window_is_never_the_last_one()
+    {
+        var reg = new ChildWindows();
+        var a = new Win(); var b = new Win();
+        var ea = a.Entry("a");
+        var token = reg.Register(ea); reg.Register(b.Entry("b"));
+        reg.Touch(ea);
+        token.Dispose();
+        Assert.Equal("b", reg.Last!.Title());
     }
 }
