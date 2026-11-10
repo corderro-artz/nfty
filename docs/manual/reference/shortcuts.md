@@ -115,6 +115,7 @@ The Rise page's 3D tile and the viewer's 3D half, while focused.
 | ++0++ | Fit the 2D art |
 | ++s++ | Next turntable speed |
 | ++i++ | Extend the info rail over the window (++esc++ folds it) |
+| ++h++ | Fold the info rail into a ribbon, or reopen it |
 | Wheel over the picture | Zoom about the pointer |
 | Left- or middle-button drag | Pan the 2D picture |
 | ++ctrl+w++ | Close the viewer window |
