@@ -123,6 +123,36 @@ public class FullScreenTests
         finally { window.Close(); }
     }
 
+    [AvaloniaTheory]
+    [InlineData(WindowState.Normal)]
+    [InlineData(WindowState.Maximized)]
+    public void Dragging_the_titlebar_leaves_full_screen_and_the_icon_follows(WindowState before)
+    {
+        // Moving the full screen window used to leave a screen-sized window wherever it was dropped,
+        // still reported as full screen, so the titlebar button kept its "leave" glyph.
+        var shell = Shell();
+        var window = new MainWindow { DataContext = shell, Width = 1280, Height = 720 };
+        window.Show();
+        try
+        {
+            window.WindowState = before;
+            shell.ToggleFullScreenCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(shell.IsFullScreen);
+
+            var frame = window.GetVisualDescendants().OfType<Nfty.App.Controls.WindowFrame>().First();
+            var bar = frame.TitlebarArea;
+            var empty = bar.TranslatePoint(new Point(bar.Bounds.Width / 2, bar.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(empty, MouseButton.Left, RawInputModifiers.None);
+            window.MouseUp(empty, MouseButton.Left, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(before, window.WindowState);
+            Assert.False(shell.IsFullScreen);
+        }
+        finally { window.Close(); }
+    }
+
     [AvaloniaFact]
     public void Escape_closes_a_dialog_and_leaves_full_screen_alone()
     {

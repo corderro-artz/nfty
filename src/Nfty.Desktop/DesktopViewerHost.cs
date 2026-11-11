@@ -119,7 +119,7 @@ public sealed class DesktopViewerHost : IViewerHost
             IsShown = () => window.WindowState != WindowState.Minimized
                 && (window.IsActive || window.Topmost || DateTime.UtcNow - leftFront < TimeSpan.FromMilliseconds(600)),
             IsMinimized = () => window.WindowState == WindowState.Minimized,
-            Hide = () => window.WindowState = WindowState.Minimized,
+            Hide = () => WindowTransitions.MinimizeInstantly(window),
             Close = window.Close,
         };
         var token = _children.Register(entry);
