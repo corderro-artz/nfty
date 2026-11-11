@@ -13,8 +13,8 @@ using Xunit;
 namespace Nfty.App.Tests;
 
 /// <summary>
-/// The quick-reference sheet is four tabs in a segmented tray: BASICS, EDITOR, RISE &amp; 3D,
-/// VIEWER &amp; RUNTIME.
+/// The quick-reference sheet is six tabs in a segmented tray: BASICS, EXPLORER, EDITOR, RISE &amp; 3D,
+/// VIEWER, COMMUNITY.
 /// </summary>
 /// <remarks>
 /// The pages share one grid cell and the inactive ones are inked out, never collapsed, so the sheet is
@@ -24,8 +24,8 @@ namespace Nfty.App.Tests;
 /// </remarks>
 public class HelpTabsTests
 {
-    private static readonly HelpTab[] All = [HelpTab.Basics, HelpTab.Editor, HelpTab.Rise, HelpTab.Viewer, HelpTab.Community];
-    private static readonly string[] Labels = ["BASICS", "EDITOR", "RISE & 3D", "VIEWER & RUNTIME", "COMMUNITY"];
+    private static readonly HelpTab[] All = [HelpTab.Basics, HelpTab.Explorer, HelpTab.Editor, HelpTab.Rise, HelpTab.Viewer, HelpTab.Community];
+    private static readonly string[] Labels = ["BASICS", "EXPLORER", "EDITOR", "RISE & 3D", "VIEWER", "COMMUNITY"];
 
     internal static (Window window, Views.HelpView view, HelpViewModel vm) Render(bool smallest = false, string query = "")
     {

@@ -62,10 +62,10 @@
                  button that did nothing. The tumble is a transition rather than a one-shot animation,
                  so a second press during the first cannot strand it; see Button.sampleroll and
                  Panel.dieroll in Styles.axaml. -->
-            <!-- THE ACTION ROW: the die and Rise, a centered pair under the picture they both act on.
-                 Both are the same quiet chip (Button.sampleroll), fixed widths - 28 and 58 - so
-                 nothing in the pair moves when a face changes or a button dims. Rise opens the page
-                 on the roll the hero is showing. -->
+            <!-- THE ACTION ROW: the die, Rise and the viewer, centered under the picture they all act
+                 on. All three are the same quiet 28px chip (Button.sampleroll), so nothing in the row
+                 moves when a face changes or a button dims. Rise and the viewer open on the roll the
+                 hero is showing. -->
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
             <Button Classes="sampleroll" Command="{Binding RerollCommand}"
                     HorizontalAlignment="Center"
@@ -83,18 +83,31 @@
                       Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
               </Panel>
             </Button>
-            <Button Classes="sampleroll" Width="58" Command="{Binding RiseCommand}"
-                    ToolTip.Tip="Paint depth on the roll shown above and turn it into a 3D model">
-              <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-                <Path Classes="ico sm" Data="{StaticResource IconRise}" />
-                <TextBlock Text="Rise" FontSize="12" VerticalAlignment="Center" />
-              </StackPanel>
+            <!-- Icons only, three equal 28px chips: roll, Rise, open in a viewer. The 92px picture
+                 above is exactly three chips and two gaps wide, so the row never overhangs it. -->
+            <Button Classes="sampleroll" Command="{Binding RiseCommand}"
+                    ToolTip.Tip="Rise: paint depth on the roll shown above and turn it into a 3D model">
+              <Path Classes="ico sm" Data="{StaticResource IconRise}" />
+            </Button>
+            <Button Classes="sampleroll" Command="{Binding PopOutRollCommand}"
+                    ToolTip.Tip="Open the roll shown above in its own viewer window">
+              <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
             </Button>
             </StackPanel>
           </StackPanel>
 
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Top">
-            <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" />
+            <!-- THE TITLE IS A BUTTON, the CookBook card's Button.titlelink: chrome stripped so the
+                 text sits where the bare TextBlock did, a pencil inked on hover only. It opens the
+                 rename card. -->
+            <Button Classes="titlelink" Command="{Binding EditNameCommand}" HorizontalAlignment="Left"
+                    ToolTip.Tip="Rename this recipe">
+              <Panel>
+                <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                <Path Classes="ico xs pen" Data="{StaticResource IconPencil}" IsHitTestVisible="False"
+                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-14,0" />
+              </Panel>
+            </Button>
 
             <!-- .rfactors: the same variant-count arithmetic the cookbook's combination space shows,
                  scoped to this one recipe. -->
@@ -177,11 +190,13 @@
              sorted view would show a stack that is not the stack, directly beside a drag handle
              that writes the real one. Nothing here is missing; see TableSort's own summary. -->
         <Border Grid.Row="0" Classes="data-h">
-          <Grid ColumnDefinitions="26,34,*,86,72,Auto">
+          <!-- 40 = the thumbnail column, the Ingredient pane's variant table's own, so the two tables
+               read as one family and their rows are one height. -->
+          <Grid ColumnDefinitions="26,34,40,*,86,72,Auto">
             <TextBlock Grid.Column="1" Classes="data-h num" Text="#" Margin="0,0,10,0" />
-            <TextBlock Grid.Column="2" Classes="data-h" Text="LAYER" />
-            <TextBlock Grid.Column="3" Classes="data-h" Text="KIND" />
-            <TextBlock Grid.Column="4" Classes="data-h num" Text="VARIANTS" />
+            <TextBlock Grid.Column="3" Classes="data-h" Text="LAYER" Margin="10,0,0,0" />
+            <TextBlock Grid.Column="4" Classes="data-h" Text="KIND" />
+            <TextBlock Grid.Column="5" Classes="data-h num" Text="VARIANTS" />
             <!-- AN AUTO COLUMN IN TWO GRIDS IS THE TRAP THIS APP HAS BEEN BITTEN BY TWICE — the
                  header sizes on its own content and the rows size on theirs, and the column starts
                  at a different x in each. It is safe here only because both cells are the SAME
@@ -189,7 +204,7 @@
                  collapse together: hidden, the Panel does not measure, so Auto is 0 in both and the
                  column is simply not there. That collapse is why the shape can change at all
                  without a bindable ColumnDefinitions, which Avalonia does not offer. -->
-            <Panel Grid.Column="5" Classes="chancecell" IsVisible="{Binding ShowChanceColumn}">
+            <Panel Grid.Column="6" Classes="chancecell" IsVisible="{Binding ShowChanceColumn}">
               <TextBlock Classes="data-h num" Text="ABSENT" HorizontalAlignment="Right" />
             </Panel>
           </Grid>
@@ -209,17 +224,20 @@
                         HorizontalContentAlignment="Stretch"
                         Command="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).OpenIngredientCommand}"
                         CommandParameter="{Binding Id}">
-                  <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
-                    <Grid ColumnDefinitions="26,34,*,86,72,Auto">
+                  <Border Classes="data-row thumbrow" Classes.sel="{Binding IsSelected}">
+                    <Grid ColumnDefinitions="26,34,40,*,86,72,Auto">
                       <Border Grid.Column="0" Classes="grip"
                               Classes.on="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).CanReorder}"
                               ToolTip.Tip="Drag to reorder — or Alt+Up / Alt+Down">
                         <Path Classes="ico" Data="{StaticResource IconGrip}" />
                       </Border>
                       <TextBlock Grid.Column="1" Classes="data-row num" Text="{Binding Index}" Margin="0,0,10,0" />
-                      <TextBlock Grid.Column="2" Classes="data-row" Text="{Binding Layer}" />
-                      <TextBlock Grid.Column="3" Classes="data-row kind-txt" Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}" Classes.kcust="{Binding IsCustom}" Text="{Binding Kind}" />
-                      <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding VariantCount}" />
+                      <Border Grid.Column="2" Classes="rowthumb">
+                        <Image Source="{Binding Thumbnail}" />
+                      </Border>
+                      <TextBlock Grid.Column="3" Classes="data-row" Text="{Binding Layer}" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="4" Classes="data-row kind-txt" Classes.kdyn="{Binding IsDynamic}" Classes.kstat="{Binding IsStatic}" Classes.kcust="{Binding IsCustom}" Text="{Binding Kind}" />
+                      <TextBlock Grid.Column="5" Classes="data-row num" Text="{Binding VariantCount}" />
 
                       <!-- Editable while the book is unlocked, plain text while it is not — the
                            same gate reordering and rule authoring use, because a chance is
@@ -229,7 +247,7 @@
                            change: a save rewrites every PNG in the book, and a stepper spun from 0
                            to 85 would otherwise be eighty-five of them. RecipeDetailView.axaml.cs
                            holds that wiring. -->
-                      <Panel Grid.Column="5" Classes="chancecell"
+                      <Panel Grid.Column="6" Classes="chancecell"
                              IsVisible="{Binding $parent[ItemsControl].((vm:RecipeDetailViewModel)DataContext).ShowChanceColumn}">
                         <TextBlock Classes="data-row num" Text="{Binding AbsentText}"
                                    HorizontalAlignment="Right" VerticalAlignment="Center"

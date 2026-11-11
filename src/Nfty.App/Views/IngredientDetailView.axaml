@@ -42,7 +42,17 @@
             <Image Source="{Binding Hero}" Stretch="UniformToFill" />
           </Border>
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+            <!-- THE TITLE IS A BUTTON, the CookBook card's Button.titlelink: chrome stripped so the
+                 text sits where the bare TextBlock did, a pencil inked on hover only. It opens the
+                 rename card. -->
+            <Button Classes="titlelink" Command="{Binding EditNameCommand}" HorizontalAlignment="Left"
+                    ToolTip.Tip="Rename this layer">
+              <Panel>
+                <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                <Path Classes="ico xs pen" Data="{StaticResource IconPencil}" IsHitTestVisible="False"
+                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-14,0" />
+              </Panel>
+            </Button>
             <!-- .hsub is ONE line - "custom · no colorize · composited as-is" - with only the kind
                  word carrying the kind color. It used to be two stacked neutral lines, which lost
                  the color-coding the tree and the layer table both apply. -->
@@ -173,13 +183,14 @@
              widths are the header words (the binding constraint at every realistic value) plus the
              8px gutter each cell carries: 48+8, 70+8, 56+8. -->
         <Border Grid.Row="0" Classes="data-h">
-          <Grid ColumnDefinitions="40,*,71,93,79">
-            <TextBlock Grid.Column="0" Classes="data-h" Text="" />
+          <!-- 26 = the drag grip's column, the Recipe pane's own; 40 = the thumbnail. No # column:
+               variant order rolls nothing, so a number would claim a meaning it does not have. -->
+          <Grid ColumnDefinitions="26,40,*,71,93,79">
             <!-- All four data columns sort. Two of them did before, neither could be reversed, and
                  IN RECIPE / OVERALL — the two a reader actually wants ordered — did not sort at
                  all. The arrows are RESERVED in every header, so clicking one cannot shove the
                  label of the header being clicked. -->
-            <Button Grid.Column="1" Classes="sorth" HorizontalContentAlignment="Left"
+            <Button Grid.Column="2" Classes="sorth" HorizontalContentAlignment="Left"
                     Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Variant}"
                     Command="{Binding Sort.ByCommand}" CommandParameter="Variant">
               <StackPanel Orientation="Horizontal" Spacing="4">
@@ -192,7 +203,7 @@
                 </Panel>
               </StackPanel>
             </Button>
-            <Button Grid.Column="2" Classes="sorth" HorizontalContentAlignment="Right"
+            <Button Grid.Column="3" Classes="sorth" HorizontalContentAlignment="Right"
                     Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Weight}"
                     Command="{Binding Sort.ByCommand}" CommandParameter="Weight">
               <StackPanel Orientation="Horizontal" Spacing="4">
@@ -205,7 +216,7 @@
                 <TextBlock Classes="data-h num" Text="WEIGHT" />
               </StackPanel>
             </Button>
-            <Button Grid.Column="3" Classes="sorth" HorizontalContentAlignment="Right"
+            <Button Grid.Column="4" Classes="sorth" HorizontalContentAlignment="Right"
                     Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=InRecipe}"
                     Command="{Binding Sort.ByCommand}" CommandParameter="InRecipe">
               <StackPanel Orientation="Horizontal" Spacing="4">
@@ -218,7 +229,7 @@
                 <TextBlock Classes="data-h num" Text="IN RECIPE" />
               </StackPanel>
             </Button>
-            <Button Grid.Column="4" Classes="sorth" HorizontalContentAlignment="Right"
+            <Button Grid.Column="5" Classes="sorth" HorizontalContentAlignment="Right"
                     Classes.on="{Binding Sort.Column, Converter={x:Static conv:SortColumnConverter.Instance}, ConverterParameter=Overall}"
                     Command="{Binding Sort.ByCommand}" CommandParameter="Overall">
               <StackPanel Orientation="Horizontal" Spacing="4">
@@ -239,8 +250,7 @@
              browser's rarity rail keeps. -->
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
-        <ItemsControl Name="VariantRows" ItemsSource="{Binding Variants}" VerticalAlignment="Top"
-                      ToolTip.Tip="Drag variants to reorder. Alt+Up / Alt+Down moves the focused variant. Unlock editing to save order.">
+        <ItemsControl Name="VariantRows" ItemsSource="{Binding Variants}" VerticalAlignment="Top">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
               <!-- CLICKABLE, and the same shape the Recipe pane's layer table uses: a ghost Button
@@ -249,15 +259,24 @@
                    and SelectVariantCommand was reachable from nothing. -->
               <Button Classes="ghost" Padding="0" HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Stretch"
-                      Command="{Binding $parent[ItemsControl].((vm:IngredientDetailViewModel)DataContext).ToggleVariantCommand}"
+                      Command="{Binding $parent[ItemsControl].((vm:IngredientDetailViewModel)DataContext).SelectVariantCommand}"
                       CommandParameter="{Binding Id}">
-                <Border Classes="data-row" Classes.sel="{Binding IsSelected}">
-                  <Grid ColumnDefinitions="40,*,71,93,79">
-                    <Image Grid.Column="0" Source="{Binding Thumbnail}" Width="32" Height="32" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="2" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />
-                    <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding WithinText}" Margin="8,0,0,0" />
-                    <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding OverallText}" Margin="8,0,0,0" />
+                <Border Classes="data-row thumbrow" Classes.sel="{Binding IsSelected}">
+                  <Grid ColumnDefinitions="26,40,*,71,93,79">
+                    <!-- The same grip the Recipe pane's layer rows carry: a drag starts HERE and
+                         nowhere else, so a click on the rest of the row only selects. -->
+                    <Border Grid.Column="0" Classes="grip"
+                            Classes.on="{Binding $parent[ItemsControl].((vm:IngredientDetailViewModel)DataContext).CanReorder}"
+                            ToolTip.Tip="Drag to reorder, or Alt+Up / Alt+Down">
+                      <Path Classes="ico" Data="{StaticResource IconGrip}" />
+                    </Border>
+                    <Border Grid.Column="1" Classes="rowthumb">
+                      <Image Source="{Binding Thumbnail}" />
+                    </Border>
+                    <TextBlock Grid.Column="2" Classes="data-row" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="3" Classes="data-row num" Text="{Binding Weight}" Margin="8,0,0,0" />
+                    <TextBlock Grid.Column="4" Classes="data-row num" Text="{Binding WithinText}" Margin="8,0,0,0" />
+                    <TextBlock Grid.Column="5" Classes="data-row num" Text="{Binding OverallText}" Margin="8,0,0,0" />
                   </Grid>
                 </Border>
               </Button>
@@ -270,9 +289,6 @@
       <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
         <Button Content="Delete variant" Command="{Binding DeleteVariantCommand}" Classes="tbtn"
                 ToolTip.Tip="{Binding DeleteVariantTip}" />
-        <Button Classes="tbtn" Command="{Binding ClearSelectionCommand}" ToolTip.Tip="Clear variant selection">
-          <Path Classes="ico sm" Data="{StaticResource IconClose}" />
-        </Button>
         <!-- The CLI's preview: writes this variant as generation would render it. The GUI could not
              get a rendered PNG out at all short of cooking a whole Set. -->
         <Button Command="{Binding ExportPreviewCommand}" Classes="tbtn"

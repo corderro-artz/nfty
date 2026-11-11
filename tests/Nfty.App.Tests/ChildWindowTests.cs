@@ -191,31 +191,63 @@ public class ChildWindowTests
 
     private sealed class Win
     {
-        public bool Shown; public int Raised, Hidden;
-        public ChildWindowEntry Entry(string title) => new()
+        public bool Shown, Minimized; public int Raised, Hidden;
+        public System.Action? OnRaise;
+        public ChildWindowEntry Entry(string title, System.Action? close = null) => new()
         {
-            Title = () => title, Activate = () => { Raised++; Shown = true; },
-            IsShown = () => Shown, Hide = () => { Hidden++; Shown = false; },
+            Title = () => title, Activate = () => { Raised++; Shown = true; Minimized = false; OnRaise?.Invoke(); },
+            IsShown = () => Shown, Hide = () => { Hidden++; Shown = false; Minimized = true; },
+            IsMinimized = () => Minimized, Close = close,
         };
     }
 
     [Fact]
-    public void A_left_click_raises_the_last_window_and_a_second_puts_it_away()
+    public void A_left_click_brings_every_window_back_and_a_second_puts_them_all_away()
     {
         var reg = new ChildWindows();
         var a = new Win(); var b = new Win();
         var ea = a.Entry("a"); var eb = b.Entry("b");
         reg.Register(ea); reg.Register(eb);
-        Assert.Same(eb, reg.Last);                   // nothing used yet: the newest
+        var order = new System.Collections.Generic.List<string>();
+        a.OnRaise = () => order.Add("a"); b.OnRaise = () => order.Add("b");
 
-        reg.Touch(ea);                               // the reader focused "a"
-        Assert.Same(ea, reg.ToggleLast());
-        Assert.Equal((1, 0), (a.Raised, a.Hidden));  // not shown: raised
-        reg.ToggleLast();
-        Assert.Equal((1, 1), (a.Raised, a.Hidden));  // shown: put away
-        reg.ToggleLast();
-        Assert.Equal((2, 1), (a.Raised, a.Hidden));  // and back
-        Assert.Equal(0, b.Raised + b.Hidden);        // the other window never touched
+        reg.Touch(ea);                               // the reader used "a" last
+        Assert.True(reg.ToggleAll());                // none shown: all come back
+        Assert.Equal(["b", "a"], order);             // the one used last lands on top
+        Assert.False(reg.ToggleAll());               // shown: all put away
+        Assert.Equal((1, 1, 1, 1), (a.Raised, a.Hidden, b.Raised, b.Hidden));
+        Assert.True(reg.ToggleAll());                // and back again
+        Assert.Equal((2, 2), (a.Raised, b.Raised));
+        Assert.Null(new ChildWindows().ToggleAll());
+    }
+
+    [Fact]
+    public void One_window_up_front_is_enough_to_put_them_all_away()
+    {
+        var reg = new ChildWindows();
+        var a = new Win(); var b = new Win();
+        reg.Register(a.Entry("a")); reg.Register(b.Entry("b"));
+        a.Shown = true;                              // only "a" is in front
+        Assert.False(reg.ToggleAll());
+        Assert.Equal((1, 1), (a.Hidden, b.Hidden));
+        Assert.Equal(0, a.Raised + b.Raised);
+    }
+
+    [Fact]
+    public void A_row_puts_away_or_closes_its_own_window_only()
+    {
+        var reg = new ChildWindows();
+        var a = new Win(); var b = new Win();
+        var closed = "";
+        reg.Register(a.Entry("a", () => closed += "a"));
+        reg.Register(b.Entry("b", () => closed += "b"));
+        var shell = Shell(reg);
+
+        shell.ChildWindowItems[0].HideCommand.Execute(null);
+        Assert.Equal((1, 0), (a.Hidden, b.Hidden));
+        Assert.True(shell.ChildWindowItems[0].IsMinimized);     // the list redraws the state
+        shell.ChildWindowItems[1].CloseCommand.Execute(null);
+        Assert.Equal("b", closed);
     }
 
     [Fact]
@@ -228,9 +260,8 @@ public class ChildWindowTests
         shell.RefreshChildWindows();
         shell.ChildWindowItems[0].ActivateCommand.Execute(null);   // "a" from the list
         Assert.Equal("a", reg.Last!.Title());
-        a.Shown = true;
-        shell.ToggleLastChildWindowCommand.Execute(null);           // left click: put "a" away
-        Assert.Equal(1, a.Hidden);
+        shell.ToggleChildWindowsCommand.Execute(null);             // left click: "a" is up, so all go
+        Assert.Equal((1, 1), (a.Hidden, b.Hidden));
     }
 
     [Fact]

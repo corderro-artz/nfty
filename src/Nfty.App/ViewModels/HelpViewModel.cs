@@ -10,6 +10,9 @@ public enum HelpTab
     /// <summary>The six words, layer kinds, rules, color and the everyday keys.</summary>
     Basics,
 
+    /// <summary>The CookBook Explorer: its tree, its panes and their keys.</summary>
+    Explorer,
+
     /// <summary>The Ingredient editor's tools and keys, and the Set inspector's.</summary>
     Editor,
 
@@ -140,6 +143,7 @@ public partial class HelpViewModel : ViewModelBase
     /// <summary>Which page is showing; starts on the basics.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBasicsTab))]
+    [NotifyPropertyChangedFor(nameof(IsExplorerTab))]
     [NotifyPropertyChangedFor(nameof(IsEditorTab))]
     [NotifyPropertyChangedFor(nameof(IsRiseTab))]
     [NotifyPropertyChangedFor(nameof(IsViewerTab))]
@@ -149,6 +153,8 @@ public partial class HelpViewModel : ViewModelBase
     /// <summary>Whether the basics tab is the chosen one. While a search is under way no tab is: the
     /// results are not a page.</summary>
     public bool IsBasicsTab => !IsSearching && Tab == HelpTab.Basics;
+    /// <summary>Whether the Explorer page is showing.</summary>
+    public bool IsExplorerTab => !IsSearching && Tab == HelpTab.Explorer;
     /// <summary>Whether the editor page is showing.</summary>
     public bool IsEditorTab => !IsSearching && Tab == HelpTab.Editor;
     /// <summary>Whether the Rise page is showing.</summary>
@@ -170,6 +176,7 @@ public partial class HelpViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsSearching))]
     [NotifyPropertyChangedFor(nameof(ShowPages))]
     [NotifyPropertyChangedFor(nameof(IsBasicsTab))]
+    [NotifyPropertyChangedFor(nameof(IsExplorerTab))]
     [NotifyPropertyChangedFor(nameof(IsEditorTab))]
     [NotifyPropertyChangedFor(nameof(IsRiseTab))]
     [NotifyPropertyChangedFor(nameof(IsViewerTab))]

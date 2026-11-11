@@ -4,7 +4,7 @@ Every key and mouse gesture in the app. On a Mac, ++ctrl++ below is ++cmd++, ++a
 and the viewer's ++ctrl++-click is a middle-click instead.
 
 The app carries this list too: press ++ctrl+slash++, or click **?** at the right of the status bar, for
-the **Quick Reference**. It has five tabs (**Basics**, **Editor**, **Rise & 3D**, **Viewer & runtime**, **Community**)
+the **Quick Reference**. It has six tabs (**Basics**, **Explorer**, **Editor**, **Rise & 3D**, **Viewer**, **Community**)
 and a search box (++slash++ jumps to it; ++enter++ opens the first match; ++esc++ clears it, then
 closes the sheet).
 
@@ -28,8 +28,9 @@ closes the sheet).
 | ++ctrl+t++ | Switch between light and dark |
 | ++ctrl+plus++ / ++ctrl+minus++ | Zoom the page in or out (50–300%); zoomed-in pages scroll to keep every control reachable |
 | ++ctrl+0++ | Page zoom back to 100%; titlebar, status bar and dialogs keep their size |
-| ++ctrl+grave-accent++ | Bring the next other window (viewer) forward |
-| ++ctrl+shift+w++ | List the other windows and pick one |
+| ++ctrl+grave-accent++ | Show every other window (viewer) as you left it, or put them all away. Works from inside a viewer too |
+| ++ctrl+shift+grave-accent++ | Bring the next other window forward |
+| ++ctrl+shift+w++ | List the other windows, to show, minimize or close one |
 | ++f11++ | Enter or leave full screen (also the first button in the titlebar). Esc closes dialogs and does not leave full screen |
 | ++esc++ | Close the open dialog |
 
@@ -46,9 +47,26 @@ closes the sheet).
 | Keys | Does |
 |---|---|
 | ++ctrl+k++ | Focus the search box |
-| ++alt+up++ / ++alt+down++ | Move the selected layer or Recipe among its siblings (editing unlocked) |
+| ++alt+up++ / ++alt+down++ | Move the selected layer or Recipe among its siblings (editing unlocked); in a table, the focused layer or variant |
 | Drag a tree row | The same move with the mouse |
+| Drag a table row by its grip | Reorder layers or variants (editing unlocked); the rest of the row only selects |
+| ++f2++ | Rename the selected Recipe or Ingredient; on the CookBook, open book settings |
+| Click a title | The same: the CookBook, Recipe and Ingredient names on their panels are buttons |
+| ++delete++ | Delete the selected Recipe or Ingredient, after asking |
+| ++ctrl+n++ | Add a child of the selection (Recipe, Ingredient or variant) |
+| ++ctrl+i++ | Import a loose file |
+| ++ctrl+l++ | Lock or unlock editing |
+| ++ctrl+b++ | Book settings |
+| ++ctrl+enter++ | Cook a Set |
+| ++ctrl+shift+o++ | Open the selection in a viewer window |
+| ++ctrl+r++ | Recipe panel: roll another sample |
+| ++ctrl+shift+r++ | Recipe panel: Rise the roll shown. Ingredient panel: Rise the selected variant |
+| ++ctrl+e++ | Ingredient panel: open the Ingredient Editor |
+| Double-click a variant row | Open the Ingredient Editor on that variant |
 | ++ctrl++-click or middle-click a row | Open it in the viewer |
+
+None of these fire while a text field (the search box, a chance field) has focus, so ++delete++
+there deletes characters.
 
 ## Ingredient Editor
 

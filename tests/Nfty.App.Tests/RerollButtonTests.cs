@@ -89,10 +89,10 @@ public class RerollButtonTests
         var (window, view, vm) = Show();
         try
         {
-            // The pair under the portrait is the die and Rise: it is the PAIR that is centered.
+            // The row under the portrait is the die, Rise and the viewer: it is the ROW that is centered.
             var chips = view.GetVisualDescendants().OfType<Button>()
                 .Where(x => x.Classes.Contains("sampleroll")).ToList();
-            Assert.Equal(2, chips.Count);
+            Assert.Equal(3, chips.Count);
             double left = chips.Min(c => c.TranslatePoint(new Point(0, 0), view)!.Value.X);
             double right = chips.Max(c => c.TranslatePoint(new Point(c.Bounds.Width, 0), view)!.Value.X);
             // The portrait: the 92px tile the sample is drawn into, above the pair.

@@ -34,6 +34,17 @@ public partial class IngredientDetailView : UserControl
         _rows.AddHandler(PointerReleasedEvent, OnRelease, RoutingStrategies.Tunnel);
         _rows.PointerCaptureLost += (_, _) => { _pressed = null; _dragging = false; };
         _rows.AddHandler(KeyDownEvent, OnKey, RoutingStrategies.Tunnel);
+        // A variant's NAME is edited in the editor, so double-clicking a row opens it on that variant
+        // (the first click already selected it, and the editor opens on the selection).
+        _rows.DoubleTapped += (_, e) =>
+        {
+            if (DataContext is IngredientDetailViewModel vm && RowUnder(e.Source as Visual) is { } row)
+            {
+                vm.SelectVariantCommand.Execute(row.Id);
+                vm.EditIngredientCommand.Execute(null);
+                e.Handled = true;
+            }
+        };
         var delete = new MenuItem { Header = "Delete variant" };
         var edit = new MenuItem { Header = "Edit variant" };
         delete.Click += (_, _) => (DataContext as IngredientDetailViewModel)?.DeleteVariantCommand.Execute(null);
@@ -54,12 +65,17 @@ public partial class IngredientDetailView : UserControl
 
     private void OnPress(object? sender, PointerPressedEventArgs e)
     {
-        if (DataContext is not IngredientDetailViewModel { CanReorder: true }
+        if (DataContext is not IngredientDetailViewModel { CanReorder: true } vm
             || !e.GetCurrentPoint(_rows).Properties.IsLeftButtonPressed) return;
+        // A drag starts on the GRIP only, as on the Recipe pane's layer rows. A press anywhere else in
+        // the row is left to the row's Button, which selects the variant on click.
+        if ((e.Source as Visual)?.GetSelfAndVisualAncestors().OfType<Border>()
+                .FirstOrDefault(b => b.Classes.Contains("grip")) is null) return;
         var row = RowUnder(e.Source as Visual);
         if (row is null) return;
         (e.Source as Visual)?.GetSelfAndVisualAncestors().OfType<Button>().FirstOrDefault()?.Focus();
         e.Handled = true;
+        vm.SelectVariantCommand.Execute(row.Id);
         e.Pointer.Capture(_rows);
         _pressed = row;
         _origin = e.GetPosition(_rows);
@@ -83,8 +99,7 @@ public partial class IngredientDetailView : UserControl
         e.Handled = true;
         if (!moved)
         {
-            e.Pointer.Capture(null);
-            vm.ToggleVariantCommand.Execute(row.Id);
+            e.Pointer.Capture(null);       // a press on the grip that never moved: selected, nothing more
             return;
         }
         var buttons = _rows.GetVisualDescendants().OfType<Button>()

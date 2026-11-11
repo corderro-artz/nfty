@@ -594,24 +594,6 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(DeleteVariantTip));
     }
 
-    [RelayCommand]
-    private void ToggleVariant(string id)
-    {
-        if (Selected?.Id == id) ClearSelection();
-        else SelectVariant(id);
-    }
-
-    [RelayCommand]
-    private void ClearSelection()
-    {
-        if (Selected is not null) Selected.IsSelected = false;
-        Selected = null;
-        var old = Hero;
-        Hero = null;
-        old?.Dispose();
-        OnPropertyChanged(nameof(DeleteVariantTip));
-    }
-
     /// <summary>Whether the current layer's variant order can be saved.</summary>
     public bool CanReorder => _isEditing() && ReorderVariants is not null;
 
@@ -743,6 +725,14 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     // editor's Save, see IngredientEditorViewModel.IsReadOnly.
 
     private bool _disposed;
+    /// <summary>Opens the rename card for this item. Set by the Explorer; null leaves
+    /// <see cref="EditNameCommand"/> doing nothing.</summary>
+    public Action? EditNameAction { get; set; }
+
+    /// <summary>The title's click: rename this item, as the CookBook card's title edits the book.</summary>
+    [RelayCommand]
+    private void EditName() => EditNameAction?.Invoke();
+
     /// <summary>Frees every rendered swatch and thumbnail without materializing lazy swatches.</summary>
     public void Dispose()
     {
