@@ -338,10 +338,31 @@ public partial class ExplorerView : UserControl
         if (DataContext is not ExplorerViewModel vm || vm.ParentOf(dragged) is not { } parent)
             return new List<(ExplorerNode, double, double)>();
 
-        var rows = new List<(ExplorerNode Node, double Top, double Height)>();
-        foreach (var sibling in parent.Children)
+        // The row CONTROLS are found once per drag, not once per pointer move. Finding one walked the
+        // whole tree's visual descendants, once per sibling, per move: quadratic, measured at 2.1 ms
+        // and 220 KB a move for a layer and 4.1 ms / 438 KB for a recipe in a 6 x 12 book. A row's
+        // control is stable for the drag (the drop line is an overlay and nothing reorders until
+        // release), so only their POSITIONS are read per move - which also follows a scroll or an
+        // expand that happens mid-drag. A row whose container was recycled leaves the visual tree,
+        // which is what sends us back to the walk.
+        if (_dragRows is null || !ReferenceEquals(_dragRowsParent, parent)
+            || _dragRows.Any(r => !r.Row.IsAttachedToVisualTree()))
         {
-            if (RowOf(sibling) is not { } row) continue;                     // scrolled out, or collapsed away
+            RowWalks++;
+            _dragRowsParent = parent;
+            _dragRows = new List<(ExplorerNode Node, Border Row)>();
+            // One pass over the tree for every sibling, not one pass each.
+            var items = new Dictionary<ExplorerNode, TreeViewItem>(ReferenceEqualityComparer.Instance);
+            foreach (var i in _tree.GetVisualDescendants().OfType<TreeViewItem>())
+                if (i.DataContext is ExplorerNode n) items.TryAdd(n, i);
+            foreach (var sibling in parent.Children)
+                if (items.TryGetValue(sibling, out var item) && RowIn(item, sibling) is { } found)  // else scrolled out, or collapsed away
+                    _dragRows.Add((sibling, found));
+        }
+
+        var rows = new List<(ExplorerNode Node, double Top, double Height)>();
+        foreach (var (sibling, row) in _dragRows)
+        {
             var top = row.TranslatePoint(default, _tree);
             if (top is null) continue;
             rows.Add((sibling, top.Value.Y, row.Bounds.Height));
@@ -350,13 +371,17 @@ public partial class ExplorerView : UserControl
         return rows;
     }
 
+    private List<(ExplorerNode Node, Border Row)>? _dragRows;
+    private ExplorerNode? _dragRowsParent;
+
+    /// <summary>How many times the tree has been walked for sibling rows. Once per drag, in the
+    /// ordinary case - what a test asserts instead of a timing.</summary>
+    internal int RowWalks { get; private set; }
+
     /// <summary>The drawn row for one node: the node box its own container carries.</summary>
-    private Border? RowOf(ExplorerNode node) => _tree.GetVisualDescendants()
-        .OfType<TreeViewItem>()
-        .Where(i => ReferenceEquals(i.DataContext, node))
-        .SelectMany(i => i.GetVisualDescendants().OfType<Border>()
-            .Where(b => b.Classes.Contains("node") && ReferenceEquals(b.DataContext, node)))
-        .FirstOrDefault();
+    private static Border? RowIn(TreeViewItem container, ExplorerNode node) => container.GetVisualDescendants()
+        .OfType<Border>()
+        .FirstOrDefault(b => b.Classes.Contains("node") && ReferenceEquals(b.DataContext, node));
 
     /// <summary>Which slot a drop at <paramref name="y"/> falls into: the first sibling whose
     /// midpoint the pointer is above, or the slot past the last one. Midpoints rather than edges, so
@@ -395,6 +420,8 @@ public partial class ExplorerView : UserControl
     {
         _dragging = false;
         _dropSlot = -1;
+        _dragRows = null;
+        _dragRowsParent = null;
         _dropLine.Classes.Set("on", false);
     }
 }

@@ -46,6 +46,7 @@ public sealed class CommunitySeenTests : IDisposable
         var e = E("a", 1);
         seen.See(e);
         Assert.Equal(SeenMark.None, seen.MarkOf(e));
+        seen.Flush();   // marks are written after a quiet second, or when the page closes
         Assert.Equal(SeenMark.None, Seen().MarkOf(e));
     }
 

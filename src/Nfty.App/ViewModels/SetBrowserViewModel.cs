@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -348,7 +349,6 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsShowingHover))]
     [NotifyPropertyChangedFor(nameof(ShownDna))]
     [NotifyPropertyChangedFor(nameof(ShownRecipe))]
-    [NotifyPropertyChangedFor(nameof(ShownRarity))]
     [NotifyPropertyChangedFor(nameof(ShownNumber))]
     [NotifyPropertyChangedFor(nameof(ShownDnaTop))]
     [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
@@ -374,7 +374,6 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsShowingHover))]
     [NotifyPropertyChangedFor(nameof(ShownDna))]
     [NotifyPropertyChangedFor(nameof(ShownRecipe))]
-    [NotifyPropertyChangedFor(nameof(ShownRarity))]
     [NotifyPropertyChangedFor(nameof(ShownNumber))]
     [NotifyPropertyChangedFor(nameof(ShownDnaTop))]
     [NotifyPropertyChangedFor(nameof(ShownDnaBottom))]
@@ -473,7 +472,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         _shareCard = shareCard;
         _rise = rise; _nav = nav; _bridge = bridge;
         _bookCandidates = bookCandidates;
-        RaritySort = new TableSort("Trait", () => OnPropertyChanged(nameof(ShownRarity)));
+        RaritySort = new TableSort("Trait", RefreshRarity);
         _set = set;
         _picker = picker ?? new FilePickerService();
         _dialogs = dialogs ?? new DialogService();
@@ -488,6 +487,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         _threads = threads;
         Items = set.Items.Select(i => new SetItemRow(i.Number, i.ImagePath, i, gate)).ToList();
         SelectedItem = Items.Count > 0 ? Items[0] : null;
+        RefreshRarity();
         BeginSourceBookSearch();
     }
 
@@ -569,6 +569,7 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     {
         if (oldValue is not null) oldValue.IsSelected = false;
         if (newValue is not null) newValue.IsSelected = true;
+        RefreshRarity();
         RiseCommand.NotifyCanExecuteChanged();
     }
 
@@ -578,15 +579,41 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
     public string ShownDna => Shown?.Item.Dna ?? "";
     /// <summary>The recipe it came from.</summary>
     public string ShownRecipe => Shown?.Item.Recipe ?? "";
-    /// <summary>Its traits with collection-wide rarity.</summary>
-    public IReadOnlyList<RarityAttribute> ShownRarity => RaritySort.Order(
-        Shown?.Item.Rarity ?? Array.Empty<RarityAttribute>(),
-        static (r, col) => col switch
+    /// <summary>Its traits with collection-wide rarity, in the table's sort order.</summary>
+    /// <remarks>
+    /// <b>One collection, one set of row objects, for the life of the browser.</b> The rail follows the
+    /// pointer, so this table is rebuilt for every tile crossed; handing the ItemsControl a fresh list of
+    /// fresh records each time made it discard and recreate every container (measured 40 hovers: 421 ms,
+    /// 52 MB). The rows are updated in place instead, so a container survives and only its bound
+    /// values change. Reading it repeatedly returns the same instance.
+    /// </remarks>
+    public ObservableCollection<RarityRowViewModel> ShownRarity { get; } = new();
+
+    private IReadOnlyList<RarityAttribute>? _rarityShownFor;
+    private string? _rarityColumn;
+    private bool _rarityDescending;
+
+    private void RefreshRarity()
+    {
+        var source = Shown?.Item.Rarity ?? Array.Empty<RarityAttribute>();
+        // Same list, same sort: nothing to do (selecting the tile already hovered, say).
+        if (ReferenceEquals(source, _rarityShownFor) && _rarityColumn == RaritySort.Column
+            && _rarityDescending == RaritySort.Descending) return;
+        _rarityShownFor = source; _rarityColumn = RaritySort.Column; _rarityDescending = RaritySort.Descending;
+
+        var ordered = RaritySort.Order(source, static (r, col) => col switch
         {
             "Value" => r.Value,
             "Pct" => (object)r.RarityPct,
             _ => r.Trait_type,
         });
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            if (i < ShownRarity.Count) ShownRarity[i].Set(ordered[i]);
+            else ShownRarity.Add(new RarityRowViewModel(ordered[i]));
+        }
+        while (ShownRarity.Count > ordered.Count) ShownRarity.RemoveAt(ShownRarity.Count - 1);
+    }
 
     /// <summary>
     /// The rarity table's sort. Its natural order is the metadata's own trait order, which is
@@ -857,7 +884,11 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         _nav!.To(_rise!(source));
     }
 
-    partial void OnHoveredItemChanged(SetItemRow? value) => RiseCommand.NotifyCanExecuteChanged();
+    partial void OnHoveredItemChanged(SetItemRow? value)
+    {
+        RefreshRarity();
+        RiseCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>Opens the export dialog for this Set.</summary>
     /// <remarks>
@@ -912,5 +943,33 @@ public partial class SetBrowserViewModel : ViewModelBase, IDisposable
         _disposed = true;
         foreach (var r in Items) r.Dispose();
         _set.Dispose();
+    }
+}
+
+/// <summary>
+/// One row of the Set browser's rarity table, with values that change in place so the row's
+/// container outlives the asset the rail is describing. Display-only; the record written into
+/// <c>nfty/NNNN.json</c> stays <see cref="RarityAttribute"/>.
+/// </summary>
+public sealed partial class RarityRowViewModel : ObservableObject
+{
+    /// <summary>The layer's published trait name.</summary>
+    [ObservableProperty] private string _trait_type = "";
+    /// <summary>The variant's name.</summary>
+    [ObservableProperty] private string _value = "";
+    /// <summary>Its share of the collection, in percent.</summary>
+    [ObservableProperty] private double _rarityPct;
+
+    /// <summary>Creates a row showing <paramref name="attribute"/>.</summary>
+    /// <param name="attribute">The rarity row to show.</param>
+    public RarityRowViewModel(RarityAttribute attribute) => Set(attribute);
+
+    /// <summary>Shows another attribute in this row; unchanged values raise nothing.</summary>
+    /// <param name="attribute">The rarity row to show.</param>
+    public void Set(RarityAttribute attribute)
+    {
+        Trait_type = attribute.Trait_type;
+        Value = attribute.Value;
+        RarityPct = attribute.RarityPct;
     }
 }

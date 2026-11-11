@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Reactive;
+using Avalonia.VisualTree;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -71,6 +72,15 @@ public sealed partial class ModelPreviewView : UserControl
     private bool _hostInteracting;
     private DispatcherTimer? _turntable;
     private long _lastTurn;
+    private IDisposable? _timerResizeHold;
+    private bool _resizeHeld;
+    private IDisposable? _windowStateWatch;
+    private IDisposable? _visibleWatch;
+
+    /// <summary>How long the size must stay put before the frame is redrawn at it. While a window edge
+    /// is dragged the last frame stays on screen (the Image is <c>Stretch="Uniform"</c>, so it only
+    /// scales); the exact frame follows once the size settles.</summary>
+    internal static readonly TimeSpan ResizeSettle = TimeSpan.FromMilliseconds(100);
 
     /// <summary>At most one repaint per this long while a gesture is running (about 60 per second).
     /// Measured small and typical frames fit this budget; heavier frames keep coalescing and paint
@@ -156,7 +166,31 @@ public sealed partial class ModelPreviewView : UserControl
         // still (0,0,0,0), and nothing repaints once layout gives the control its real size unless
         // Bounds itself is watched too. A live 3D viewport must also repaint on every ordinary resize,
         // which this buys for free.
-        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => MarkDirty()));
+        this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ =>
+        {
+            UpdateTurntable(); // a zero-size preview owns no timer
+            OnBoundsChanged();
+        }));
+    }
+
+    // A size change with a frame already standing is HELD: the old frame keeps showing, scaled by the
+    // Stretch="Uniform" Image, and one exact frame is drawn once the size has been still for
+    // ResizeSettle. The first frame (nothing on screen yet) and any other pending reason draw as before.
+    private void OnBoundsChanged()
+    {
+        if (_bitmap is null || (RepaintPending && !_resizeHeld))
+        {
+            MarkDirty();
+            return;
+        }
+        RepaintPending = true;
+        _resizeHeld = true;
+        _timerResizeHold?.Dispose();
+        _timerResizeHold = DispatcherTimer.RunOnce(() =>
+        {
+            _timerResizeHold = null;
+            if (RepaintPending && _resizeHeld) RepaintNow();
+        }, ResizeSettle, DispatcherPriority.Render);
     }
 
     private void InitializeComponent()
@@ -184,7 +218,12 @@ public sealed partial class ModelPreviewView : UserControl
     // viewer owns no timer.
     private void UpdateTurntable()
     {
-        bool wanted = VisualRoot is not null && _subscribed is { Turntable: not TurntableSpeed.Off };
+        // Paused (timer stopped, setting and angle kept) while the host window is minimized, the
+        // preview has no size, or it is not effectively visible; resuming restarts the clock so the
+        // angle continues from where it stopped rather than jumping by the time away.
+        bool wanted = VisualRoot is not null && _subscribed is { Turntable: not TurntableSpeed.Off }
+            && IsEffectivelyVisible && Bounds.Width >= 1 && Bounds.Height >= 1
+            && (TopLevel.GetTopLevel(this) as Window)?.WindowState != WindowState.Minimized;
         if (!wanted)
         {
             _turntable?.Stop();
@@ -205,6 +244,28 @@ public sealed partial class ModelPreviewView : UserControl
         double seconds = (now - _lastTurn) / (double)Stopwatch.Frequency;
         _lastTurn = now;
         _subscribed?.Tick(TimeSpan.FromSeconds(seconds));
+    }
+
+    private void WatchHost()
+    {
+        _windowStateWatch?.Dispose();
+        _windowStateWatch = null;
+        if (TopLevel.GetTopLevel(this) is Window w)
+            _windowStateWatch = w.GetObservable(Window.WindowStateProperty)
+                .Subscribe(new AnonymousObserver<WindowState>(_ => UpdateTurntable()));
+        // Avalonia has no change notification for IsEffectivelyVisible, so every ancestor's own
+        // IsVisible (and this control's) is watched; a hidden ancestor hides the preview too.
+        _visibleWatch?.Dispose();
+        var watches = new List<IDisposable>();
+        for (Visual? v = this; v is not null; v = v.GetVisualParent())
+            watches.Add(v.GetObservable(IsVisibleProperty)
+                .Subscribe(new AnonymousObserver<bool>(_ => UpdateTurntable())));
+        _visibleWatch = new Release(watches);
+    }
+
+    private sealed class Release(List<IDisposable> items) : IDisposable
+    {
+        public void Dispose() { foreach (var i in items) i.Dispose(); items.Clear(); }
     }
 
     /// <summary>Whether the turntable timer is running.</summary>
@@ -232,6 +293,7 @@ public sealed partial class ModelPreviewView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         Subscribe(DataContext as ModelPreviewViewModel);
+        WatchHost();
         UpdateTurntable();
         if (!_focusedOnce)
         {
@@ -247,7 +309,14 @@ public sealed partial class ModelPreviewView : UserControl
     {
         base.OnDetachedFromVisualTree(e);
         Subscribe(null);
+        _windowStateWatch?.Dispose();
+        _windowStateWatch = null;
+        _visibleWatch?.Dispose();
+        _visibleWatch = null;
         UpdateTurntable();
+        _timerResizeHold?.Dispose();
+        _timerResizeHold = null;
+        _resizeHeld = false;
         _budgetTimer?.Dispose();
         _budgetTimer = null;
         _surface.Source = null; // never dispose a bitmap that is still the Source: measure reads it
@@ -342,7 +411,11 @@ public sealed partial class ModelPreviewView : UserControl
     /// budget's hook for step 7.</summary>
     private void MarkDirty()
     {
-        if (RepaintPending) return;
+        if (RepaintPending && !_resizeHeld) return;
+        // A real reason arrived while a resize frame was held: it is drawn the ordinary way now.
+        _resizeHeld = false;
+        _timerResizeHold?.Dispose();
+        _timerResizeHold = null;
         RepaintPending = true;
         if (Interacting && BudgetRemaining() is { } wait)
         {
@@ -388,6 +461,9 @@ public sealed partial class ModelPreviewView : UserControl
     internal void RepaintNow()
     {
         RepaintPending = false;
+        _resizeHeld = false;
+        _timerResizeHold?.Dispose();
+        _timerResizeHold = null;
         _budgetTimer?.Dispose(); // a held frame is being drawn right now
         _budgetTimer = null;
         // Detached: the buffers were released on detach; drawing now would allocate a bitmap nothing

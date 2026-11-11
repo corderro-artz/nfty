@@ -121,6 +121,25 @@ Decodes a picture file.
 
 - `UnknownImageFormatException` - The file is neither PNG nor JPEG.
 
+### Load(string, bool) { #m-load-system-string-system-boolean }
+
+```csharp
+public static Image<Rgba32> Load(string path, bool keepMetadata);
+```
+
+Decodes a picture file, optionally keeping its PNG text chunks, in one read of the file.
+
+**Parameters**
+
+- `path` (`string`) - The PNG or JPEG file.
+- `keepMetadata` (`bool`) - Whether PNG text chunks are read (the sheet grid lives in one).
+
+**Returns.** The decoded image; the caller owns it.
+
+**Exceptions**
+
+- `UnknownImageFormatException` - The file is neither PNG nor JPEG.
+
 ### LoadAny(string, bool) { #m-loadany-system-string-system-boolean }
 
 ```csharp

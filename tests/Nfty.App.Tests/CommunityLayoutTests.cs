@@ -113,7 +113,7 @@ public class CommunityLayoutTests
             Assert.Equal(16, ok.Preview!.PixelSize.Width);        // the first cell, not the whole sheet
             Assert.True(gone.ImageMissing);
             Assert.False(gone.IsLoading);
-            Assert.Single(view.GetVisualDescendants().OfType<Border>(), b => b.Classes.Contains("tmissing") && b.IsVisible
+            Assert.Single(view.GetVisualDescendants().OfType<Border>(), b => b.Classes.Contains("tload") && b.Classes.Contains("miss") && b.IsVisible
                 && b.Bounds.Width > 0 && b.GetVisualAncestors().OfType<Border>().Any(a => a.Classes.Contains("cpreview")));
         }
         finally { window.Close(); }

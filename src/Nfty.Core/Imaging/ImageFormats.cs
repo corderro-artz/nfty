@@ -60,6 +60,17 @@ public static class ImageFormats
         catch (UnknownImageFormatException) { throw Refused(); }
     }
 
+    /// <summary>Decodes a picture file, optionally keeping its PNG text chunks, in one read of the file.</summary>
+    /// <param name="path">The PNG or JPEG file.</param>
+    /// <param name="keepMetadata">Whether PNG text chunks are read (the sheet grid lives in one).</param>
+    /// <returns>The decoded image; the caller owns it.</returns>
+    /// <exception cref="UnknownImageFormatException">The file is neither PNG nor JPEG.</exception>
+    public static Image<Rgba32> Load(string path, bool keepMetadata)
+    {
+        try { return NoIcc(Image.Load<Rgba32>(Pick(keepMetadata), path)); }
+        catch (UnknownImageFormatException) { throw Refused(); }
+    }
+
     /// <summary>Decodes picture bytes.</summary>
     /// <param name="bytes">The encoded PNG or JPEG.</param>
     /// <returns>The decoded image; the caller owns it.</returns>

@@ -35,6 +35,10 @@
     column for the preview; its contents stay laid out at full width behind the reopen ribbon.
   -->
   <UserControl.Resources>
+    <!-- One chunker PER VIEW, never a shared singleton: two viewer galleries alternating through one
+         one-slot cache evicted each other on every resize, and a static field kept the last closed
+         gallery's items alive. -->
+    <appconv:GalleryRowChunkConverter x:Key="GalleryRows" />
     <!-- One group in the extended panel: its heading and count, then a card of label / value rows
          with every value whole (wrapped, never trimmed). -->
     <DataTemplate x:Key="FactSection" x:DataType="vw:ViewerFactSection">
@@ -127,7 +131,7 @@
     <ListBox Grid.Column="0" x:Name="GalleryList" Classes="tiles vgallery" Padding="0,14,0,14"
              Background="Transparent" IsVisible="{Binding IsGallery}">
       <ListBox.ItemsSource>
-        <MultiBinding Converter="{x:Static appconv:GalleryRowChunkConverter.Instance}">
+        <MultiBinding Converter="{StaticResource GalleryRows}">
           <Binding Path="Gallery.Items" />
           <Binding ElementName="GalleryList" Path="Bounds.Width" />
         </MultiBinding>

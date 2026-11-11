@@ -24,6 +24,10 @@
     <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
     <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
   </UserControl.KeyBindings>
+  <!-- One chunker per view (see ViewerView): no shared cache, no static reference to the items. -->
+  <UserControl.Resources>
+    <conv:RiseTileRowConverter x:Key="TileRows" />
+  </UserControl.Resources>
   <!-- The Rise page: a source rail, the depth canvas with its 3D tile, and a depth / export rail,
        full-bleed and divided by 1px rules like the Ingredient editor's three panes. Every pane opens
        with the same 41px header, and the footer is the editor's.
@@ -195,7 +199,7 @@
                  three; see RowChunkConverter for why a grid is built this way in Avalonia. -->
             <ListBox x:Name="TileList" Classes="tiles" Background="Transparent" Padding="6,8,6,5"
                      VerticalAlignment="Top"
-                     ItemsSource="{Binding Items, Converter={x:Static conv:RiseTileRowConverter.Instance}}"
+                     ItemsSource="{Binding Items, Converter={StaticResource TileRows}}"
                      IsVisible="{Binding IsTileRail}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
               <ListBox.ItemTemplate>

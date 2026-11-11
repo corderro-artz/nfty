@@ -167,6 +167,20 @@ A grid from a column and row count, every cell filled.
 
 - `ArgumentException` - The grid does not divide the picture; the message says how.
 
+### Of(ImageMetadata) { #m-of-sixlabors-imagesharp-metadata-imagemetadata }
+
+```csharp
+public static SheetGrid? Of(ImageMetadata metadata);
+```
+
+Reads the grid from metadata already in hand (a picture loaded with its text chunks kept), so a caller that decodes the picture anyway opens the file once.
+
+**Parameters**
+
+- `metadata` (`ImageMetadata`) - The picture's metadata.
+
+**Returns.** The grid, or null when there is no `nfty-grid` entry or it is malformed.
+
 ### Parse(string) { #m-parse-system-string }
 
 ```csharp

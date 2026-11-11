@@ -23,13 +23,11 @@ public sealed class RiseTileRowConverter : IValueConverter
     /// <summary>Tiles per row.</summary>
     public const int PerRow = 3;
 
-    /// <summary>The shared instance markup binds to.</summary>
-    public static readonly RiseTileRowConverter Instance = new();
-
     private IReadOnlyList<RiseItem>? _forItems;
     private IReadOnlyList<RiseTileRow>? _rows;
 
-    private RiseTileRowConverter() { }
+    /// <summary>Creates one converter. Each view declares its own in its resources, so its cached rows die with it.</summary>
+    public RiseTileRowConverter() { }
 
     /// <summary>Chunks the items.</summary>
     /// <param name="value">The rail's items.</param>
