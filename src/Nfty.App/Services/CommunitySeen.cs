@@ -37,7 +37,7 @@ public interface ICommunitySeen
 }
 
 /// <inheritdoc cref="ICommunitySeen"/>
-public sealed class CommunitySeen : ICommunitySeen
+public sealed class CommunitySeen : ICommunitySeen, IDisposable
 {
     /// <summary>How long after the last mark the file is written, in milliseconds.</summary>
     public const int SaveDelayMs = 1000;
@@ -127,6 +127,10 @@ public sealed class CommunitySeen : ICommunitySeen
             if (_dirty) Save();
         }
     }
+
+    /// <summary>Writes any mark still waiting. The app's service provider disposes this singleton at exit,
+    /// so a mark made in the last second before the app closes, with the Community page still open, is kept.</summary>
+    public void Dispose() => Flush();
 
     // A mark is kept in memory at once and written once the reader has stopped selecting for a moment: a
     // keyboard walk through the grid selects a tile per key press, and each write was a synchronous file

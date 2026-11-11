@@ -181,4 +181,19 @@ public class CommunityTilePerfTests
         vm.Dispose();
         Assert.Contains(tile.Entry.Id, File.ReadAllText(Path.Combine(root, "seen.json")));
     }
+
+    [Fact]
+    public void Disposing_the_service_provider_at_exit_flushes_a_mark_still_waiting()
+    {
+        // The app disposes its provider on exit; the singleton must write what the debounce still holds.
+        string root = Directory.CreateTempSubdirectory("nfty-seen-exit-").FullName;
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<ICommunitySeen>(services,
+            _ => new CommunitySeen(root, () => CommunityFixtures.T0, _ => new TaskCompletionSource().Task));
+        var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ICommunitySeen>(provider)
+            .See(CommunityFixtures.Entry("closing"));
+        provider.Dispose();
+        Assert.Contains("closing", File.ReadAllText(Path.Combine(root, "seen.json")));
+    }
 }
