@@ -109,31 +109,55 @@ public class NoContextCaptureTests
         }
     }
 
+    /// <summary>Holds the export at its first progress report until the test opens the gate, and
+    /// remembers which thread made that report.</summary>
+    private sealed class GatedProgress : IProgress<ExportProgress>
+    {
+        private int _reports;
+        public ManualResetEventSlim Gate { get; } = new();
+        public int ReportingThread { get; private set; } = -1;
+        public int Reports => Volatile.Read(ref _reports);
+
+        public void Report(ExportProgress value)
+        {
+            if (Interlocked.Increment(ref _reports) != 1) return;
+            ReportingThread = Environment.CurrentManagedThreadId;
+            Gate.Wait(Deadline);
+        }
+    }
+
     [Fact]
     public async Task Export_returns_control_to_the_caller_before_doing_any_work()
     {
+        // The export is held at its first progress report until the call has returned. Checking
+        // IsCompleted or the output folder against a free-running export raced: once it yields, it runs
+        // on the pool, and a two-asset export could finish before the caller looked.
         string setDir = SpriteSheetFixture.Cook(2);
         string outDir = Path.Combine(Directory.CreateTempSubdirectory("nfty-yield-").FullName, "export");
+        var progress = new GatedProgress();
         try
         {
             using var context = new SingleThreadContext();
             // No watermark and no sheet: nothing in the export awaits real I/O before its sync tail,
-            // so without an explicit yield the whole export runs inside this call.
-            var (task, returnedCompleted, existedOnReturn) = await context.Run(() =>
+            // so without an explicit yield the whole export runs inside this call - and the gate
+            // would hold the caller's own thread until the deadline.
+            var (task, returnedCompleted) = await context.Run(() =>
             {
-                var started = SetExporter.ExportAsync(setDir, outDir, new ExportOptions());
-                return (started, started.IsCompleted, Directory.Exists(outDir));
+                var started = SetExporter.ExportAsync(setDir, outDir, new ExportOptions(), progress: progress);
+                return (started, started.IsCompleted);
             }).WaitAsync(Deadline);
+            progress.Gate.Set();
 
             Assert.False(returnedCompleted);
-            Assert.False(existedOnReturn);
-
             var result = await task.WaitAsync(Deadline);
+            Assert.True(progress.Reports > 0, "the export reported no progress, so the gate held nothing");
+            Assert.NotEqual(context.ThreadId, progress.ReportingThread);
             Assert.True(Directory.Exists(outDir));
             Assert.NotEmpty(result.Plan.Entries);
         }
         finally
         {
+            progress.Gate.Set();
             Directory.Delete(setDir, recursive: true);
             Directory.Delete(Path.GetDirectoryName(outDir)!, recursive: true);
         }
