@@ -36,10 +36,8 @@ public sealed class RowChunkConverter : IMultiValueConverter
     private const double TileSlotWidth = 120 + 12;
     private const double TileGap = 10;
 
-    /// <summary>The shared instance markup binds to.</summary>
-    public static readonly RowChunkConverter Instance = new();
-
-    private RowChunkConverter() { }
+    /// <summary>Creates one converter. Each view declares its own in its resources, so its cached rows die with it.</summary>
+    public RowChunkConverter() { }
 
     // The last answer, kept so an unchanged question gets it back verbatim.
     //
