@@ -218,9 +218,10 @@ public class SetBrowserPerfTests
         try
         {
             var ci = System.Globalization.CultureInfo.InvariantCulture;
-            var small = RowChunkConverter.Instance.Convert([vm.Items, 932d], typeof(object), null, ci);
-            var big = RowChunkConverter.Instance.Convert([vm.Items, 2212d], typeof(object), null, ci);
-            var bigger = RowChunkConverter.Instance.Convert([vm.Items, 2216d], typeof(object), null, ci);
+            var conv = new RowChunkConverter();
+            var small = conv.Convert([vm.Items, 932d], typeof(object), null, ci);
+            var big = conv.Convert([vm.Items, 2212d], typeof(object), null, ci);
+            var bigger = conv.Convert([vm.Items, 2216d], typeof(object), null, ci);
             Assert.NotSame(small, big);
             Assert.Same(big, bigger);
         }
@@ -292,9 +293,10 @@ public class SetBrowserPerfTests
         using var vm = new SetBrowserViewModel(loaded);
         try
         {
-            var a = RowChunkConverter.Instance.Convert([vm.Items, 1000d], typeof(object), null,
+            var conv = new RowChunkConverter();
+            var a = conv.Convert([vm.Items, 1000d], typeof(object), null,
                 System.Globalization.CultureInfo.InvariantCulture);
-            var b = RowChunkConverter.Instance.Convert([vm.Items, 1004d], typeof(object), null,
+            var b = conv.Convert([vm.Items, 1004d], typeof(object), null,
                 System.Globalization.CultureInfo.InvariantCulture);
 
             Assert.Same(a, b);

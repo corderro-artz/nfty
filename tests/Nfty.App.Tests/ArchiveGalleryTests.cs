@@ -375,7 +375,7 @@ public class ArchiveGalleryTests
         var gate = new ThumbnailGate(1);
         IReadOnlyList<GalleryItem> items = Enumerable.Range(0, 30)
             .Select(i => new GalleryItem("t" + i, null, () => Task.FromResult<ViewerSubject>(null!), gate)).ToList();
-        var conv = GalleryRowChunkConverter.Instance;
+        var conv = new GalleryRowChunkConverter();
         var culture = System.Globalization.CultureInfo.InvariantCulture;
 
         var a = (IReadOnlyList<GalleryRow>)conv.Convert([items, 600.0], typeof(object), null, culture)!;
