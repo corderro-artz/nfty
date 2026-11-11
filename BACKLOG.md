@@ -190,3 +190,27 @@ checked first, since its upload service has changed over time.
 **The gallery's workflows have never run on GitHub.** The Python is tested against fixtures and the YAML is reviewed, but `check.yml` -> `merge.yml` (`workflow_run`), Pages deploy and the nightly health check were written without an `nfty-gallery` repository to run in. Pick up by creating it from `tools/gallery/repo`, sharing a real Set from a test account end to end, and fixing what GitHub's runner disagrees with (permissions, artifact names, `workflow_run` payload shape are the likely places).
 
 **A false "already listed" from a copied open-PR entry.** The share run checks duplicates against the published list AND the gallery's open pull requests (`ListOpenPullEntriesAsync`), and an open pull request's entry file is untrusted: anyone can open one. Someone who copies another person's pending entry (same fingerprint or file hash) into their own open pull request makes that person's share fail with `AlreadyListed(@griefer)` until the copy is closed. Low risk: it needs a deliberate act, costs the victim one retry, and the checker refuses the copy itself as a duplicate of the original, so it never lists. Pick up by counting an open-PR entry only when its pull request's author owns the entry (the `entries/<id>/` path already says so) and the entry has passed the checker (its `check` run is green), so only a share that would really list can block another.
+
+## An MCP server for the nfty suite
+
+**Status:** deferred by the author (2026-11-11). The design and plan are written and kept ready.
+
+The spec is `docs/superpowers/specs/2026-11-11-mcp-server-design.md` and the plan is
+`docs/superpowers/plans/2026-11-11-mcp-server.md`. They describe a local stdio server, `nfty-mcp`,
+shipped as a .NET tool.
+
+- **What it exposes:** 16 tools. They inspect, validate, roll, cook and extend, write Menus, tune a
+  book's numbers in one all-or-nothing batch, export, and publish. Each one calls the same library
+  code the CLI runs.
+- **What it leaves out:** drawing, depth sculpting, image import and structure authoring. Those
+  are the author's work, not something to automate.
+- **Safety rules:**
+  - Every path stays inside a root folder.
+  - Output goes only to new paths, never over existing ones.
+  - Nothing but protocol frames goes to stdout.
+  - Secrets come only from `env:` or `file:` sources.
+- **Before picking it up:**
+  - It adds one package, `ModelContextProtocol`, to `Nfty.Mcp` only. That bends the
+    zero-new-packages rule, so it needs the author's OK.
+  - Plan Task 1 comes first. It moves the CLI's set-output guards, the seeded Menu roll and the
+    book edits into Core, so the CLI and the server share one copy.
