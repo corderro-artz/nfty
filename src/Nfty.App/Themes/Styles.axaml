@@ -2039,6 +2039,12 @@
     <Setter Property="ClipToBounds" Value="True" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- A share track that fills its column instead of a stated 120: the Ingredient hero's strip,
+       where a fixed track floated in a cell that grows with the window. -->
+  <Style Selector="Border.rt.fluid">
+    <Setter Property="Width" Value="NaN" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
   <Style Selector="Border.rt > Border">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="CornerRadius" Value="999" />
@@ -3362,7 +3368,10 @@
     <Setter Property="FontSize" Value="13" />
     <Setter Property="Foreground" Value="{DynamicResource FgBrush}" />
   </Style>
+  <!-- Italic leans past its own advance: right-aligned against the rail's edge, the slanted last
+       glyph ("p" of value-map) was clipped. The 3px of padding is the overhang's room. -->
   <Style Selector="TextBlock.av.der">
+    <Setter Property="Padding" Value="0,0,3,0" />
     <Setter Property="FontStyle" Value="Italic" />
     <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
   </Style>

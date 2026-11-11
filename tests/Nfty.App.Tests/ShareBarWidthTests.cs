@@ -27,7 +27,7 @@ public class ShareBarWidthTests
     [AvaloniaTheory]
     [InlineData(false, 1180)]
     [InlineData(true, 1416)]
-    public void Ingredient_bars_keep_their_pinned_track_and_follow_the_displayed_share(bool dark, double width)
+    public void Ingredient_bars_fill_their_column_and_follow_the_displayed_share(bool dark, double width)
     {
         using var book = VisualCapture.NamedBook("Book", "Cat", "Aura", 12);
         var recipe = book.Recipes[0];
@@ -50,9 +50,11 @@ public class ShareBarWidthTests
             {
                 var row = Assert.IsType<VariantRow>(track.DataContext);
                 var fill = Assert.Single(track.GetVisualChildren().OfType<Border>());
-                Assert.Equal(120, track.Bounds.Width);
-                var expected = row.OverallPercent * 1.2;
-                Assert.Equal(expected, fill.Width, precision: 10);
+                // The hero's track is elastic (Border.rt.fluid), so the fill reads the track's
+                // MEASURED width - the same rule .cbar follows - and every track is one width.
+                Assert.Equal(tracks[0].Bounds.Width, track.Bounds.Width, 0.5);
+                var expected = row.OverallPercent / 100.0 * track.Bounds.Width;
+                Assert.Equal(expected, fill.Width, precision: 6);
                 // Layout snaps measured edges; the bound percentage remains unrounded.
                 Assert.InRange(fill.Bounds.Width, Math.Floor(expected), Math.Ceiling(expected));
             }

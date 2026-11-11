@@ -16,7 +16,14 @@
        screen was missing. The rail loses 40 and the fixed cells 48 (# 40 to 34, KIND 110 to 86,
        VARIANTS 90 to 72, each still wider than its own header), which is what lets the window
        minimum be 1280x720 rather than 1366 wide. MinimumWindowFitTests measures the column by name. -->
-  <Grid Margin="16" ColumnDefinitions="*,260">
+  <!-- The rail GROWS with the pane from its 260 floor up to 300, the same MaxWidth the
+       Ingredient pane's colorways rail shares, so neither side panel runs off across a wide window
+       and the two panels stop at one width. -->
+  <Grid Margin="16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="3*" />
+      <ColumnDefinition Width="*" MinWidth="260" MaxWidth="300" />
+    </Grid.ColumnDefinitions>
     <!-- THE LAYER ROWS ARE WHAT SCROLLS, and the hero and the LAYERS header do not.
          This column was one StackPanel, so a recipe with enough layers simply ran off the bottom of
          the pane: at the smallest window a six-layer stack showed four and a half rows, with no

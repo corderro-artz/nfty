@@ -25,7 +25,9 @@
          regardless of what the rail happens to contain. -->
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="2*" MinWidth="0" />
-      <ColumnDefinition Width="*" MinWidth="208" />
+      <!-- Capped at 300, the MaxWidth the Recipe pane's rules rail states too: at a wide window the rail used
+           to take a third of the pane (500px and more) while the rules rail stopped at 260. -->
+      <ColumnDefinition Width="*" MinWidth="208" MaxWidth="300" />
     </Grid.ColumnDefinitions>
     <!-- THE ACTIONS ARE PINNED, and the variant rows are what scrolls.
          This column was one StackPanel - hero, then the whole variant table, then the buttons - so a
@@ -127,11 +129,17 @@
                      percent is a stated 44 ("15.38%" clipped at 34), and the name takes what is left and trims - the same
                      rule the DNA-space rows follow, and for the same reason: a right-aligned block
                      given less than it asks for overflows its LEADING edge and eats the label. -->
-                <Grid ColumnDefinitions="*,Auto,44" ColumnSpacing="8" Margin="0,0,14,11"
+                <!-- NAME FIXED, TRACK ELASTIC. The name used to take the star column and right-align,
+                     so at a wide pane every label sat at its own x and the 120px track floated in
+                     the middle of a 500px cell: no two bars started together. Now the name is a
+                     stated, LEFT-aligned 96 (trims), the track takes what is left and the percent a
+                     stated 48, so in both columns every bar starts and ends at one x and a bar's
+                     length grows with the pane. The fill reads its own track's width. -->
+                <Grid ColumnDefinitions="96,*,48" ColumnSpacing="10" Margin="0,0,16,11"
                       VerticalAlignment="Center">
-                  <TextBlock Grid.Column="0" Classes="cshare" Text="{Binding Name}"
+                  <TextBlock Grid.Column="0" Classes="cshare" Text="{Binding Name}" TextAlignment="Left"
                              VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                  <Border Grid.Column="1" Classes="rt" VerticalAlignment="Center">
+                  <Border Grid.Column="1" Classes="rt fluid" VerticalAlignment="Center">
                     <Border>
                       <Border.Width>
                         <MultiBinding Converter="{x:Static conv:ShareWidthConverter.Instance}">
