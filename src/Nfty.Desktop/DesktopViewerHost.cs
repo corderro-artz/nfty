@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.Controls;
 using Nfty.App.Services;
@@ -97,21 +99,42 @@ public sealed class DesktopViewerHost : IViewerHost
         // just now still counts as in front, so the click puts it away instead of raising it again.
         var leftFront = DateTime.MinValue;
         window.Deactivated += (_, _) => leftFront = DateTime.UtcNow;
+        // The state to come back to: whatever the window was in before it was put away (normal,
+        // maximized, full screen). Minimizing keeps the window's place, so position needs no record.
+        var restoreTo = window.WindowState == WindowState.Minimized ? WindowState.Normal : window.WindowState;
+        window.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == Window.WindowStateProperty && e.NewValue is WindowState s && s != WindowState.Minimized)
+                restoreTo = s;
+        };
         var entry = new ChildWindowEntry
         {
             Title = () => string.IsNullOrWhiteSpace(vm.Title) ? "Viewer" : vm.Title,
             Hint = () => vm.LiveBadge,
             Activate = () =>
             {
-                if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                if (window.WindowState == WindowState.Minimized) window.WindowState = restoreTo;
                 window.Activate();
             },
             IsShown = () => window.WindowState != WindowState.Minimized
                 && (window.IsActive || window.Topmost || DateTime.UtcNow - leftFront < TimeSpan.FromMilliseconds(600)),
+            IsMinimized = () => window.WindowState == WindowState.Minimized,
             Hide = () => window.WindowState = WindowState.Minimized,
+            Close = window.Close,
         };
         var token = _children.Register(entry);
         window.Activated += (_, _) => _children.Touch(entry);
+        // The shell's Ctrl+` also works from inside a viewer, so the windows just brought up can be
+        // put away again without first clicking back into the shell.
+        var children = _children;
+        window.AddHandler(InputElement.KeyDownEvent, (_, e) =>
+        {
+            if (e.Key == Key.OemTilde && e.KeyModifiers == KeyModifiers.Control)
+            {
+                children.ToggleAll();
+                e.Handled = true;
+            }
+        }, RoutingStrategies.Tunnel);
         window.Closed += (_, _) => token.Dispose();
     }
 

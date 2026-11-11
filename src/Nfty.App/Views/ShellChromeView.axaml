@@ -101,12 +101,13 @@
      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
       <!-- Other windows (pop-out viewers, galleries): a badge carrying its own count. A fixed-width
            slot, always laid out and only INKED when a window is open, so the titlebar never reflows.
-           Left click brings back the window used last, or puts it away when it is already up; right
-           click (or Ctrl+Shift+W) lists every window to pick one. In full screen nothing on the
+           Left click (or Ctrl+`) puts every window away when one is up, else brings them all back as
+           they were last arranged; right click (or Ctrl+Shift+W) lists every window to raise, put away
+           or close one alone. In full screen nothing on the
            desktop can reach a window behind the shell, so this is the way back to one. -->
       <Button x:Name="ChildWindowsButton" Classes="winchip" Classes.has="{Binding HasChildWindows}"
               IsHitTestVisible="{Binding HasChildWindows}" Focusable="False"
-              Command="{Binding ToggleLastChildWindowCommand}"
+              Command="{Binding ToggleChildWindowsCommand}"
               ToolTip.Tip="{Binding ChildWindowsTip}">
         <Button.ContextFlyout>
           <Flyout Placement="BottomEdgeAlignedRight" ShowMode="Standard">
@@ -115,14 +116,27 @@
               <ItemsControl ItemsSource="{Binding ChildWindowItems}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Button Classes="winrow" Command="{Binding ActivateCommand}"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
-                        <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="2" Classes="sbar" Text="{Binding Hint}" VerticalAlignment="Center" />
-                      </Grid>
-                    </Button>
+                    <!-- The row raises its window; the two trailing buttons put just that one away
+                         or close it. Both always laid out, so every row is one width. -->
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="2">
+                      <Button Classes="winrow" Classes.min="{Binding IsMinimized}" Command="{Binding ActivateCommand}"
+                              HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                              ToolTip.Tip="Show this window">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+                          <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Classes="sbar" Text="{Binding Hint}" VerticalAlignment="Center" />
+                        </Grid>
+                      </Button>
+                      <Button Grid.Column="1" Classes="winact" Command="{Binding HideCommand}"
+                              IsEnabled="{Binding CanHide}" ToolTip.Tip="Minimize this window">
+                        <Path Classes="ico sm" Data="{StaticResource IconMinimise}" />
+                      </Button>
+                      <Button Grid.Column="2" Classes="winact" Command="{Binding CloseCommand}"
+                              IsEnabled="{Binding CanClose}" ToolTip.Tip="Close this window">
+                        <Path Classes="ico sm" Data="{StaticResource IconClose}" />
+                      </Button>
+                    </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

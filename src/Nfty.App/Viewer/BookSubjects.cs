@@ -57,4 +57,28 @@ public static class BookSubjects
         };
         return new SnapshotSubject(recipe.Manifest.Name, facts, art, null);
     }
+
+    /// <summary>The recipe as the Recipe pane's hero shows it: the one asset generation rolls for
+    /// <paramref name="seed"/>, colors and all, so the viewer opens on the picture the reader clicked from.</summary>
+    /// <param name="book">The open book; borrowed.</param>
+    /// <param name="recipe">The recipe; borrowed.</param>
+    /// <param name="seed">The pane's roll seed.</param>
+    /// <returns>A snapshot the caller owns.</returns>
+    /// <exception cref="InvalidOperationException">The book cannot be cooked yet; the message says why.</exception>
+    public static SnapshotSubject ForRoll(LoadedCookBook book, LoadedRecipe recipe, int seed)
+    {
+        ArgumentNullException.ThrowIfNull(book);
+        ArgumentNullException.ThrowIfNull(recipe);
+        string text = seed.ToString(CultureInfo.InvariantCulture);
+        using var asset = Nfty.Core.Generation.Generator.GenerateStreaming(book, new Nfty.Core.Generation.GenerateOptions(1,
+            text, recipe.Manifest.Id, EnforceUniqueDna: false)).First();
+        var facts = new List<ViewerFact>
+        {
+            new("RECIPE", recipe.Manifest.Name),
+            new("SEED", text),
+            new("DNA", asset.Dna),
+            new("SIZE", string.Create(CultureInfo.InvariantCulture, $"{asset.Image.Width} x {asset.Image.Height}")),
+        };
+        return new SnapshotSubject(recipe.Manifest.Name, facts, asset.Image, null);
+    }
 }

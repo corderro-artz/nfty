@@ -107,8 +107,8 @@ Every word the manual uses with a special meaning, in alphabetical order. The ei
     mean a larger DNA space.
 
 **Quick Reference**
-:   The four-tab sheet behind the **?** button (++ctrl+slash++): Basics, Editor, Rise & 3D, and
-    Viewer & runtime, with a search box. Keys are drawn as key caps.
+:   The six-tab sheet behind the **?** button (++ctrl+slash++): Basics, Explorer, Editor, Rise & 3D,
+    Viewer, Community, with a search box. Keys are drawn as key caps.
 
 **Rarity**
 :   The share of a collection carrying a given trait. A collection-wide fact, recomputed when a Set

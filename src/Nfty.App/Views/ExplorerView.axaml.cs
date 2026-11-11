@@ -158,7 +158,58 @@ public partial class ExplorerView : UserControl
             this.FindControl<TextBox>("SearchBox")?.Focus();
             e.Handled = true;
         }
+        else if (!e.Handled && DataContext is ExplorerViewModel vm && OnShortcut(vm, e.Key, e.KeyModifiers))
+            e.Handled = true;
         base.OnKeyDown(e);
+    }
+
+    /// <summary>
+    /// The Explorer's keys, one focus-guarded handler like the editor's: none fires while a text field
+    /// (the search box, a chance field) has focus, so Delete deletes characters there and never the
+    /// selected recipe. Every chord here is in the Quick Reference (<c>HelpCatalog</c>).
+    /// </summary>
+    /// <returns>Whether the key was one of these and was acted on.</returns>
+    internal bool OnShortcut(ExplorerViewModel vm, Key key, KeyModifiers mods)
+    {
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return false;
+        var ctrl = KeyModifiers.Control;
+        var ctrlShift = KeyModifiers.Control | KeyModifiers.Shift;
+        switch (key)
+        {
+            case Key.F2 when mods == KeyModifiers.None && vm.SelectedNode is { } node:
+                _ = vm.EditNodeAsync(node);
+                return true;
+            case Key.Delete when mods == KeyModifiers.None:
+                return RunCommand(vm.DeleteSelectedCommand);
+            case Key.L when mods == ctrl:
+                return RunCommand(vm.ToggleLockCommand);
+            case Key.N when mods == ctrl:
+                return RunCommand(vm.AddCommand);
+            case Key.I when mods == ctrl:
+                return RunCommand(vm.ImportCommand);
+            case Key.B when mods == ctrl:
+                return RunCommand(vm.ShowBookSettingsCommand);
+            case Key.Enter when mods == ctrl:
+                return RunCommand(vm.CookCommand);
+            case Key.O when mods == ctrlShift:
+                return RunCommand(vm.PopOutNodeCommand);
+            case Key.R when mods == ctrl && vm.CurrentDetail is RecipeDetailViewModel recipe:
+                return RunCommand(recipe.RerollCommand);
+            case Key.R when mods == ctrlShift && vm.CurrentDetail is RecipeDetailViewModel recipe:
+                return RunCommand(recipe.RiseCommand);
+            case Key.R when mods == ctrlShift && vm.CurrentDetail is IngredientDetailViewModel layer:
+                return RunCommand(layer.RiseCommand);
+            case Key.E when mods == ctrl && vm.CurrentDetail is IngredientDetailViewModel layer:
+                return RunCommand(layer.EditIngredientCommand);
+        }
+        return false;
+    }
+
+    private static bool RunCommand(System.Windows.Input.ICommand command)
+    {
+        if (!command.CanExecute(null)) return true;     // ours, but not now: still consumed
+        command.Execute(null);
+        return true;
     }
 
     // ---- drag ------------------------------------------------------------------------------------

@@ -292,12 +292,12 @@ public class RiseEntryExplorerTests
         {
             var chips = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(view)
                 .OfType<Avalonia.Controls.Button>().Where(b => b.Classes.Contains("sampleroll")).ToList();
-            Assert.Equal(2, chips.Count);
+            Assert.Equal(3, chips.Count);                  // die, Rise, viewer: icons only
             var ys = chips.Select(c => c.TranslatePoint(new Point(0, 0), view)!.Value.Y).ToList();
-            Assert.Equal(ys[0], ys[1], precision: 1);
-            // Fixed widths, so nothing in the pair moves when the die changes face or a button dims.
-            Assert.Equal(28, chips[0].Bounds.Width, precision: 1);
-            Assert.Equal(58, chips[1].Bounds.Width, precision: 1);
+            Assert.All(ys, y => Assert.Equal(ys[0], y, precision: 1));
+            // Fixed widths, so nothing in the row moves when the die changes face or a button dims.
+            Assert.All(chips, c => Assert.Equal(28, c.Bounds.Width, precision: 1));
+            Assert.All(chips, c => Assert.Empty(Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(c).OfType<Avalonia.Controls.TextBlock>()));
             Assert.True(chips[1].IsEnabled);
         }
         finally { window.Close(); }

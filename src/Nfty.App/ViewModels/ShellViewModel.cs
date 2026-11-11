@@ -238,8 +238,8 @@ public partial class ShellViewModel : ViewModelBase
     public string ChildWindowsTip => ChildWindowItems.Count switch
     {
         0 => "No other windows are open",
-        1 => $"1 other window. Click shows or hides it; right-click lists it  ·  {KeyHints.ChildWindows}",
-        var n => $"{n} other windows. Click shows or hides the last one; right-click lists them all  ·  {KeyHints.ChildWindows} cycles  ·  {KeyHints.ChildWindowList} lists",
+        1 => $"1 other window. Click shows or hides it ({KeyHints.ChildWindows}); right-click to pick or close it",
+        var n => $"{n} other windows. Click shows or hides them all ({KeyHints.ChildWindows}); right-click to pick or close one  ·  {KeyHints.ChildWindowCycle} cycles",
     };
 
     /// <summary>Raised when the chord asks for the list; the view opens its menu on the badge.</summary>
@@ -261,14 +261,14 @@ public partial class ShellViewModel : ViewModelBase
         {
             _childWindows.Touch(w);
             ChildWindowMenuCloseRequested?.Invoke();
-        })).ToList();
+        }, RefreshChildWindows)).ToList();
 
-    /// <summary>The badge's left click: brings back the window used last, or puts it away when it is
-    /// already up in front.</summary>
+    /// <summary>The badge's left click and Ctrl+`: puts every other window away when one is up in front,
+    /// otherwise brings them all back as they were last arranged.</summary>
     [RelayCommand]
-    private void ToggleLastChildWindow()
+    private void ToggleChildWindows()
     {
-        if (_childWindows.ToggleLast() is null) _status.Say("No other windows are open.");
+        if (_childWindows.ToggleAll() is null) _status.Say("No other windows are open.");
     }
 
     /// <summary>Opens the list of other windows (Ctrl+Shift+W). Says so when there are none.</summary>
@@ -280,7 +280,7 @@ public partial class ShellViewModel : ViewModelBase
         ChildWindowMenuRequested?.Invoke();
     }
 
-    /// <summary>Brings the next other window forward (Ctrl+`).</summary>
+    /// <summary>Brings the next other window forward (Ctrl+Shift+`).</summary>
     [RelayCommand]
     private void CycleChildWindows()
     {

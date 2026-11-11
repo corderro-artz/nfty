@@ -75,6 +75,11 @@ public class WiringCoverageTests
             foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
                 foreach (Match m in Regex.Matches(File.ReadAllText(file), @"([A-Za-z0-9_]+Command)\s*\.\s*Execute\s*\("))
                     found.Add(m.Groups[1].Value);
+            // A focus-guarded key handler (ExplorerView.OnShortcut) routes through one helper that
+            // checks CanExecute first; RunCommand(x.YCommand) is that call.
+            foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                foreach (Match m in Regex.Matches(File.ReadAllText(file), @"RunCommand\(\s*\w+\.([A-Za-z0-9_]+Command)\s*\)"))
+                    found.Add(m.Groups[1].Value);
         }
         return found;
     }

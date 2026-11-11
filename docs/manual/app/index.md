@@ -51,11 +51,19 @@ term. The full list is in [Keyboard shortcuts](../reference/shortcuts.md).
 
 **Full screen.** ++f11++, or the first button in the titlebar, fills the display with the window and
 back again. ++esc++ closes an open dialog and never leaves full screen. Viewer windows opened meanwhile
-stay above it. While another window is open, a badge in the titlebar shows how many: click it to
-bring back the window you used last, or to put it away when it is already in front; right-click it,
-or press ++ctrl+shift+w++, to list every window and pick one; ++ctrl+grave-accent++ cycles through them.
-The badge has a slot of its own, so it never moves the lock or the window buttons. This is the way
-back to a viewer while the main window is full screen.
+stay above it.
+
+**Other windows.** While a viewer window is open, a badge in the titlebar shows how many. Click it,
+or press ++ctrl+grave-accent++, to bring **every** window back exactly as you left it (place, size,
+maximized or not); click again to put them all away. Arrange your viewers once, then flip them into
+view and out again while you keep working in the main window. The key works from inside a viewer
+too. Right-click the badge, or press ++ctrl+shift+w++, for a list: click a window's row to show just
+that one, or use the row's **minimize** and **close** buttons. ++ctrl+shift+grave-accent++ brings the
+next window forward. The badge has a slot of its own, so it never moves the lock or the window
+buttons. This is the way back to a viewer while the main window is full screen.
+
+![The other-windows list: each open viewer with its show, minimize and close controls](../images/other-windows-light.png#only-light)
+![The other-windows list: each open viewer with its show, minimize and close controls](../images/other-windows-dark.png#only-dark)
 
 **Closing.** ++ctrl+w++ closes the open book or Set and returns to the opening screen. Closing the
 window asks about unsaved work, and refuses while a cook, export or upload is running.

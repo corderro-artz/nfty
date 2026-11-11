@@ -123,35 +123,42 @@
                the bold of the chosen one cannot move its neighbours. -->
           <Border Grid.Column="1" Classes="seg tiny" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="TabTray">
             <StackPanel Orientation="Horizontal" Spacing="2">
-              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsBasicsTab}" Width="86"
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsBasicsTab}" Width="80"
                       Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Basics}">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <Path Classes="ico sm" Data="{StaticResource IconTypeCookBook}" Stroke="{Binding $parent[Button].Foreground}" />
                   <TextBlock Text="BASICS" />
                 </StackPanel>
               </Button>
-              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsEditorTab}" Width="86"
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsExplorerTab}" Width="92"
+                      Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Explorer}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                  <Path Classes="ico sm" Data="{StaticResource IconTypeRecipe}" Stroke="{Binding $parent[Button].Foreground}" />
+                  <TextBlock Text="EXPLORER" />
+                </StackPanel>
+              </Button>
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsEditorTab}" Width="80"
                       Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Editor}">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <Path Classes="ico sm" Data="{StaticResource IconPencil}" Stroke="{Binding $parent[Button].Foreground}" />
                   <TextBlock Text="EDITOR" />
                 </StackPanel>
               </Button>
-              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsRiseTab}" Width="104"
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsRiseTab}" Width="98"
                       Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Rise}">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <Path Classes="ico sm" Data="{StaticResource IconRise}" Stroke="{Binding $parent[Button].Foreground}" />
                   <TextBlock Text="RISE &amp; 3D" />
                 </StackPanel>
               </Button>
-              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsViewerTab}" Width="152"
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsViewerTab}" Width="80"
                       Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Viewer}">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <Path Classes="ico sm" Data="{StaticResource IconPopout}" Stroke="{Binding $parent[Button].Foreground}" />
-                  <TextBlock Text="VIEWER &amp; RUNTIME" />
+                  <TextBlock Text="VIEWER" />
                 </StackPanel>
               </Button>
-              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsCommunityTab}" Width="106"
+              <Button Classes="seg-b tiny hl" Classes.on="{Binding IsCommunityTab}" Width="104"
                       Command="{Binding ShowTabCommand}" CommandParameter="{x:Static vm:HelpTab.Community}">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                   <Path Classes="ico sm" Data="{StaticResource IconCommunity}" Stroke="{Binding $parent[Button].Foreground}" />

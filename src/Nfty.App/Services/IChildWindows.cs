@@ -16,8 +16,15 @@ public sealed class ChildWindowEntry
     /// left by the click on the badge). Null = unknown, which the badge reads as "not shown".</summary>
     public Func<bool>? IsShown { get; init; }
 
-    /// <summary>Puts the window away (minimizes it), or null when the head cannot.</summary>
+    /// <summary>Puts the window away (minimizes it), or null when the head cannot. The window keeps the
+    /// state it was in (normal, maximized, its place on screen) for <see cref="Activate"/> to bring back.</summary>
     public Action? Hide { get; init; }
+
+    /// <summary>Closes the window, or null when the head cannot.</summary>
+    public Action? Close { get; init; }
+
+    /// <summary>Whether the window is minimized now. Null = unknown, read as "not minimized".</summary>
+    public Func<bool>? IsMinimized { get; init; }
 }
 
 /// <summary>
@@ -50,9 +57,11 @@ public interface IChildWindows
     /// <param name="entry">The window.</param>
     void Touch(ChildWindowEntry entry);
 
-    /// <summary>The badge's left click: puts <see cref="Last"/> away when it is shown, else raises it.</summary>
-    /// <returns>The window toggled, or null when none is open.</returns>
-    ChildWindowEntry? ToggleLast();
+    /// <summary>The badge's left click and its chord: when any window is up in front, puts EVERY window
+    /// away; otherwise brings every window back in the state it was last in, the one used last on top.
+    /// Arrange the viewers once, then flip them into view and out of it again.</summary>
+    /// <returns>True when the windows were brought back, false when they were put away, null when none is open.</returns>
+    bool? ToggleAll();
 }
 
 /// <inheritdoc cref="IChildWindows"/>
@@ -72,12 +81,21 @@ public sealed class ChildWindows : IChildWindows
     }
 
     /// <inheritdoc />
-    public ChildWindowEntry? ToggleLast()
+    public bool? ToggleAll()
     {
-        if (Last is not { } entry) return null;
-        if (entry.Hide is not null && entry.IsShown?.Invoke() == true) entry.Hide();
-        else { entry.Activate(); _last = entry; }
-        return entry;
+        if (_windows.Count == 0) return null;
+        var windows = _windows.ToList();       // a Hide or Activate may close a window under us
+        if (windows.Any(w => w.IsShown?.Invoke() == true))
+        {
+            foreach (var w in windows) w.Hide?.Invoke();
+            return false;
+        }
+        // Oldest first, the window used last at the end, so it lands on top and keeps the focus.
+        var last = Last;
+        foreach (var w in windows.Where(w => !ReferenceEquals(w, last))) w.Activate();
+        last?.Activate();
+        if (last is not null) _last = last;
+        return true;
     }
 
     /// <inheritdoc />

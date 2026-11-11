@@ -71,6 +71,10 @@ public partial class LayerRow : ObservableObject
 
     /// <summary>The ingredient's id.</summary>
     public string Id { get; }
+    /// <summary>The layer's first variant as the Ingredient pane's variant table draws it (Custom art
+    /// as-is, Dynamic/Static colorized), so both tables show the art beside the name. Owned by the
+    /// pane; null when the layer has no variant.</summary>
+    public Avalonia.Media.Imaging.Bitmap? Thumbnail { get; init; }
     /// <summary>Its display name.</summary>
     public string Layer { get; }
     /// <summary>The layer kind using its enum spelling: Dynamic, Static or Custom.</summary>
@@ -384,7 +388,12 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
                 .Select(l => new LayerRow(l.Depth, l.IngredientId, ingById[l.IngredientId].Manifest.Name,
                     ingById[l.IngredientId].Manifest.Kind.ToString(),
                     ingById[l.IngredientId].Manifest.Variants.Count,
-                    recipe.Manifest.AbsentPercentOf(l.IngredientId))));
+                    recipe.Manifest.AbsentPercentOf(l.IngredientId))
+                {
+                    Thumbnail = ingById[l.IngredientId].Manifest.Variants.Count == 0 ? null
+                        : Nfty.App.Imaging.VariantImagery.Render(bridge, ingById[l.IngredientId],
+                            ingById[l.IngredientId].Manifest.Variants[0].Id),
+                }));
 
         _allRules = recipe.Manifest.Rules.Select(r => MapRule(r, recipe)).ToList();
         RuleSort = new TableSort("Authored", () => OnPropertyChanged(nameof(Rules)));
@@ -832,6 +841,21 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// <param name="id">The ingredient id.</param>
     [RelayCommand] private void PopOutLayerAt(string? id) { if (id is not null) PopOutLayer?.Invoke(id); }
 
+    /// <summary>Opens the roll the hero shows in a viewer window (given its seed). Set by the Explorer;
+    /// null leaves <see cref="PopOutRollCommand"/> disabled.</summary>
+    public Action<int>? PopOutRollAction
+    {
+        get => _popOutRoll;
+        set { _popOutRoll = value; PopOutRollCommand.NotifyCanExecuteChanged(); }
+    }
+    private Action<int>? _popOutRoll;
+
+    private bool CanPopOutRoll() => _popOutRoll is not null && !_disposed;
+
+    /// <summary>The hero's third button: the same roll, in its own viewer window.</summary>
+    [RelayCommand(CanExecute = nameof(CanPopOutRoll))]
+    private void PopOutRoll() { if (CanPopOutRoll()) _popOutRoll!(RollSeed); }
+
     private readonly Action<int>? _rise;
 
     /// <summary>Whether the Rise button can act: the Explorer offered a way to open the page.</summary>
@@ -847,6 +871,14 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         _rise!(RollSeed);
     }
 
+    /// <summary>Opens the rename card for this item. Set by the Explorer; null leaves
+    /// <see cref="EditNameCommand"/> doing nothing.</summary>
+    public Action? EditNameAction { get; set; }
+
+    /// <summary>The title's click: rename this item, as the CookBook card's title edits the book.</summary>
+    [RelayCommand]
+    private void EditName() => EditNameAction?.Invoke();
+
     /// <summary>Frees the sample-roll bitmap. Idempotent, and it latches: a reorder's save can land
     /// after the Explorer has navigated away and disposed this pane, and the reply must not
     /// resurrect it.</summary>
@@ -855,6 +887,7 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
         if (_disposed) return;
         _disposed = true;
         Hero.Dispose();
+        foreach (var row in Layers) row.Thumbnail?.Dispose();
     }
 
     /// <summary>Set once this pane has been navigated away from and freed. Checked by

@@ -160,6 +160,25 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     /// </summary>
     /// <returns>A task that completes when the card closes.</returns>
     internal Task ShowBookSettingsAsync() =>
+        ShowBookSettingsCore();
+
+    /// <summary>Book settings from the keyboard (Ctrl+B), the CookBook card's title click.</summary>
+    /// <returns>A task that completes when the card closes.</returns>
+    [RelayCommand]
+    private Task ShowBookSettings() => ShowBookSettingsCore();
+
+    /// <summary>Cook from the keyboard (Ctrl+Enter), the CookBook card's Cook button.</summary>
+    /// <returns>A task that completes when the cook dialog closes.</returns>
+    [RelayCommand]
+    private Task Cook()
+    {
+        // The card's Cook button is gated on the same fact; the key says why instead of opening a
+        // dialog Generator would refuse at the end.
+        if (!IsValid) { _status.Warn("This CookBook has problems to fix before it can cook."); return Task.CompletedTask; }
+        return OpenCookDialogAsync();
+    }
+
+    private Task ShowBookSettingsCore() =>
         _dialogs.ShowAsync<object>(new BookSettingsDialogViewModel(
             _dialogs, _book, _palette, () => IsEditing, CommitBookSettingsAsync));
 
@@ -461,6 +480,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         if (CurrentDetail is IngredientDetailViewModel ingredientPane
             && newValue?.Domain is (LoadedRecipe owner, LoadedIngredient layer))
         {
+            var layerNode = newValue;
+            ingredientPane.EditNameAction = () => _ = EditNodeAsync(layerNode);
             string recipeId = owner.Manifest.Id, ingredientId = layer.Manifest.Id;
             ingredientPane.ReorderVariants = async ids =>
             {
@@ -485,6 +506,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
             // built from, and a save since then replaced it.
             string recipeId = shown.Manifest.Id;
             recipePane.PopOutLayer = ingredientId => PopOutIngredient(recipeId, ingredientId);
+            var recipeNode = newValue;
+            recipePane.EditNameAction = () => _ = EditNodeAsync(recipeNode);
+            // Assigned whether or not a host is set yet: the first pane is built before the shell
+            // hands the Explorer its viewer host, and PopOutSubject reads Viewer at click time.
+            recipePane.PopOutRollAction = seed => PopOutSubject(() =>
+                    _book.Recipes.FirstOrDefault(r => r.Manifest.Id == recipeId) is { } live
+                        ? BookSubjects.ForRoll(_book, live, seed) : null);
         }
         RebuildCrumbs();
         DeleteSelectedCommand.NotifyCanExecuteChanged();
@@ -1378,6 +1406,16 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
     private async Task EditSelected()
     {
         if (!CanEditSelected() || SelectedNode is not { } node) return;
+        await EditNodeAsync(node);
+    }
+
+    /// <summary>Opens the settings card for a node: book settings for the CookBook, the rename card for
+    /// a recipe or layer. The panes' titles call it on click, locked or not, as the CookBook card's
+    /// title does: reading is not an edit, and the save re-checks the lock itself.</summary>
+    /// <param name="node">The node to edit.</param>
+    /// <returns>A task that completes when the card closes.</returns>
+    internal async Task EditNodeAsync(ExplorerNode node)
+    {
         if (node.Kind == ExplorerNodeKind.CookBook) { await ShowBookSettingsAsync(); return; }
         string? recipeId = node.Domain switch
         {

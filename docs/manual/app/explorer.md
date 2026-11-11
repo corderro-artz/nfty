@@ -89,8 +89,8 @@ unlocked.
 
 | Part | Shows |
 |---|---|
-| **Identity card** | A rolled preview of this character (the die rolls another), each layer's contribution multiplied out, the Recipe's **unique DNA**, and **Rise**, which opens the roll on the [Rise page](rise-a-recipe.md). |
-| **LAYERS** | The stack in paint order: `1` paints first and sits furthest back. Each row has the layer's kind and variant count. Unlocked, rows gain a drag grip. **OPTIONAL LAYERS** adds the **ABSENT** column. |
+| **Identity card** | The Recipe's name (click it to rename), a rolled preview of this character, each layer's contribution multiplied out and the Recipe's **unique DNA**. Under the preview, three icon buttons: the **die** rolls another sample (++ctrl+r++), **Rise** opens the roll on the [Rise page](rise-a-recipe.md) (++ctrl+shift+r++), and **pop out** opens the same roll in a [viewer](viewer.md) window. |
+| **LAYERS** | The stack in paint order: `1` paints first and sits furthest back. Each row shows a thumbnail of the layer's first variant, its kind and variant count. Unlocked, rows gain a drag grip; only the grip starts a drag. **OPTIONAL LAYERS** adds the **ABSENT** column. |
 | **RULES** | This Recipe's rules, with **ALL / NEVER / ALWAYS** filters and **+** to add one. See [Rules](rules.md). |
 
 The layer table is never sorted by column: its order *is* the paint order.
@@ -102,9 +102,9 @@ The layer table is never sorted by column: its order *is* the paint order.
 
 | Part | Shows |
 |---|---|
-| **Identity card** | A preview, the layer's kind and color model, an absent flag if the Recipe can leave it out, and a rule flag if a rule names it. The **pencil** opens the [Ingredient Editor](ingredient-editor.md); **Rise** opens the [Rise page](rise.md). |
+| **Identity card** | The layer's name (click it to rename), a preview, the layer's kind and color model, an absent flag if the Recipe can leave it out, and a rule flag if a rule names it. The **pencil** opens the [Ingredient Editor](ingredient-editor.md) (++ctrl+e++); **Rise** opens the [Rise page](rise.md). |
 | **Share strip** | The biggest variants' shares as bars, four at a time. |
-| **VARIANT table** | Each variant's **WEIGHT**, its share **IN RECIPE**, and its share **OVERALL** (of the whole collection). Click a header to sort. See [Weights and rarity](weights.md). |
+| **VARIANT table** | Each variant's thumbnail, **WEIGHT**, its share **IN RECIPE**, and its share **OVERALL** (of the whole collection). Click a header to sort. One variant is always selected (the first, when the panel opens); double-click a row to edit it. Unlocked, rows gain the same drag grip as the layer table. Its rows are the layer table's height. See [Weights and rarity](weights.md). |
 | **COLORWAYS** | The actual colors this layer can roll, by hue and saturation, and how many it **ADMITS**. Static shows one swatch; Custom says colorization does not apply. |
 | **Delete variant** | Removes the selected variant, after asking. |
 | **Export preview…** | Writes the selected variant as a PNG, exactly as generation renders it. |

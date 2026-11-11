@@ -133,10 +133,11 @@ public static class HelpCatalog
     public static string TabLabel(HelpTab tab) => tab switch
     {
         HelpTab.Basics => "BASICS",
+        HelpTab.Explorer => "EXPLORER",
         HelpTab.Editor => "EDITOR",
         HelpTab.Rise => "RISE & 3D",
         HelpTab.Community => "COMMUNITY",
-        _ => "VIEWER & RUNTIME",
+        _ => "VIEWER",
     };
 
     /// <summary>Every entry, in page order.</summary>
@@ -163,9 +164,34 @@ public static class HelpCatalog
 
     private static IReadOnlyList<HelpEntry> Build()
     {
+        const HelpTab X = HelpTab.Explorer;
         const HelpTab B = HelpTab.Basics, E = HelpTab.Editor, R = HelpTab.Rise, V = HelpTab.Viewer, C2 = HelpTab.Community;
         var list = new List<HelpEntry>
         {
+            // ---------------- EXPLORER ----------------
+            // Every key here is bound in ExplorerView.OnShortcut (Ctrl+K in its OnKeyDown, Alt+Up/Down
+            // in the tree and table handlers) and is inert while a text field has focus.
+            K(X, 0, "KEYS · TREE", KeyHints.Search, "search the tree"),
+            K(X, 0, "KEYS · TREE", KeyHints.MoveLayer, "move layer, recipe or variant"),
+            K(X, 0, "KEYS · TREE", KeyHints.Rename, "rename, or book settings"),
+            K(X, 0, "KEYS · TREE", "Delete", "delete the selected item"),
+            K(X, 0, "KEYS · TREE", KeyHints.AddItem, "add a recipe or layer"),
+            K(X, 0, "KEYS · TREE", KeyHints.Import, "import a loose file"),
+
+            K(X, 1, "KEYS · BOOK", KeyHints.ToggleLock, "lock / unlock editing"),
+            K(X, 1, "KEYS · BOOK", KeyHints.BookSettings, "book settings"),
+            K(X, 1, "KEYS · BOOK", KeyHints.Cook, "cook a Set"),
+            K(X, 1, "KEYS · BOOK", KeyHints.OpenInViewer, "open the selection in a viewer"),
+
+            K(X, 2, "KEYS · RECIPE", KeyHints.Reroll, "roll another sample"),
+            K(X, 2, "KEYS · RECIPE", KeyHints.RiseKey, "Rise the roll shown"),
+            K(X, 2, "KEYS · LAYER", KeyHints.EditLayer, "open the editor"),
+            K(X, 2, "KEYS · LAYER", KeyHints.RiseKey, "Rise the selected variant"),
+            K(X, 2, "KEYS · LAYER", "Double-click", "edit that variant"),
+
+            T(X, 3, "BY POINTER", "Titles", "Click a CookBook, recipe or layer *name* to rename or set it up.", "icon:IconPencil"),
+            T(X, 3, "BY POINTER", "Grip", "Drag a row by its *grip* to reorder; the rest of the row selects.", "icon:IconGrip"),
+
             // ---------------- BASICS ----------------
             new HelpNote { Tab = B, Column = 0, Section = Words, Chain = true, Description = "CookBook ^›^ Recipe ^›^ Ingredient ^›^ Variant  —  cook it to get a Set" },
             T(B, 0, Words, "CookBook", "An *uncooked* Set — holds the Recipes, the canvas size, the collection.", "icon:IconTypeCookBook", ".cbk"),
@@ -198,8 +224,6 @@ public static class HelpCatalog
             K(B, 3, "KEYS · LANDING", KeyHints.NewCookBook, "new CookBook"),
             K(B, 3, "KEYS · LANDING", KeyHints.Open, "open"),
             K(B, 3, "KEYS · LANDING", KeyHints.Import, "import a loose file"),
-            K(B, 3, "KEYS · TREE", KeyHints.Search, "search the tree"),
-            K(B, 3, "KEYS · TREE", KeyHints.MoveLayer, "move layer or recipe"),
 
             // ---------------- EDITOR ----------------
             K(E, 0, "TOOLS", "B", "brush"),
@@ -266,7 +290,7 @@ public static class HelpCatalog
             T(V, 0, "THE VIEWER", "Live or snapshot", "*Live* follows the editor or Rise page; a *snapshot* is a copy that stays."),
             T(V, 0, "THE VIEWER", "In the window", $"Wheel zooms the 2D art; left or middle drag pans. *{KeyHints.CloseDocument}* closes the window."),
             T(V, 0, "THE VIEWER", "Sealed .tin", "View-only: *no save, copy or export*."),
-            K(V, 0, "KEYS · OTHER WINDOWS", KeyHints.ChildWindows, "bring the next window forward"),
+            K(V, 0, "KEYS · OTHER WINDOWS", KeyHints.ChildWindows, "show or hide them all"),
             K(V, 0, "KEYS · OTHER WINDOWS", KeyHints.ChildWindowList, "list the open windows"),
 
             T(V, 1, "OPEN IT", "Pop out", "The Pop out buttons beside previews and the 3D tile."),

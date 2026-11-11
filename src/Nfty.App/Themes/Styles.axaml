@@ -229,6 +229,12 @@
   <Style Selector="Button.ghost:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgAlt2Brush}" />
   </Style>
+  <!-- Fluent shrinks a pressed Button to 98%. On a table row that squeeze reads as the row lifting
+       for a drag, on every click anywhere in it; a drag starts only from the grip, so the row stays
+       still. -->
+  <Style Selector="Button.ghost:pressed">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
 
   <!-- Icon system (audit Critical #1): the mockups draw glyphs as 24-unit stroked SVG paths, so an
        icon is a Path stroked with the current text color, never a font glyph — emoji injected
@@ -1854,6 +1860,26 @@
   <Style Selector="Border.data-row.sel">
     <Setter Property="Background" Value="{DynamicResource AccentWashBrush}" />
   </Style>
+  <!-- A row that carries a thumbnail: the Recipe pane's layers and the Ingredient pane's variants.
+       ONE height for both tables (28px art, 46px row), between the old 43px text-only layer row and
+       the 56px variant row, so switching panes no longer jumps between a thin table and a bulky one.
+       The stated Height is what makes the two equal by construction. -->
+  <Style Selector="Border.data-row.thumbrow">
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="Height" Value="46" />
+  </Style>
+  <Style Selector="Border.rowthumb">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+    <Setter Property="Background" Value="{DynamicResource TileBrush}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.rowthumb > Image">
+    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
   <Style Selector="TextBlock.data-row">
     <Setter Property="FontSize" Value="14" />
     <!-- A TextBlock in a Grid cell stretches and draws its line at the TOP, which put every one of
@@ -2651,6 +2677,30 @@
   <Style Selector="Button.winrow:pressed /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
   </Style>
+  <!-- A minimized window's row reads quieter than one up on screen. -->
+  <Style Selector="Button.winrow.min TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource FgMutedBrush}" />
+  </Style>
+  <!-- The row's minimize / close buttons: square, flat until hovered. -->
+  <Style Selector="Button.winact">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusXs}" />
+  </Style>
+  <Style Selector="Button.winact /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.winact:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource LineBrush}" />
+  </Style>
+  <Style Selector="Button.winact:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource LineStrongBrush}" />
+  </Style>
 
   <Style Selector="Border.modal.validity">
     <Setter Property="Width" Value="620" />
@@ -2813,6 +2863,10 @@
     <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="Button.titlelink:pointerover TextBlock.idname">
+    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+  </Style>
+  <!-- The Recipe and Ingredient panes' titles (mono, 17px) take the same hover ink. -->
+  <Style Selector="Button.titlelink:pointerover TextBlock.mono">
     <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
   </Style>
   <!-- The pencil beside the title: reserved (it is an overlay, it costs no layout) and inked only

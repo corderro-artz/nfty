@@ -41,10 +41,30 @@ public static class KeyHints
     public static string CloseDocument { get; } = WithMod("W");
     /// <summary>Switch light/dark.</summary>
     public static string Theme { get; } = WithMod("T");
-    /// <summary>Cycle through the other windows.</summary>
+    /// <summary>Show or hide every other window at once (the badge's left click).</summary>
     public static string ChildWindows { get; } = WithMod("`");
+    /// <summary>Cycle through the other windows.</summary>
+    public static string ChildWindowCycle { get; } = WithMod((OperatingSystem.IsMacOS() ? "⇧" : "Shift") + Gap + "`");
     /// <summary>List the other windows.</summary>
     public static string ChildWindowList { get; } = WithMod("Shift W");
+    /// <summary>Rename the selected item (book settings on the CookBook).</summary>
+    public static string Rename { get; } = "F2";
+    /// <summary>Add a recipe or layer in the Explorer.</summary>
+    public static string AddItem { get; } = WithMod("N");
+    /// <summary>Lock or unlock the CookBook for editing.</summary>
+    public static string ToggleLock { get; } = WithMod("L");
+    /// <summary>Open book settings.</summary>
+    public static string BookSettings { get; } = WithMod("B");
+    /// <summary>Cook a Set.</summary>
+    public static string Cook { get; } = WithMod("Enter");
+    /// <summary>Open the selected tree item in a viewer window.</summary>
+    public static string OpenInViewer { get; } = WithMod((OperatingSystem.IsMacOS() ? "⇧" : "Shift") + Gap + "O");
+    /// <summary>Roll another sample on the Recipe pane.</summary>
+    public static string Reroll { get; } = WithMod("R");
+    /// <summary>Open Rise on the Recipe or Ingredient pane.</summary>
+    public static string RiseKey { get; } = WithMod((OperatingSystem.IsMacOS() ? "⇧" : "Shift") + Gap + "R");
+    /// <summary>Open the Ingredient editor from its pane.</summary>
+    public static string EditLayer { get; } = WithMod("E");
     /// <summary>Toggle full screen.</summary>
     public static string FullScreen { get; } = "F11";
     /// <summary>Reset zoom to 100%.</summary>
