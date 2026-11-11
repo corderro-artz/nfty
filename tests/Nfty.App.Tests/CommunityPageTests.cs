@@ -13,6 +13,7 @@ internal sealed class FakeCommunityCache : ICommunityCache
 {
     public CommunityListing? Next { get; set; }
     public CommunityListing? Cached { get; set; }
+    public Task<CommunityListing>? RefreshResult { get; set; }
     public IReadOnlyList<string> Tags { get; set; } = [];
     public string? PreviewPath { get; set; }
     public HashSet<string> MissingPreviews { get; } = [];
@@ -26,6 +27,7 @@ internal sealed class FakeCommunityCache : ICommunityCache
     public Task<CommunityListing> RefreshAsync(CancellationToken ct)
     {
         Refreshes++;
+        if (RefreshResult is not null) return RefreshResult;
         var listing = Next ?? new CommunityListing(null, DateTimeOffset.UtcNow, ShareRules.Unreachable);
         Cached = listing;
         return Task.FromResult(listing);

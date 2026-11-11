@@ -490,7 +490,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     /// <summary>Fetches the list again.</summary>
     [RelayCommand]
-    private Task Refresh() => PendingRefresh = RefreshCoreAsync();
+    private Task Refresh() => PendingRefresh.IsCompleted ? PendingRefresh = RefreshCoreAsync() : PendingRefresh;
 
     /// <summary>Marks every entry seen.</summary>
     [RelayCommand(CanExecute = nameof(HasMarks))]
@@ -514,6 +514,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
             listing = _cache.Cached ?? new CommunityListing(null, DateTimeOffset.UtcNow, ShareRules.Unreachable);
             if (listing.Notice is null) listing = listing with { Notice = ShareRules.Unreachable };
         }
+        if (_cts.IsCancellationRequested) return;
         Apply(listing, refreshed: true);
         await CheckPendingAsync(listing).ConfigureAwait(true);
     }
@@ -766,7 +767,9 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         _sheet?.Dispose();
         _sheet = null;
         _grid = null;
+        var oldPreview = RailPreview;
         RailPreview = null;
+        oldPreview?.Dispose();
         Cell = 0;
         CellCount = 0;
         RailMissing = false;

@@ -1,4 +1,5 @@
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -18,6 +19,56 @@ namespace Nfty.App.Tests;
 /// </summary>
 public class FullScreenTests
 {
+    [AvaloniaFact]
+    public void Custom_chrome_does_not_add_a_platform_fullscreen_caption()
+    {
+        var window = new MainWindow();
+        try
+        {
+            Assert.Equal(WindowDecorations.None, window.WindowDecorations);
+            Assert.False(window.ExtendClientAreaToDecorationsHint);
+        }
+        finally { window.Close(); }
+    }
+
+    [AvaloniaFact]
+    public void Caption_icons_keep_equal_spacing_in_both_fullscreen_states()
+    {
+        var window = new MainWindow { DataContext = Shell() };
+        window.Show();
+        try
+        {
+            var buttons = new[] { "FullScreenButton", "MinimizeButton", "MaximizeButton", "CloseButton" }
+                .Select(name => window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == name)).ToArray();
+            Avalonia.Point[] Centers() => buttons.Select(b => b.TranslatePoint(
+                new Avalonia.Point(b.Bounds.Width / 2, b.Bounds.Height / 2), window)!.Value).ToArray();
+            Dispatcher.UIThread.RunJobs();
+            var before = Centers();
+            foreach (var state in new[] { WindowState.FullScreen, WindowState.Normal })
+            {
+                window.WindowState = state;
+                Dispatcher.UIThread.RunJobs();
+                var centers = Centers();
+                double spacing = centers[1].X - centers[0].X;
+                Assert.True(spacing > 0);
+                for (int i = 1; i < centers.Length; i++)
+                {
+                    Assert.Equal(spacing, centers[i].X - centers[i - 1].X, 5);
+                    Assert.Equal(centers[0].Y, centers[i].Y, 5);
+                    Assert.Equal(buttons[0].Bounds.Size, buttons[i].Bounds.Size);
+                }
+                var frame = window.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("frame"));
+                if (state == WindowState.FullScreen)
+                {
+                    Assert.Equal(new Avalonia.Thickness(0), frame.Margin);
+                    Assert.Equal(window.ClientSize, frame.Bounds.Size);
+                }
+                else Assert.Equal(before, centers);
+            }
+        }
+        finally { window.Close(); }
+    }
+
     private static ShellViewModel Shell(DialogService? dialogs = null) =>
         new(new FakeNav(), dialogs ?? new DialogService(), new ThemeService(), new StatusService());
 
@@ -117,6 +168,7 @@ public class FullScreenTests
 
             var paths = button.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().ToList();
             Assert.Equal(2, paths.Count);
+            Assert.NotSame(paths[0].Data, paths[1].Data);
             Assert.True(paths[0].IsVisible);
             Assert.False(paths[1].IsVisible);
 

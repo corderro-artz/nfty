@@ -9,7 +9,9 @@
         MinWidth="{x:Static vm:ShellViewModel.MinWindowWidth}"
         MinHeight="{x:Static vm:ShellViewModel.MinWindowHeight}" Title="nfty"
         Background="Transparent" TransparencyLevelHint="Transparent"
-        ExtendClientAreaToDecorationsHint="True" WindowDecorations="None">
+        WindowDecorations="None">
+  <!-- WindowFrame owns the chrome. Opting into platform decorations also adds Avalonia's
+       fullscreen hover caption, even with decorations None, covering the app's own controls. -->
   <!-- The application opens at its 1280x720 DIP minimum. CenterScreen uses the native opening
        display, falling back to the primary display, and centers in its working area at its DPI. -->
   <Window.KeyBindings>
