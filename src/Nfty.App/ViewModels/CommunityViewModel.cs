@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -296,9 +297,10 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
 
     // ---- the grid --------------------------------------------------------------------------
 
-    /// <summary>The tiles on the current page.</summary>
-    [ObservableProperty]
-    private IReadOnlyList<CommunityTile> _tiles = [];
+    /// <summary>The tiles on the current page. One collection for the page's lifetime, edited in place by
+    /// <see cref="Repage"/>: a resize that only changes how many tiles fit appends or removes at the tail, so the
+    /// containers already realized (each ~30 ms and several MB) survive instead of being rebuilt.</summary>
+    public ObservableCollection<CommunityTile> Tiles { get; } = [];
 
     /// <summary>The zero-based page.</summary>
     [ObservableProperty]
@@ -405,11 +407,22 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
         Repage();
     }
 
+    /// <summary>Makes <see cref="Tiles"/> hold <paramref name="want"/> by touching only what differs after the
+    /// common leading run (reference equality): a page that grows or shrinks at the same start edits the tail
+    /// alone; a page turn or a new filter replaces what differs.</summary>
+    private void SyncTiles(IReadOnlyList<CommunityTile> want)
+    {
+        int keep = 0;
+        while (keep < Tiles.Count && keep < want.Count && ReferenceEquals(Tiles[keep], want[keep])) keep++;
+        while (Tiles.Count > keep) Tiles.RemoveAt(Tiles.Count - 1);
+        for (int i = keep; i < want.Count; i++) Tiles.Add(want[i]);
+    }
+
     private void Repage()
     {
         int last = Math.Max(0, PageCount - 1);
         if (PageIndex > last) { PageIndex = last; return; }
-        Tiles = _filtered.Skip(PageIndex * PageSize).Take(PageSize).ToList();
+        SyncTiles(_filtered.Skip(PageIndex * PageSize).Take(PageSize).ToList());
         OnPropertyChanged(nameof(PageCount));
         OnPropertyChanged(nameof(MatchCount));
         OnPropertyChanged(nameof(PageText));
@@ -1030,6 +1043,7 @@ public sealed partial class CommunityViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _account.Changed -= OnAccountChanged;
+        _seen.Flush();
         _cts.Cancel();
         _railCts?.Cancel();
         if (_ownsHttp) _http.Dispose();

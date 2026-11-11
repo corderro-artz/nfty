@@ -132,6 +132,13 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
     /// <summary>Whether the preview could not be had, so the tile says so instead of looking like a slow one.</summary>
     public bool ImageMissing => _missing;
 
+    /// <summary>Whether the tile's one marker (breathing diamond while loading, static warning diamond when the
+    /// preview is missing) is on screen. One control for both states, as the Set browser's tile does.</summary>
+    public bool ShowsMark => IsLoading || _missing;
+
+    /// <summary>The marker's tooltip: set only when the preview is missing, null otherwise.</summary>
+    public string? MarkTip => _missing ? "This preview couldn't be fetched" : null;
+
     /// <summary>The decode this tile started, so a test can settle it.</summary>
     internal Task PendingDecode { get; private set; } = Task.CompletedTask;
 
@@ -180,16 +187,37 @@ public sealed partial class CommunityTile : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(Preview));
                 OnPropertyChanged(nameof(IsLoading));
                 OnPropertyChanged(nameof(ImageMissing));
+                OnPropertyChanged(nameof(ShowsMark));
+                OnPropertyChanged(nameof(MarkTip));
             });
         });
     }
 
+    /// <summary>The longest side a tile's picture is kept at: the tile draws ~120 px, up to 2x on a high-density
+    /// screen under the shell's 1.2 scale. A 1000 px cell used to be kept whole for it (4 MB a tile).</summary>
+    internal const int PreviewMaxSide = 240;
+
+    /// <summary>The picture a tile keeps for a cell of this size: the smallest whole-number reduction that
+    /// fits <see cref="PreviewMaxSide"/>, never an enlargement.</summary>
+    /// <param name="width">The cell's width.</param>
+    /// <param name="height">The cell's height.</param>
+    /// <returns>The reduction factor, 1 when the cell already fits.</returns>
+    internal static int ReductionFor(int width, int height) =>
+        Math.Max(1, (Math.Max(width, height) + PreviewMaxSide - 1) / PreviewMaxSide);
+
+    // One open of the file (pixels and the grid chunk together). Reduced by nearest neighbor and a whole
+    // factor, never a filter: the art is pixel art and a filter would invent colors it never had.
     private Avalonia.Media.Imaging.Bitmap DecodeFirstCell(string path)
     {
-        using var sheet = ImageFormats.Load(path);
-        var grid = SheetGrid.Read(path);
+        using var sheet = ImageFormats.Load(path, keepMetadata: true);
+        var grid = SheetGrid.Of(sheet.Metadata);
         var rect = PreviewCells.Rect(grid, 0, sheet.Width, sheet.Height);
-        using var cell = sheet.Clone(c => c.Crop(rect));
+        int f = ReductionFor(rect.Width, rect.Height);
+        using var cell = sheet.Clone(c =>
+        {
+            c.Crop(rect);
+            if (f > 1) c.Resize((rect.Width + f - 1) / f, (rect.Height + f - 1) / f, KnownResamplers.NearestNeighbor);
+        });
         return _bridge.ToBitmap(cell);
     }
 
