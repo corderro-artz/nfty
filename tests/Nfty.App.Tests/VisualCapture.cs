@@ -1353,10 +1353,16 @@ public partial class VisualCapture
     /// nobody remembers to add to it is the one that goes unchecked. A modal added later is framed
     /// correctly without anyone touching this file.
     /// </remarks>
-    private static bool IsDialogLayer(Control view) =>
-        view is UserControl { Content: Border root }
+    internal static bool IsDialogLayer(Control view)
+    {
+        // The Help sheet's safety scroller wraps the same styled root. It still gets the modal
+        // area, rather than a page-sized frame that could conceal an overflowing sheet.
+        var content = (view as UserControl)?.Content;
+        if (content is ScrollViewer scroll) content = scroll.Content;
+        return content is Border root
             && (root.Classes.Contains("modal") || root.Classes.Contains("sheet")
                 || root.Classes.Contains("inspect"));
+    }
 
     /// <summary>
     /// Renders one view into a themed window and saves the frame.

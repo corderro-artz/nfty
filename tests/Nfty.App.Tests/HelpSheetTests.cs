@@ -174,6 +174,13 @@ public class HelpSheetTests
     }
 
     [AvaloniaFact]
+    public void Captures_give_the_sheet_the_modal_area_inside_its_safety_scroller()
+    {
+        Assert.True(VisualCapture.IsDialogLayer(new Views.HelpView()),
+            "the safety scroller must not turn a modal sheet into a page-sized capture");
+    }
+
+    [AvaloniaFact]
     public void The_sheet_is_a_single_glance_and_never_scrolls_at_the_smallest_window()
     {
         // Why this one card stays FIXED while every other modal became adaptive: a quick reference
