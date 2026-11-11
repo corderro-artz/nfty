@@ -31,11 +31,23 @@ public interface ICommunitySeen
     /// <summary>Marks every entry seen as it is now.</summary>
     /// <param name="index">The list.</param>
     void SeeAll(CommunityIndex index);
+
+    /// <summary>Writes any marks still waiting for the debounce, so closing the page never loses one.</summary>
+    void Flush();
 }
 
 /// <inheritdoc cref="ICommunitySeen"/>
 public sealed class CommunitySeen : ICommunitySeen
 {
+    /// <summary>How long after the last mark the file is written, in milliseconds.</summary>
+    public const int SaveDelayMs = 1000;
+
+    /// <summary>How many times the file has been written, so a test can tell one write from many.</summary>
+    internal int SaveCount { get; private set; }
+
+    /// <summary>The write the debounce is waiting to make, so a test can settle it.</summary>
+    internal Task PendingSave { get; private set; } = Task.CompletedTask;
+
     /// <summary>The file inside the community folder.</summary>
     public const string FileName = "seen.json";
 
@@ -44,12 +56,18 @@ public sealed class CommunitySeen : ICommunitySeen
     private readonly string _path;
     private readonly DateTimeOffset _firstVisit;
     private readonly Dictionary<string, DateTimeOffset> _seen = new(StringComparer.Ordinal);
+    private readonly Func<CancellationToken, Task> _delay;
+    private readonly object _gate = new();
+    private int _generation;
+    private bool _dirty;
 
     /// <summary>Loads the file, or starts over (first visit now) when it is absent or unreadable.</summary>
     /// <param name="root">The <c>community</c> folder. Tests MUST pass a temp directory.</param>
     /// <param name="clock">The time source.</param>
-    public CommunitySeen(string root, Func<DateTimeOffset>? clock = null)
+    /// <param name="delay">The quiet time a change waits for before it is written; one second when null. Tests pass their own.</param>
+    public CommunitySeen(string root, Func<DateTimeOffset>? clock = null, Func<CancellationToken, Task>? delay = null)
     {
+        _delay = delay ?? (ct => Task.Delay(SaveDelayMs, ct));
         _path = Path.Combine(root, FileName);
         string? text = null;
         try { if (File.Exists(_path)) text = File.ReadAllText(_path); }
@@ -70,7 +88,10 @@ public sealed class CommunitySeen : ICommunitySeen
     /// <inheritdoc />
     public SeenMark MarkOf(CommunityEntry entry)
     {
-        if (_seen.TryGetValue(entry.Id, out var at)) return entry.Updated > at ? SeenMark.Updated : SeenMark.None;
+        DateTimeOffset at;
+        bool known;
+        lock (_gate) known = _seen.TryGetValue(entry.Id, out at);
+        if (known) return entry.Updated > at ? SeenMark.Updated : SeenMark.None;
         return entry.Created > _firstVisit ? SeenMark.New : SeenMark.None;
     }
 
@@ -86,23 +107,57 @@ public sealed class CommunitySeen : ICommunitySeen
     /// <inheritdoc />
     public void See(CommunityEntry entry)
     {
-        _seen[entry.Id] = entry.Updated;
-        Save();
+        lock (_gate) _seen[entry.Id] = entry.Updated;
+        Schedule();
     }
 
     /// <inheritdoc />
     public void SeeAll(CommunityIndex index)
     {
-        foreach (var e in index.Entries) _seen[e.Id] = e.Updated;
-        Save();
+        lock (_gate) foreach (var e in index.Entries) _seen[e.Id] = e.Updated;
+        Schedule();
+    }
+
+    /// <inheritdoc />
+    public void Flush()
+    {
+        lock (_gate)
+        {
+            _generation++;   // whatever the debounce had waiting is superseded by this write
+            if (_dirty) Save();
+        }
+    }
+
+    // A mark is kept in memory at once and written once the reader has stopped selecting for a moment: a
+    // keyboard walk through the grid selects a tile per key press, and each write was a synchronous file
+    // write on the UI thread. Trailing debounce: every mark restarts the wait.
+    private void Schedule()
+    {
+        int mine;
+        lock (_gate)
+        {
+            _dirty = true;
+            mine = ++_generation;
+        }
+        PendingSave = Task.Run(async () =>
+        {
+            try { await _delay(CancellationToken.None).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return; }
+            lock (_gate)
+            {
+                if (mine == _generation && _dirty) Save();
+            }
+        });
     }
 
     private void Save()
     {
+        _dirty = false;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             File.WriteAllText(_path, StateJson.Write(new Stored(_firstVisit, _seen)));
+            SaveCount++;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* convenience state */ }
     }

@@ -81,6 +81,17 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
     private static int? PositiveInt(string s) =>
         int.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n > 0 ? n : null;
 
+    /// <summary>Reads the grid from metadata already in hand (a picture loaded with its text chunks kept), so a
+    /// caller that decodes the picture anyway opens the file once.</summary>
+    /// <param name="metadata">The picture's metadata.</param>
+    /// <returns>The grid, or null when there is no <c>nfty-grid</c> entry or it is malformed.</returns>
+    public static SheetGrid? Of(SixLabors.ImageSharp.Metadata.ImageMetadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        var entry = metadata.GetPngMetadata().TextData.FirstOrDefault(t => t.Keyword == ChunkKeyword);
+        return entry.Keyword is null ? null : Parse(entry.Value);
+    }
+
     /// <summary>Reads the grid a PNG carries, without decoding its pixels.</summary>
     /// <exception cref="ArgumentException"><paramref name="pngPath"/> is null or whitespace.</exception>
     /// <param name="pngPath">The sheet.</param>
@@ -90,10 +101,7 @@ public sealed record SheetGrid(int Columns, int Rows, int CellWidth, int CellHei
         ArgumentException.ThrowIfNullOrWhiteSpace(pngPath);
         try
         {
-            var info = ImageFormats.Identify(pngPath, keepMetadata: true);
-            var entry = info.Metadata.GetPngMetadata().TextData
-                .FirstOrDefault(t => t.Keyword == ChunkKeyword);
-            return entry.Keyword is null ? null : Parse(entry.Value);
+            return Of(ImageFormats.Identify(pngPath, keepMetadata: true).Metadata);
         }
         catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
         {

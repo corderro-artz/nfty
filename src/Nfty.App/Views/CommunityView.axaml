@@ -185,9 +185,8 @@
                 <StackPanel Spacing="3">
                   <Border Classes="tile cpreview" Classes.sel="{Binding IsSelected}">
                     <Panel>
-                      <Border Classes="tload" IsVisible="{Binding IsLoading}" />
-                      <Border Classes="tmissing" IsVisible="{Binding ImageMissing}"
-                              ToolTip.Tip="This preview couldn't be fetched" />
+                      <Border Classes="tload" Classes.miss="{Binding ImageMissing}"
+                              IsVisible="{Binding ShowsMark}" ToolTip.Tip="{Binding MarkTip}" />
                       <Image Source="{Binding Preview}" Stretch="Uniform" Margin="4" />
                       <!-- One badge slot, accent ink for New, Updated or Pending, never two. -->
                       <Border Classes="cbadge" Opacity="{Binding MarkOpacity}">
