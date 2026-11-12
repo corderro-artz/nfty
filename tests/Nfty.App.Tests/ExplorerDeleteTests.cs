@@ -34,7 +34,7 @@ public class ExplorerDeleteTests
             var ingNode = recipeNode.Children[0];
             vm.SelectNodeCommand.Execute(ingNode);
             Assert.True(vm.DeleteSelectedCommand.CanExecute(null));
-            await vm.DeleteSelectedCommand.ExecuteAsync(null);
+            await Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail).DeleteItemCommand!.ExecuteAsync(null);
 
             using var reread = CookBookArchive.Read(path);
             Assert.DoesNotContain(reread.Recipes[0].Ingredients, i => i.Manifest.Id == ingNode.Id);
@@ -53,7 +53,7 @@ public class ExplorerDeleteTests
             vm.ToggleLockCommand.Execute(null);
             var recipeNode = vm.Root.Children[0];
             vm.SelectNodeCommand.Execute(recipeNode);
-            await vm.DeleteSelectedCommand.ExecuteAsync(null);
+            await Assert.IsType<RecipeDetailViewModel>(vm.CurrentDetail).DeleteItemCommand!.ExecuteAsync(null);
             using var reread = CookBookArchive.Read(path);
             Assert.DoesNotContain(reread.Recipes, r => r.Manifest.Id == recipeNode.Id);
             Assert.Equal(vm.Root.Id, vm.SelectedNode!.Id);

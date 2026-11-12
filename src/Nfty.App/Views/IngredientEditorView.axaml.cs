@@ -61,6 +61,8 @@ public partial class IngredientEditorView : UserControl
 
     private Image _img = null!;
     private Panel _surface = null!;
+    private Panel _viewport = null!;
+    private Border _outline = null!;
     private Canvas _overlay = null!;
     private Panel _backdrop = null!;
     private IngredientEditorViewModel? _vm;
@@ -75,6 +77,8 @@ public partial class IngredientEditorView : UserControl
 
         _img = this.FindControl<Image>("CanvasImage")!;
         _surface = this.FindControl<Panel>("CanvasSurface")!;
+        _viewport = this.FindControl<Panel>("CanvasViewport")!;
+        _outline = this.FindControl<Border>("CanvasOutline")!;
         _overlay = this.FindControl<Canvas>("CanvasOverlay")!;
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
         _canvas = new PixelCanvasHost(_img, _surface, _backdrop, () => _vm, Brush);
@@ -88,7 +92,7 @@ public partial class IngredientEditorView : UserControl
             e.Handled = true;
         }, RoutingStrategies.Tunnel);
 
-        _surface.PointerPressed += (_, e) =>
+        _viewport.PointerPressed += (_, e) =>
         {
             // CAPTURE, or a gesture that wanders off the 320px tile is simply abandoned: moves stop
             // arriving, the release lands on whatever is under the pointer instead, and the stroke
@@ -101,7 +105,7 @@ public partial class IngredientEditorView : UserControl
             // image was what the pointer talked to.
             if (_vm?.ShowPaintCanvas != true) return;
 
-            e.Pointer.Capture(_surface);
+            e.Pointer.Capture(_viewport);
             _mods = e.KeyModifiers;
 
             // THE MIDDLE BUTTON PANS, and it is settled here rather than on the move for the same
@@ -117,6 +121,16 @@ public partial class IngredientEditorView : UserControl
                 _panning = true;
                 _panFrom = e.GetPosition(_surface);
                 e.Handled = true;
+                return;
+            }
+
+            // The pane also contains empty space outside the art. A press there must not clamp
+            // onto and paint an edge pixel; only a gesture already in progress may cross the edge.
+            var at = e.GetPosition(_surface);
+            if (_img.Source is not Bitmap bmp || _canvas.Frame() is not { } frame
+                || CanvasMapping.PixelUnder(frame, at.X, at.Y, bmp.PixelSize.Width, bmp.PixelSize.Height) is null)
+            {
+                e.Pointer.Capture(null);
                 return;
             }
 
@@ -136,7 +150,7 @@ public partial class IngredientEditorView : UserControl
             _vm?.PreviewToolStroke(Gesture(), _gestureTool);
             DrawBand();
         };
-        _surface.PointerMoved += (_, e) =>
+        _viewport.PointerMoved += (_, e) =>
         {
             if (_panning)
             {
@@ -153,7 +167,7 @@ public partial class IngredientEditorView : UserControl
             _vm?.PreviewToolStroke(Gesture(), _gestureTool);
             DrawBand();
         };
-        _surface.PointerReleased += (_, e) =>
+        _viewport.PointerReleased += (_, e) =>
         {
             if (_panning) { _panning = false; e.Pointer.Capture(null); return; }
             if (!_drawing) return;
@@ -172,7 +186,7 @@ public partial class IngredientEditorView : UserControl
         // Capture can be taken away — the window deactivates, another control grabs it — and then no
         // release is coming. The gesture is abandoned, so the canvas has to stop showing a stroke
         // that is never going to commit.
-        _surface.PointerCaptureLost += (_, _) =>
+        _viewport.PointerCaptureLost += (_, _) =>
         {
             _panning = false;
             if (_drawing) AbortGesture();
@@ -181,7 +195,7 @@ public partial class IngredientEditorView : UserControl
         // THE WHEEL ZOOMS, anchored on the pointer. Bare, with no modifier: the canvas is not in a
         // scroller, so there is nothing else for a wheel over it to mean, and a magnifier that
         // needs a chord is one nobody finds.
-        _surface.PointerWheelChanged += (_, e) =>
+        _viewport.PointerWheelChanged += (_, e) =>
         {
             if (_vm is null || !_vm.ShowPaintCanvas || e.Delta.Y == 0) return;
             _canvas.ZoomAt(e.GetPosition(_surface),
@@ -228,7 +242,7 @@ public partial class IngredientEditorView : UserControl
         DataContextChanged += (_, _) => Rebind();
         _surface.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ =>
         {
-            DrawBand();
+            Reframe();
             _canvas.RebuildBackdrop();
         }));
         // AND the panel's own bounds. The art sits in a fixed 320px host centered in this panel, so
@@ -423,7 +437,7 @@ public partial class IngredientEditorView : UserControl
         // is first bound, so an editor that only ever answered the change notification would open
         // with no transform at all and the first zoom would be the one that installed it.
         _canvas.ApplyCanvasTransform();
-        DrawBand();
+        Reframe();
         _canvas.RebuildBackdrop();
     }
 
@@ -435,15 +449,30 @@ public partial class IngredientEditorView : UserControl
         _canvas.ApplyCanvasTransform();
         _canvas.ClampPan();
         _canvas.RebuildBackdrop();
-        DrawBand();
+        Reframe();
     }
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(IngredientEditorViewModel.Selection)
-            or nameof(IngredientEditorViewModel.ActiveTool)
-            or nameof(IngredientEditorViewModel.Canvas))
+        if (e.PropertyName is nameof(IngredientEditorViewModel.Canvas)
+            or nameof(IngredientEditorViewModel.PreviewFillsPane))
+            Reframe();
+        else if (e.PropertyName is nameof(IngredientEditorViewModel.Selection)
+            or nameof(IngredientEditorViewModel.ActiveTool))
             DrawBand();
+    }
+
+    /// <summary>The outline follows the art's zoom and pan; the preview retains its fitted tile.</summary>
+    private void Reframe()
+    {
+        var art = _vm?.PreviewFillsPane == true ? new Rect(_surface.Bounds.Size) : _canvas.Geometry();
+        if (art.Width > 0 && art.Height > 0)
+        {
+            _outline.Width = art.Width + 2;
+            _outline.Height = art.Height + 2;
+            _outline.Margin = new Thickness(art.X - 1, art.Y - 1, 0, 0);
+        }
+        DrawBand();
     }
 
     /// <summary>

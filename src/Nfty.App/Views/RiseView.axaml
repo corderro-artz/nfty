@@ -336,30 +336,33 @@
             </ctl:StripPanel>
           </Border>
 
-          <!-- The canvas, built exactly as the editor's: a fixed 320px host in the middle of a
-               backdrop that is drawn in code-behind as a lattice of the art's OWN pixels. -->
+          <!-- The host establishes the fitted size. The pane is the viewport: magnified art,
+               its outline and its labels can all grow beyond that original fitted rectangle. -->
           <Panel Grid.Row="1" x:Name="CanvasBackdrop">
-            <Border x:Name="CanvasHost" Width="320" Height="320" CornerRadius="10"
-                    BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
-                    BoxShadow="{DynamicResource WinShadow}" ClipToBounds="True"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-              <!-- The pointer talks to this untransformed panel, never to the image (which carries the
-                   zoom as a render transform). Background="Transparent" so it hit-tests at all. -->
-              <Panel x:Name="CanvasSurface" Background="Transparent">
-                <!-- The layers around the one being painted, dimmed: under it, then it, then over it.
-                     All three carry the same zoom and pan (RiseView.axaml.cs). Absent without a target. -->
-                <Image x:Name="BelowImage" Classes="dimlayer" Source="{Binding BelowCanvas}" Stretch="Uniform"
-                       IsVisible="{Binding ShowPaintCanvas}" />
-                <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
-                       IsVisible="{Binding ShowPaintCanvas}" />
-                <Image x:Name="AboveImage" Classes="dimlayer" Source="{Binding AboveCanvas}" Stretch="Uniform"
-                       IsVisible="{Binding ShowPaintCanvas}" />
-                <!-- The thickness of each solid pixel, once a cell is big enough to hold a number. -->
-                <ctl:DepthLabelLayer x:Name="DepthLabels" IsHitTestVisible="False"
-                                     IsVisible="{Binding ShowPaintCanvas}" />
-                <Canvas x:Name="CanvasOverlay" IsHitTestVisible="False" IsVisible="{Binding ShowPaintCanvas}" />
-              </Panel>
-            </Border>
+            <Panel x:Name="CanvasViewport" Background="Transparent" ClipToBounds="True">
+              <Border x:Name="CanvasHost" Width="320" Height="320" BorderThickness="1"
+                      HorizontalAlignment="Center" VerticalAlignment="Center">
+                <!-- Mapping stays in this untransformed fitted surface's coordinates. The full pane's
+                     viewport receives the pointer, including over art outside this fitted surface. -->
+                <Panel x:Name="CanvasSurface">
+                  <!-- The layers around the one being painted, dimmed: under it, then it, then over it.
+                       All three carry the same zoom and pan (RiseView.axaml.cs). Absent without a target. -->
+                  <Image x:Name="BelowImage" Classes="dimlayer" Source="{Binding BelowCanvas}" Stretch="Uniform"
+                         IsVisible="{Binding ShowPaintCanvas}" />
+                  <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
+                         IsVisible="{Binding ShowPaintCanvas}" />
+                  <Image x:Name="AboveImage" Classes="dimlayer" Source="{Binding AboveCanvas}" Stretch="Uniform"
+                         IsVisible="{Binding ShowPaintCanvas}" />
+                  <Border x:Name="CanvasOutline" CornerRadius="{DynamicResource RadiusMd}" BorderThickness="1"
+                          BorderBrush="{DynamicResource LineStrongBrush}" BoxShadow="{DynamicResource WinShadow}"
+                          HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                  <Canvas x:Name="CanvasOverlay" IsHitTestVisible="False" IsVisible="{Binding ShowPaintCanvas}" />
+                </Panel>
+              </Border>
+              <!-- Labels cull against the whole pane, never against the original fitted rectangle. -->
+              <ctl:DepthLabelLayer x:Name="DepthLabels" IsHitTestVisible="False"
+                                   IsVisible="{Binding ShowPaintCanvas}" />
+            </Panel>
 
             <!-- WHERE THE 3D VIEW LIVES WHEN IT HAS TAKEN THE PANE. Empty otherwise, and a Border
                  with no background is not hit-testable, so the canvas under it keeps the pointer. -->
@@ -403,7 +406,7 @@
                  ModelPreviewView lives in TileHost by default and is MOVED to BigHost (never
                  duplicated) when the two trade places; RiseView.axaml.cs does the moving. -->
             <Border x:Name="ModelTile" Width="{Binding TileSize}" Height="{Binding TileSize}"
-                    CornerRadius="10" ClipToBounds="True"
+                    CornerRadius="{DynamicResource RadiusMd}" ClipToBounds="True"
                     BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
                     Background="{DynamicResource TileBrush}" BoxShadow="{DynamicResource WinShadow}"
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26">

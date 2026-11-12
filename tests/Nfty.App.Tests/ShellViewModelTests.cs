@@ -71,14 +71,9 @@ public class ShellViewModelTests
         Assert.Equal("", shell.StatusMessage);
     }
 
-    /// <summary>...but a page that HAS an opening line still gets to say it on arrival.</summary>
-    /// <remarks>
-    /// The Explorer announces its lock state from its constructor, which runs before the navigation
-    /// that shows it -- so clearing on page change would have swallowed exactly the message the
-    /// titlebar chip has to agree with.
-    /// </remarks>
+    /// <summary>The two lock badges are enough; routine navigation and toggles leave room for guidance.</summary>
     [AvaloniaFact]
-    public void The_explorer_still_announces_its_lock_state_when_it_becomes_the_current_page()
+    public void The_explorer_leaves_the_status_line_clear_on_arrival_and_lock_changes()
     {
         var nav = new FakeNav();
         var status = new StatusService();
@@ -94,7 +89,14 @@ public class ShellViewModelTests
 
             nav.To(explorer);
 
-            Assert.Contains("lock", shell.StatusMessage, System.StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("", shell.StatusMessage);
+            explorer.ToggleLockCommand.Execute(null);
+            Assert.True(explorer.IsEditing);
+            Assert.Equal("", shell.StatusMessage);
+            status.Warn("Unlock editing to add a recipe.");
+            Assert.Equal("Unlock editing to add a recipe.", shell.StatusMessage);
+            explorer.ToggleLockCommand.Execute(null);
+            Assert.Equal("", shell.StatusMessage);
             explorer.Dispose();
         }
         finally { session.Dispose(); System.IO.Directory.Delete(System.IO.Path.GetDirectoryName(path)!, true); }
