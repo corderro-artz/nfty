@@ -2,6 +2,6 @@
      fill="none" stroke="currentColor" stroke-width="2"
      stroke-linecap="round" stroke-linejoin="round">
   <title>IconRise</title>
-  <desc>A flat picture pushed out into a solid: an oblique block, front face square-on with its top and side faces showing depth. Must not read as Kitchen (a wide lidded archive box) or as a lock, eye or the rect tool.</desc>
-  <path d="M3 10h12v11H3zM3 10l5-6h12l-5 6M20 4v11l-5 6"/>
+  <desc>A balanced three-dimensional cube with an upward arrow: raise a flat image into a solid.</desc>
+  <path d="M12 7V2M9 5l3-3 3 3M4 11l8-4 8 4v6l-8 4-8-4zM4 11l8 4 8-4M12 15v6"/>
 </svg>

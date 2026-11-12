@@ -11,7 +11,7 @@ left; the panel on the right describes whatever is selected. It opens when you c
 
 A CookBook opens **read-only**, so nothing can be rearranged by accident. The chip in the title bar
 shows the state and **is the switch**: click **read-only** to unlock it, and it turns carmine and
-reads **editing**. The status bar says the same in words.
+reads **editing**. A second badge in the status bar shows the same state; the message area stays free for action results and warnings.
 
 | Locked | Allowed |
 |---|---|
@@ -102,11 +102,12 @@ The layer table is never sorted by column: its order *is* the paint order.
 
 | Part | Shows |
 |---|---|
-| **Identity card** | The layer's name (click it to rename), a preview, the layer's kind and color model, an absent flag if the Recipe can leave it out, and a rule flag if a rule names it. The **pencil** opens the [Ingredient Editor](ingredient-editor.md) (++ctrl+e++); **Rise** opens the [Rise page](rise.md). |
+| **Identity card** | The layer's name (click the name or its hover pencil to open the editor), a preview, the layer's kind and color model, an absent flag if the Recipe can leave it out, and a rule flag if a rule names it. The name opens the [Ingredient Editor](ingredient-editor.md) (++ctrl+e++). The die and **Rise** sit beneath the preview; **Rise** opens the [Rise page](rise.md) on the selected variant. Rename the layer with the pane header's pencil. |
 | **Share strip** | The biggest variants' shares as bars, four at a time. |
 | **VARIANT table** | Each variant's thumbnail, **WEIGHT**, its share **IN RECIPE**, and its share **OVERALL** (of the whole collection). Click a header to sort. One variant is always selected (the first, when the panel opens); double-click a row to edit it. Unlocked, rows gain the same drag grip as the layer table. Its rows are the layer table's height. See [Weights and rarity](weights.md). |
 | **COLORWAYS** | The actual colors this layer can roll, by hue and saturation, and how many it **ADMITS**. Static shows one swatch; Custom says colorization does not apply. |
 | **Delete variant** | Removes the selected variant, after asking. |
+| **Delete ingredient** | Removes the whole layer from its Recipe, after asking. **Delete recipe** on the Recipe panel removes the whole Recipe. Both require editing unlocked. |
 | **Export preview…** | Writes the selected variant as a PNG, exactly as generation renders it. |
 
 ## The status bar

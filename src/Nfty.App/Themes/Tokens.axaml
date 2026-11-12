@@ -470,6 +470,9 @@
   <x:Double x:Key="KeyCapHeight">20</x:Double>
   <x:Double x:Key="KeyCapHeightSm">18</x:Double>
   <x:Double x:Key="StepperWidth">17</x:Double>
+  <!-- Fluent's track, arrows and hit target share this width in both orientations. -->
+  <x:Double x:Key="ScrollBarSize">10</x:Double>
+  <Thickness x:Key="TableScrollGutter">0,0,14,0</Thickness>
   <!-- One DNA-space row. STATED, not measured, and that is a correctness fix rather than a tidy-up:
        CookBookDetailView divides the rows host by this to decide how many rows a page holds, and it
        used to measure a drawn row instead. A measured row wobbles for a pass after the ItemsControl

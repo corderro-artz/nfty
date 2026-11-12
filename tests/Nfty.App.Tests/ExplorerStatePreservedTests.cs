@@ -17,9 +17,8 @@ namespace Nfty.App.Tests;
 /// <remarks>
 /// A save rebuilds the whole tree from a new graph. Selection was already carried across by id;
 /// expansion was not, so saving a layer dropped the author back on a fully collapsed root, three
-/// levels from where they were working. The lock's status line had the mirror-image problem — it was
-/// only ever written when the lock was TOGGLED, so a second book (which opens locked) inherited
-/// "Editing unlocked" from the first and contradicted its own read-only chip.
+/// levels from where they were working. Status messages also clear when opening another book;
+/// the lock badges carry the persistent mode.
 /// </remarks>
 public class ExplorerStatePreservedTests
 {
@@ -72,16 +71,14 @@ public class ExplorerStatePreservedTests
     }
 
     [AvaloniaFact]
-    public void The_status_line_states_the_lock_as_it_actually_is_on_open()
+    public void The_status_line_is_clear_on_open()
     {
         using var book = ExplorerViewModelTests.TwoRecipeBook();
         var status = new StatusService();
         using var vm = Explorer(book, status);
 
         Assert.False(vm.IsEditing);                        // a book opens locked
-        Assert.NotNull(status.Last);
-        Assert.Contains("locked", status.Last!, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("unlocked", status.Last!, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("", status.Last);
     }
 
     [AvaloniaFact]
@@ -94,13 +91,14 @@ public class ExplorerStatePreservedTests
         {
             vm.ToggleLockCommand.Execute(null);
             Assert.True(vm.IsEditing);
-            Assert.Contains("unlocked", status.Last!, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("", status.Last);
+            status.Say("A previous action's message.");
         }
 
         using var second = ExplorerViewModelTests.TwoRecipeBook();
         using var vm2 = Explorer(second, status);
 
         Assert.False(vm2.IsEditing);
-        Assert.DoesNotContain("unlocked", status.Last!, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("", status.Last);
     }
 }

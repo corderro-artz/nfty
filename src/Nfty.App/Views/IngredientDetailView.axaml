@@ -38,18 +38,31 @@
          and the actions sit in a band of their own that nothing can push. -->
     <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="14" Margin="0,0,16,0">
       <Border Grid.Row="0" Classes="vhero">
-        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
-          <Border Grid.Column="0" Width="84" Height="84" CornerRadius="{DynamicResource RadiusMd}"
-                  Background="{DynamicResource TileBrush}" ClipToBounds="True" Margin="0,0,16,0">
-            <Image Source="{Binding Hero}" Stretch="UniformToFill" />
-          </Border>
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+          <!-- Match the Recipe pane: controls belong under the picture they act on. -->
+          <StackPanel Grid.Column="0" Margin="0,0,16,0" Spacing="7" VerticalAlignment="Top">
+            <Border Width="84" Height="84" CornerRadius="{DynamicResource RadiusMd}"
+                    Background="{DynamicResource TileBrush}" ClipToBounds="True">
+              <Image Source="{Binding Hero}" Stretch="UniformToFill" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+              <Button Classes="sampleroll" Command="{Binding RollColorCommand}" IsVisible="{Binding IsDynamic}"
+                      ToolTip.Tip="Roll another sample color. A Dynamic layer is colored per asset when cooked; this is one roll of it, not a stored color.">
+                <Panel Classes="dieroll">
+                  <Path Classes="ico ti" Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.Instance}}" />
+                  <Path Classes="ico ti pip1" Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
+                </Panel>
+              </Button>
+              <Button Classes="sampleroll" Command="{Binding RiseCommand}" ToolTip.Tip="{Binding RiseTip}">
+                <Path Classes="ico sm" Data="{StaticResource IconRise}" />
+              </Button>
+            </StackPanel>
+          </StackPanel>
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-            <!-- THE TITLE IS A BUTTON, the CookBook card's Button.titlelink: chrome stripped so the
-                 text sits where the bare TextBlock did, a pencil inked on hover only. It opens the
-                 rename card. -->
-            <Button Classes="titlelink" Command="{Binding EditNameCommand}" HorizontalAlignment="Left"
-                    ToolTip.Tip="Rename this layer">
-              <Panel>
+            <!-- The name and its hover pencil open the editor; renaming stays in the pane header. -->
+            <Button Classes="titlelink" Command="{Binding EditIngredientCommand}" HorizontalAlignment="Left"
+                    ToolTip.Tip="Edit variant images, names and weights">
+              <Panel Margin="0,0,14,0">
                 <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                 <Path Classes="ico xs pen" Data="{StaticResource IconPencil}" IsHitTestVisible="False"
                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-14,0" />
@@ -98,22 +111,7 @@
               </Border>
             </StackPanel>
           </StackPanel>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
-            <!-- DYNAMIC ONLY. A Dynamic variant is a gray value-map colored per asset, so a pane
-                 showing one frozen color misdescribes it; the die rolls another sample. A layer's kind
-                 never changes while its pane is open, so IsVisible moves nothing. Same die, faces and
-                 tumble as the Recipe pane's roll. -->
-            <Button Classes="sampleroll" Command="{Binding RollColorCommand}" IsVisible="{Binding IsDynamic}"
-                    ToolTip.Tip="Roll another sample color. A Dynamic layer is colored per asset when cooked; this is one roll of it, not a stored color.">
-              <Panel Classes="dieroll">
-                <Path Classes="ico ti"
-                      Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.Instance}}" />
-                <Path Classes="ico ti pip1"
-                      Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
-              </Panel>
-            </Button>
-            <Button Command="{Binding EditIngredientCommand}" Classes="accent" ToolTip.Tip="Edit variant images, names and weights"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
-          </StackPanel>
+
 
           <!-- .rarity: how the layer's weight actually splits, at a glance. The table below carries
                the same numbers, but a column of percentages does not show the SHAPE of the split. -->
@@ -127,7 +125,7 @@
                Four in a fixed UniformGrid gives the hero ONE height in every book, puts two bars
                side by side where they can be compared, and sends the rest a page away rather than
                cutting them off. The pager is the CookBook card's, down to its dots. -->
-          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding VisibleHeroBars}"
+          <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{Binding VisibleHeroBars}"
                         Margin="0,13,0,0">
             <ItemsControl.ItemsPanel>
               <!-- Rows AND Columns stated: a UniformGrid given only Columns grows rows to fit, which
@@ -175,7 +173,7 @@
           <!-- The pager is PRESENT at one page as well as five - disabled, never absent - so adding
                a variant cannot move the block above it. Right-aligned under the bars, which is where
                the DNA SPACE rail puts the same control. -->
-          <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal"
+          <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
                       Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center"
                       Margin="0,0,0,2"
                       ToolTip.Tip="The biggest slices first, four at a time. The table below lists every variant.">
@@ -205,7 +203,7 @@
              them, and every value in that column moved as soon as a weight gained a digit. The
              widths are the header words (the binding constraint at every realistic value) plus the
              8px gutter each cell carries: 48+8, 70+8, 56+8. -->
-        <Border Grid.Row="0" Classes="data-h">
+        <Border Grid.Row="0" Classes="data-h" Margin="{DynamicResource TableScrollGutter}">
           <!-- 26 = the drag grip's column, the Recipe pane's own; 40 = the thumbnail. No # column:
                variant order rolls nothing, so a number would claim a meaning it does not have. -->
           <Grid ColumnDefinitions="26,40,*,71,93,79">
@@ -272,7 +270,7 @@
              one row that must never scroll away from the numbers it names - the same split the Set
              browser's rarity rail keeps. -->
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
+                      VerticalScrollBarVisibility="Visible">
         <ItemsControl Name="VariantRows" ItemsSource="{Binding Variants}" VerticalAlignment="Top">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:VariantRow">
@@ -321,14 +319,8 @@
             <TextBlock Text="Export preview…" />
           </StackPanel>
         </Button>
-        <!-- Opens the Rise page on the selected variant. Available on a locked book as the pencil is:
-             the page gates its own Save. -->
-        <Button Command="{Binding RiseCommand}" Classes="tbtn" ToolTip.Tip="{Binding RiseTip}">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <Path Classes="ico sm" Data="{StaticResource IconRise}" />
-            <TextBlock Text="Rise" />
-          </StackPanel>
-        </Button>
+        <Button Content="Delete ingredient" Command="{Binding DeleteItemCommand}" Classes="tbtn"
+                IsEnabled="{Binding HasDeleteAction}" ToolTip.Tip="Delete this whole layer from the Recipe, after confirmation" />
       </StackPanel>
     </Grid>
 

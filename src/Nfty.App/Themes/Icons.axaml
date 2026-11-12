@@ -169,8 +169,8 @@
   <!-- ingredient-editor.html: "Reroll sampled color" — also the recipe portrait's reroll -->
   <StreamGeometry x:Key="IconReroll">M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6</StreamGeometry>
 
-  <!-- A flat picture pushed out into a solid: an oblique block, front face square-on with its top and side faces showing depth. Must not read as Kitchen (a wide lidded archive box) or as a lock, eye or the rect tool. -->
-  <StreamGeometry x:Key="IconRise">M3 10h12v11H3zM3 10l5-6h12l-5 6M20 4v11l-5 6</StreamGeometry>
+  <!-- A balanced three-dimensional cube with an upward arrow: raise a flat image into a solid. -->
+  <StreamGeometry x:Key="IconRise">M12 7V2M9 5l3-3 3 3M4 11l8-4 8 4v6l-8 4-8-4zM4 11l8 4 8-4M12 15v6</StreamGeometry>
 
   <!-- A floppy disk: the shutter on top, the label below. Save, as opposed to IconDownload (a file leaving for somewhere else). -->
   <StreamGeometry x:Key="IconSave">M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 3v5h7V3M7 21v-7h10v7</StreamGeometry>

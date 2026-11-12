@@ -340,6 +340,11 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// state to that drew the sentence twice, once in each row.</summary>
     public bool FilterEmptied => RecipeHasRules && !HasRules;
 
+    /// <summary>The Explorer's existing confirmed delete action for this whole recipe.</summary>
+    public IAsyncRelayCommand? DeleteItemCommand { get; }
+    /// <summary>Whether this pane has a persistence owner to delete through.</summary>
+    public bool HasDeleteAction => DeleteItemCommand is not null;
+
     /// <summary>The empty state's sentence: a recipe with no rules and a filter that matched none
     /// are different situations, and one of them is undone by a click.</summary>
     public string EmptyRuleText => _allRules.Count == 0
@@ -361,13 +366,15 @@ public partial class RecipeDetailViewModel : ViewModelBase, IDisposable
     /// <paramref name="editRules"/>: a form that cannot save is not worth opening.</param>
     /// <param name="rise">Opens the Rise page on the roll the hero shows (given its seed). Null where
     /// Rise is not offered, which disables the button rather than hiding it.</param>
+    /// <param name="deleteItem">The Explorer's lock-gated, confirmed delete action for the whole recipe.</param>
     public RecipeDetailViewModel(LoadedRecipe recipe, LoadedCookBook book, IImageBridge bridge,
         Action<string> openIngredient,
         Func<string, int, Task<LoadedCookBook?>>? moveLayer = null, bool canReorder = false,
         Func<Func<RecipeManifest, RecipeManifest>, string, Task<LoadedCookBook?>>? editRules = null,
         IDialogService? dialogs = null,
-        Action<int>? rise = null)
+        Action<int>? rise = null, IAsyncRelayCommand? deleteItem = null)
     {
+        DeleteItemCommand = deleteItem;
         _rise = rise;
         _recipe = recipe; _book = book; _bridge = bridge; _openIngredient = openIngredient;
         _moveLayer = moveLayer;

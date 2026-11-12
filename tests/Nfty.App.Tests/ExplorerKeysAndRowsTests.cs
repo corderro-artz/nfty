@@ -118,7 +118,7 @@ public class ExplorerKeysAndRowsTests
     }
 
     [AvaloniaFact]
-    public void Every_title_opens_its_editor()
+    public void Recipe_title_and_ingredient_header_open_their_settings()
     {
         var (path, session) = OnDisk();
         try
@@ -132,8 +132,9 @@ public class ExplorerKeysAndRowsTests
                 Assert.Equal("Edit Recipe", Assert.IsType<ItemSettingsDialogViewModel>(dialogs.Active).Title);
 
                 vm.SelectedNode = vm.Root.Children[0].Children[0];
-                var layer = Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
-                layer.EditNameCommand.Execute(null);
+                Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
+                vm.ToggleLockCommand.Execute(null);
+                vm.EditSelectedCommand.Execute(null);
                 Assert.Equal("Edit Ingredient", Assert.IsType<ItemSettingsDialogViewModel>(dialogs.Active).Title);
             }
         }

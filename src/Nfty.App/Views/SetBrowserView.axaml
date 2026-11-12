@@ -316,7 +316,7 @@
                            ToolTip.Tip="The rarest single trait this asset carries, of the ones listed below" />
 
               </Grid>
-                <Border Classes="data-h">
+                <Border Classes="data-h" Margin="{DynamicResource TableScrollGutter}">
                   <!-- 71, not 56: a rarity reads "52.33%" as often as "44%", and six characters of
                        tabular mono need ~52px, plus the 11px sort slot and its 4px gap. At 46 the
                        wider values overflowed their column to the LEFT, into the value column's
@@ -386,7 +386,7 @@
                  are more", which is what Auto means. -->
             <ScrollViewer Grid.Row="1" x:Name="RarityRows" Margin="13,0,13,12"
                           VerticalAlignment="Top"
-                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
                 <ItemsControl ItemsSource="{Binding ShownRarity}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RarityRowViewModel">

@@ -1,7 +1,7 @@
 # The Ingredient Editor
 
 The Ingredient Editor is where a layer's variants are drawn and its colors are set. Open it from the
-**pencil** on an Ingredient's panel in the Explorer. It has three panes: variants on the left, the
+**name or its hover pencil** on an Ingredient's panel in the Explorer. It has three panes: variants on the left, the
 canvas in the middle, and a rail on the right with two tabs, **COLORIZE** and **REFERENCES**.
 
 ![The Ingredient Editor](../images/editor-light.png#only-light)

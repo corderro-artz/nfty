@@ -44,6 +44,7 @@ public partial class RiseView : UserControl
     private Image _below = null!;
     private Image _above = null!;
     private Panel _surface = null!;
+    private Panel _viewport = null!;
     private Canvas _overlay = null!;
     private Panel _backdrop = null!;
     private DepthLabelLayer _labels = null!;
@@ -51,6 +52,7 @@ public partial class RiseView : UserControl
     private Border _bigHost = null!;
     private ModelPreviewView _model = null!;
     private Border _host = null!;
+    private Border _outline = null!;
     private Border _tile = null!;
     private Border _targetChip = null!;
     private ScrollViewer _railScroll = null!;
@@ -86,6 +88,7 @@ public partial class RiseView : UserControl
         _below = this.FindControl<Image>("BelowImage")!;
         _above = this.FindControl<Image>("AboveImage")!;
         _surface = this.FindControl<Panel>("CanvasSurface")!;
+        _viewport = this.FindControl<Panel>("CanvasViewport")!;
         _overlay = this.FindControl<Canvas>("CanvasOverlay")!;
         _backdrop = this.FindControl<Panel>("CanvasBackdrop")!;
         _labels = this.FindControl<DepthLabelLayer>("DepthLabels")!;
@@ -93,6 +96,7 @@ public partial class RiseView : UserControl
         _bigHost = this.FindControl<Border>("BigHost")!;
         _model = this.FindControl<ModelPreviewView>("ModelView")!;
         _host = this.FindControl<Border>("CanvasHost")!;
+        _outline = this.FindControl<Border>("CanvasOutline")!;
         _tile = this.FindControl<Border>("ModelTile")!;
         // Ctrl+click or middle-click on the 3D tile opens the viewer. On the tunnel so the model's own
         // orbit drag and the tile's buttons never see the press.
@@ -121,6 +125,7 @@ public partial class RiseView : UserControl
 
         DataContextChanged += (_, _) => Rebind();
         _surface.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => Reframe()));
+        _host.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => Reframe()));
         // And the backdrop's own bounds: the art sits in a fixed host centered in it, so the host's
         // POSITION keeps moving as the pane resizes after the image has stopped changing size.
         _backdrop.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => { FitHost(); _canvas.RebuildBackdrop(); }));
@@ -225,9 +230,16 @@ public partial class RiseView : UserControl
     /// <summary>Re-reads the geometry for everything that is drawn from it.</summary>
     private void Reframe()
     {
-        _labels.Frame = _canvas.TryGeometry(out var scale, out var offX, out var offY)
-            ? new CanvasFrame(scale, offX, offY)
-            : default;
+        if (_canvas.TryGeometry(out var scale, out var offX, out var offY)
+            && _surface.TranslatePoint(new Point(offX, offY), _labels) is { } origin)
+        {
+            _labels.Frame = new CanvasFrame(scale, origin.X, origin.Y);
+            var art = _canvas.Geometry();
+            _outline.Width = art.Width + 2;
+            _outline.Height = art.Height + 2;
+            _outline.Margin = new Thickness(art.X - 1, art.Y - 1, 0, 0);
+        }
+        else _labels.Frame = default;
         DrawBand();
         _canvas.RebuildBackdrop();
     }
@@ -434,7 +446,7 @@ public partial class RiseView : UserControl
 
     private void WirePointer()
     {
-        _surface.PointerPressed += (_, e) =>
+        _viewport.PointerPressed += (_, e) =>
         {
             var props = e.GetCurrentPoint(_surface).Properties;
             // Ctrl is also how a stroke is constrained to a straight line, so Ctrl+press cannot decide
@@ -446,7 +458,7 @@ public partial class RiseView : UserControl
             {
                 e.Handled = true;
                 if (_vm?.ShowPaintCanvas != true) { _vm?.PopOutCommand.Execute(null); return; }
-                e.Pointer.Capture(_surface);
+                e.Pointer.Capture(_viewport);
                 _ctrlHold = true;
                 _ctrlFrom = e.GetPosition(_surface);
                 _ctrlMods = e.KeyModifiers;
@@ -454,7 +466,7 @@ public partial class RiseView : UserControl
             }
             // The surface is still there when the 3D view has the pane; a stroke would land unseen.
             if (_vm?.ShowPaintCanvas != true) return;
-            e.Pointer.Capture(_surface);
+            e.Pointer.Capture(_viewport);
             _mods = e.KeyModifiers;
 
             // PointerUpdateKind AND the flag: platforms differ about which one a press populates.
@@ -471,7 +483,7 @@ public partial class RiseView : UserControl
                 props.IsRightButtonPressed || props.PointerUpdateKind == PointerUpdateKind.RightButtonPressed);
         };
 
-        _surface.PointerMoved += (_, e) =>
+        _viewport.PointerMoved += (_, e) =>
         {
             if (_ctrlHold)
             {
@@ -502,7 +514,7 @@ public partial class RiseView : UserControl
             Hover(e);
         };
 
-        _surface.PointerReleased += (_, e) =>
+        _viewport.PointerReleased += (_, e) =>
         {
             if (_ctrlHold)
             {
@@ -519,7 +531,7 @@ public partial class RiseView : UserControl
                 if (_panTravel < PanClickSlop) _vm?.PopOutCommand.Execute(null);
                 return;
             }
-            if (!_drawing) return;
+            if (!_drawing) { e.Pointer.Capture(null); return; }
             _mods = e.KeyModifiers;
             // Cleared BEFORE the capture is released: releasing raises PointerCaptureLost, which would
             // otherwise read a finished gesture as an abandoned one.
@@ -534,19 +546,19 @@ public partial class RiseView : UserControl
 
         // Capture can be taken away - the window deactivates, another control grabs it - and no
         // release is coming; a preview left standing is indistinguishable from a committed stroke.
-        _surface.PointerCaptureLost += (_, _) =>
+        _viewport.PointerCaptureLost += (_, _) =>
         {
             _panning = false;
             _ctrlHold = false;
             if (_drawing) AbortGesture();
         };
 
-        _surface.PointerExited += (_, _) =>
+        _viewport.PointerExited += (_, _) =>
         {
             if (!_drawing && _vm is not null) _vm.HoverPixel = null;
         };
 
-        _surface.PointerWheelChanged += (_, e) =>
+        _viewport.PointerWheelChanged += (_, e) =>
         {
             if (_vm is null || !_vm.ShowPaintCanvas || e.Delta.Y == 0) return;
             _canvas.ZoomAt(e.GetPosition(_surface), e.Delta.Y > 0 ? RiseViewModel.ZoomStep : 1 / RiseViewModel.ZoomStep);
@@ -577,7 +589,8 @@ public partial class RiseView : UserControl
     /// Ctrl press that moved) is always the left button.</param>
     private void BeginStroke(Point at, bool back)
     {
-        if (_vm is null) return;
+        if (_vm is null || _img.Source is not Bitmap bmp || _canvas.Frame() is not { } frame
+            || CanvasMapping.PixelUnder(frame, at.X, at.Y, bmp.PixelSize.Width, bmp.PixelSize.Height) is null) return;
         _side = back ? DepthSide.Back : DepthSide.Front;
         _lower = _mods.HasFlag(KeyModifiers.Shift);
         _drawing = true;

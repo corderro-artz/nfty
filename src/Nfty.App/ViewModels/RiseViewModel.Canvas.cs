@@ -10,8 +10,12 @@ public sealed partial class RiseViewModel
     /// <summary>The zoom that fits the whole canvas in the tile.</summary>
     public const double ZoomMin = CanvasMapping.ZoomMin;
 
-    /// <summary>The deepest zoom.</summary>
+    /// <summary>The deepest zoom for small sprites; larger images can zoom further to read their depth.</summary>
     public const double ZoomMax = CanvasMapping.ZoomMax;
+
+    // Even the smallest 160px fitted host can then show a cell at 20px, above the depth labels'
+    // readability floor. A fixed 16x ceiling left 512px artwork permanently below that floor.
+    private double ZoomLimit => Math.Max(ZoomMax, Math.Max(Surface.Width, Surface.Height) / 8.0);
 
     /// <summary>One notch of the wheel, or one press of the zoom keys.</summary>
     public const double ZoomStep = CanvasMapping.ZoomStep;
@@ -67,7 +71,7 @@ public sealed partial class RiseViewModel
 
     partial void OnZoomChanged(double value)
     {
-        double clamped = double.IsFinite(value) ? Math.Clamp(value, ZoomMin, ZoomMax) : ZoomMin;
+        double clamped = double.IsFinite(value) ? Math.Clamp(value, ZoomMin, ZoomLimit) : ZoomMin;
         // IsNaN first: |clamped - NaN| > 1e-9 is false, so a NaN would sail through the comparison.
         if (double.IsNaN(value) || Math.Abs(clamped - value) > 1e-9) { Zoom = clamped; return; }
         if (!IsZoomed) { PanX = 0; PanY = 0; }

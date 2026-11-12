@@ -356,12 +356,18 @@ public class RulesPanelTests
     /// against the ROW's own content, not against the other Grid's declaration, because two
     /// declarations being equal is precisely what was true while it was broken.</para>
     /// </remarks>
-    [AvaloniaFact]
-    public void Both_layer_headings_sit_over_the_values_they_name()
+    [AvaloniaTheory]
+    [InlineData(3, "all")]
+    [InlineData(12, "all")]
+    [InlineData(12, "exclude")]
+    [InlineData(12, "require")]
+    public void Both_layer_headings_sit_over_the_values_they_name(int count, string filter)
     {
-        var (window, _, view) = Render(3);
+        var (window, vm, view) = Render(count);
         try
         {
+            vm.FilterRulesCommand.Execute(filter);
+            Dispatcher.UIThread.RunJobs();
             // Scoped to the rules panel: the LAYERS table below has a "LAYER" heading of its own,
             // and comparing across the two tables would be meaningless.
             var panel = view.GetVisualDescendants().OfType<Border>()
@@ -393,6 +399,6 @@ public class RulesPanelTests
                     + $"x={cell:0.#} — the heading is not over its own column.");
             }
         }
-        finally { window.Close(); }
+        finally { window.Close(); vm.Dispose(); }
     }
 }

@@ -372,10 +372,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         Root.IsExpanded = true;
         RebuildCrumbs();
         RefreshValidity();
-        // The status line is shared and outlives this page. A second book opens LOCKED, but the line
-        // left over from the first still read "Editing unlocked" — the chip and the status bar
-        // disagreeing about the same thing, on the same screen.
-        SayLockState();
+        // The lock badges carry the mode; clear any previous action message on open.
+        _status.Say("");
     }
 
     private static ExplorerNode BuildTree(LoadedCookBook book)
@@ -459,7 +457,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
                 // reason: closing over the node would pin the pre-edit graph for the pane's life.
                 RuleEditCallback((LoadedRecipe)newValue.Domain!),
                 _dialogs,
-                _riseFactory is null ? null : RiseRecipeCallback(((LoadedRecipe)newValue.Domain!).Manifest.Id)),
+                _riseFactory is null ? null : RiseRecipeCallback(((LoadedRecipe)newValue.Domain!).Manifest.Id),
+                deleteItem: DeleteSelectedCommand),
             ExplorerNodeKind.Ingredient => newValue!.Domain is (LoadedRecipe r, LoadedIngredient i)
                 ? new IngredientDetailViewModel(i, r, _book, _bridge,
                     () => OpenEditor(i, r), () => IsEditing,
@@ -473,15 +472,14 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
                     // Rise reads the LIVE graph at call time, by id: the node's captured (r, i) is the
                     // graph as it was when the pane was built, and a save since then (a Rise save, an
                     // editor save) swaps in new objects. Closing over them would rise a stale variant.
-                    _riseFactory is null ? null : RiseVariantCallback(r.Manifest.Id, i.Manifest.Id))
+                    _riseFactory is null ? null : RiseVariantCallback(r.Manifest.Id, i.Manifest.Id),
+                    deleteItem: DeleteSelectedCommand)
                 : null,
             _ => null,
         };
         if (CurrentDetail is IngredientDetailViewModel ingredientPane
             && newValue?.Domain is (LoadedRecipe owner, LoadedIngredient layer))
         {
-            var layerNode = newValue;
-            ingredientPane.EditNameAction = () => _ = EditNodeAsync(layerNode);
             string recipeId = owner.Manifest.Id, ingredientId = layer.Manifest.Id;
             ingredientPane.ReorderVariants = async ids =>
             {
@@ -569,11 +567,7 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
 
     private void OpenEditor(LoadedIngredient i, LoadedRecipe r)
     {
-        // The status line is a last-message board, so whatever the Explorer said last was still
-        // standing over the editor - and what it usually said last was "Editing locked - unlock to
-        // make changes." The lock governs the Explorer's structural edits (add, delete, reorder);
-        // the pencil is deliberately NOT gated by it, so that sentence sat under a canvas that
-        // painted perfectly well, claiming the opposite. Say something true on the way in.
+        // Opening is allowed while locked; the editor gates its own Save.
         if (_disposed) return;
         var editor = _editorFactory(i, r, _book, () => IsEditing);
         if (CurrentDetail is IngredientDetailViewModel { Selected: { } selected }
@@ -983,29 +977,13 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
         return false;
     }
 
-    /// <summary>The edit lock had no visible state at all (static padlock, no active styling), so a
-    /// working toggle read as a dead button. Flip it, restyle it, and say so on the status line.</summary>
+    /// <summary>Toggle the edit lock. Its two badges carry the state; the status line stays free for guidance.</summary>
     [RelayCommand]
     private void ToggleLock()
     {
         IsEditing = !IsEditing;
-        SayLockState();
+        _status.Say("");
     }
-
-    /// <summary>Puts the current lock state on the status line.
-    ///
-    /// <para>Called on open as well as on toggle. Opening a second book starts it locked, but the
-    /// line left over from the first still read "Editing unlocked" — so the chip said read-only and
-    /// the status bar said the opposite, on the same screen.</para>
-    ///
-    /// <para>Also called by the shell whenever this page becomes the current one. The open-time call
-    /// happens in the constructor, which runs BEFORE the navigation that shows the page — and the
-    /// shell clears the status on every page change, so the constructor's line would be wiped by the
-    /// very push that displays it. Saying it again on arrival also covers coming BACK from the
-    /// editor, which used to leave the editor's line standing over the Explorer.</para></summary>
-    internal void SayLockState() => _status.Say(IsEditing
-        ? "Editing unlocked - you can add, delete, edit and drag to reorder."
-        : "Editing locked - unlock to make changes.");
 
     /// <summary>What the tree's rows say about being draggable, or null when they are not.
     ///

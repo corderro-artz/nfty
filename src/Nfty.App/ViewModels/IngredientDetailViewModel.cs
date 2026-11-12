@@ -328,6 +328,11 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// <summary>The rule flag's label, naming how many rules touch this layer.</summary>
     public string RuleFlagText => RuleCount == 1 ? "1 rule" : $"{RuleCount} rules";
 
+    /// <summary>The Explorer's existing confirmed delete action for this whole ingredient.</summary>
+    public IAsyncRelayCommand? DeleteItemCommand { get; }
+    /// <summary>Whether this pane has a persistence owner to delete through.</summary>
+    public bool HasDeleteAction => DeleteItemCommand is not null;
+
     /// <summary>Builds the Ingredient detail pane.</summary>
     /// <param name="ing">The layer to describe.</param>
     /// <param name="recipe">Its owning recipe.</param>
@@ -344,13 +349,15 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// is not offered, which disables the button rather than hiding it.</param>
     /// <param name="deleteVariant">Removes one variant from this layer and saves the book. Null
     /// where there is nothing to save back to, which disables the button rather than hiding it.</param>
+    /// <param name="deleteItem">The Explorer's lock-gated, confirmed delete action for the whole ingredient.</param>
     public IngredientDetailViewModel(LoadedIngredient ing, LoadedRecipe recipe, LoadedCookBook book,
         IImageBridge bridge, Action editIngredient, Func<bool> isEditing,
         Action? jumpToRecipe = null, IStatusService? status = null,
         IFilePickerService? picker = null, IDialogService? dialogs = null,
         Func<string, Task>? deleteVariant = null,
-        Action<string>? rise = null)
+        Action<string>? rise = null, IAsyncRelayCommand? deleteItem = null)
     {
+        DeleteItemCommand = deleteItem;
         _rise = rise;
         Identity = (recipe.Manifest.Id, ing.Manifest.Id);
         Sort = new TableSort("Order", () => OnPropertyChanged(nameof(Variants)));
@@ -760,14 +767,6 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     // editor's Save, see IngredientEditorViewModel.IsReadOnly.
 
     private bool _disposed;
-    /// <summary>Opens the rename card for this item. Set by the Explorer; null leaves
-    /// <see cref="EditNameCommand"/> doing nothing.</summary>
-    public Action? EditNameAction { get; set; }
-
-    /// <summary>The title's click: rename this item, as the CookBook card's title edits the book.</summary>
-    [RelayCommand]
-    private void EditName() => EditNameAction?.Invoke();
-
     /// <summary>Frees every rendered swatch and thumbnail without materializing lazy swatches.</summary>
     public void Dispose()
     {

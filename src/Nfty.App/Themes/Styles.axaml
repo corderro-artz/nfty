@@ -5213,17 +5213,26 @@
   </Style>
 
   <!-- ===== Scrollbars ===== -->
-  <!-- The expanded bar (pointer over it) keeps Fluent's width, so it stays easy to grab, but its thumb is a
-       rounded, inset pill like the resting one rather than a square gray slab. Colors are Fluent's own keys,
-       re-inked in Tokens.axaml. One /template/ hop. -->
+  <!-- Keep Fluent's auto-hiding ink, but reserve the vertical lane in both states. Expanding an overlay
+       used to cover the final percentage or input in every compact table and modal. -->
+  <Style Selector="ScrollViewer[AllowAutoHide=True] /template/ ScrollContentPresenter#PART_ContentPresenter">
+    <Setter Property="Grid.ColumnSpan" Value="1" />
+  </Style>
+  <Style Selector="ScrollBar">
+    <Setter Property="MinWidth" Value="{DynamicResource ScrollBarSize}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ScrollBarSize}" />
+  </Style>
   <Style Selector="ScrollBar /template/ Thumb">
     <Setter Property="CornerRadius" Value="4" />
   </Style>
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Margin" Value="4,0,0,0" />
+  </Style>
   <Style Selector="ScrollBar:vertical:expanded /template/ Thumb">
-    <Setter Property="Margin" Value="3,0" />
+    <Setter Property="Margin" Value="2,0" />
   </Style>
   <Style Selector="ScrollBar:horizontal:expanded /template/ Thumb">
-    <Setter Property="Margin" Value="0,3" />
+    <Setter Property="Margin" Value="0,2" />
   </Style>
 
   <!-- ===== Community page ===== -->

@@ -98,10 +98,9 @@ public class ExplorerAddGuidanceTests
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }
     }
 
-    /// <summary>The edit lock is a toggle with real state: the tooltip states the current mode and the
-    /// status line confirms the change (it previously had no visible state at all).</summary>
+    /// <summary>The badges and tooltip carry the mode; the status line stays free for action guidance.</summary>
     [AvaloniaFact]
-    public void Toggling_the_lock_announces_and_describes_the_new_state()
+    public void Toggling_the_lock_updates_its_badge_without_repeating_it_in_the_status_line()
     {
         var (vm, status, session, path, _) = Explorer();
         try
@@ -114,7 +113,7 @@ public class ExplorerAddGuidanceTests
             vm.ToggleLockCommand.Execute(null);
             Assert.True(vm.IsEditing);
             Assert.Contains("unlocked", vm.LockTip, System.StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("unlocked", status.Last!, System.StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("", status.Last);
             vm.Dispose();
         }
         finally { session.Dispose(); Directory.Delete(Path.GetDirectoryName(path)!, recursive: true); }

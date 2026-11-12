@@ -111,18 +111,24 @@ public partial class ExplorerView : UserControl
             if (menuNode is { } n && DataContext is ExplorerViewModel vm)
             { vm.SelectNodeCommand.Execute(n); vm.DeleteSelectedCommand.Execute(null); }
         };
-        _tree.ContextMenu = new ContextMenu { Items = { edit, delete, new Separator(), openInViewer } };
-        _tree.ContextRequested += (_, e) =>
+        // Resolve the target BEFORE attaching the menu. Avalonia's ContextMenu handler opens the
+        // popup and handles this event; a resolver registered after it never runs.
+        _tree.ContextRequested += (sender, e) =>
         {
             menuNode = NodeUnder(e.Source as Visual);
+            if (menuNode is null && !e.TryGetPosition(_tree, out _))
+                menuNode = _tree.SelectedItem as ExplorerNode; // keyboard menu key / Shift+F10
             if (menuNode is { } node && DataContext is ExplorerViewModel vm)
             {
                 vm.SelectNodeCommand.Execute(node);
                 edit.IsEnabled = vm.EditSelectedCommand.CanExecute(null);
                 delete.IsEnabled = vm.DeleteSelectedCommand.CanExecute(null);
+                openInViewer.IsEnabled = vm.Viewer is not null
+                    && node.Kind is ExplorerNodeKind.Recipe or ExplorerNodeKind.Ingredient;
             }
             if (menuNode is null) e.Handled = true;     // no row under the pointer: no menu
         };
+        _tree.ContextMenu = new ContextMenu { Items = { edit, delete, new Separator(), openInViewer } };
         // TUNNEL, like the press, and for a sharper reason: a TreeView handles the ARROW KEYS
         // itself, for navigation, and it does so whatever modifier is held - so a bubble handler
         // here never saw Alt+Up at all and the chord silently moved the SELECTION instead of the

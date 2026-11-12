@@ -399,31 +399,26 @@
                every canvas size, and the drawing read as out of register with its own background. -->
           <Panel Grid.Row="2" x:Name="CanvasBackdrop">
 
-            <Border Name="CanvasHost" Width="320" Height="320" CornerRadius="10"
-                    BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
-                    BoxShadow="{DynamicResource WinShadow}" ClipToBounds="True"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-              <!-- THE POINTER TALKS TO THIS PANEL, NOT TO THE IMAGE. The art carries a render
-                   transform once the canvas is zoomed, and Avalonia hit-tests and reports positions
-                   THROUGH a render transform: at sixteen times, the image's clickable region is the
-                   central twentieth of the tile and every coordinate comes back in a space the
-                   layout knows nothing about. This panel is never transformed, so it is the one
-                   surface whose coordinates mean what the geometry says they mean.
-                   Background="Transparent" because in Avalonia a null background means "nothing
-                   here" rather than "nothing painted", and a panel with no background is not
-                   hit-testable at all. -->
-              <Panel x:Name="CanvasSurface" Background="Transparent">
-                <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
-                       IsVisible="{Binding ShowPaintCanvas}" />
-                <!-- The rubber band and the selection marquee. Drawn in control coordinates over
-                     the art rather than into it, so a shape being positioned never touches a pixel
-                     until it is committed, and never hit-tests away the pointer that is drawing it. -->
-                <Canvas x:Name="CanvasOverlay" IsHitTestVisible="False"
-                        IsVisible="{Binding ShowPaintCanvas}" />
-                <!-- "Fill pane with preview": the colorized result takes over the tile. -->
-                <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding PreviewFillsPane}" />
-              </Panel>
-            </Border>
+            <!-- The 320px host establishes the fitted size; the entire pane is the viewport.
+                 Art, outline and marquee can grow together beyond the original fitted box. -->
+            <Panel x:Name="CanvasViewport" Background="Transparent" ClipToBounds="True">
+              <Border Name="CanvasHost" Width="320" Height="320" BorderThickness="1"
+                      HorizontalAlignment="Center" VerticalAlignment="Center">
+                <!-- Coordinates stay in this untransformed fitted surface. Pointer events arrive
+                     at the viewport, including over magnified art outside the fitted surface. -->
+                <Panel x:Name="CanvasSurface">
+                  <Image x:Name="CanvasImage" Source="{Binding Canvas}" Stretch="Uniform"
+                         IsVisible="{Binding ShowPaintCanvas}" />
+                  <Canvas x:Name="CanvasOverlay" IsHitTestVisible="False"
+                          IsVisible="{Binding ShowPaintCanvas}" />
+                  <!-- "Fill pane with preview": the result keeps its original fitted presentation. -->
+                  <Image Source="{Binding Preview}" Stretch="Uniform" IsVisible="{Binding PreviewFillsPane}" />
+                  <Border x:Name="CanvasOutline" CornerRadius="{DynamicResource RadiusMd}" BorderThickness="1"
+                          BorderBrush="{DynamicResource LineStrongBrush}" BoxShadow="{DynamicResource WinShadow}"
+                          HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                </Panel>
+              </Border>
+            </Panel>
 
             <!-- .blip: the colorized preview sits ON the canvas' bottom-right corner rather than
                  stacked in the rail under the controls.
@@ -436,7 +431,7 @@
                  Size is bound, not fixed: "enlarge" moved a number the markup had hard-coded past,
                  so the middle button did nothing at all. -->
             <Border x:Name="PreviewTile" Width="{Binding PreviewHeight}" Height="{Binding PreviewHeight}"
-                    CornerRadius="10" ClipToBounds="True"
+                    CornerRadius="{DynamicResource RadiusMd}" ClipToBounds="True"
                     BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
                     Background="{DynamicResource TileBrush}" BoxShadow="{DynamicResource WinShadow}"
                     HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,26,26">
