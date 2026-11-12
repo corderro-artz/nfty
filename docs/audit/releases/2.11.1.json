@@ -1,0 +1,65 @@
+{
+  "version": "2.11.1",
+  "mainCommit": "e05d5439882aa0b8c5a7a94123d0cda5f2459489",
+  "url": "https://github.com/corderro-artz/nfty/releases/tag/v2.11.1",
+  "publishedAt": "2026-11-12T01:47:28Z",
+  "assets": [
+    {
+      "name": "nfty-2.11.1-linux-x64-framework-dependent.tar.gz",
+      "size": 13235669,
+      "digest": "sha256:d8be7b3137e8c174f37e58527f1c9f5b9e7d011e59f661163e4892dce3441d39",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-linux-x64-framework-dependent.tar.gz"
+    },
+    {
+      "name": "nfty-2.11.1-linux-x64-portable.tar.gz",
+      "size": 83708641,
+      "digest": "sha256:6f1a177eb62dc88be90b3be08f87946cfc03af29e3865a8d81a9b2d932d2b190",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-linux-x64-portable.tar.gz"
+    },
+    {
+      "name": "nfty-2.11.1-linux-x64-single-file-net10.tar.gz",
+      "size": 13226927,
+      "digest": "sha256:251c70dd5a682ccf2b682844c68770a55b0026ed3d5117bbed605961bf9d452c",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-linux-x64-single-file-net10.tar.gz"
+    },
+    {
+      "name": "nfty-2.11.1-linux-x64-single-file.tar.gz",
+      "size": 76580707,
+      "digest": "sha256:259d8dbe5321c37d57e9c1be73bd08f825e693b3c10017082649c9fdc8492ec3",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-linux-x64-single-file.tar.gz"
+    },
+    {
+      "name": "nfty-2.11.1-win-x64-framework-dependent.zip",
+      "size": 15929159,
+      "digest": "sha256:3fb221ea21aeed3ef0f28232146f344c5fb6e7bce6231672222ff3e80d430245",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-win-x64-framework-dependent.zip"
+    },
+    {
+      "name": "nfty-2.11.1-win-x64-portable.zip",
+      "size": 89422618,
+      "digest": "sha256:96f26af768f40ba2641b514a497be5c8e4cace4adb4546ac0389bd4c43e510d9",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-win-x64-portable.zip"
+    },
+    {
+      "name": "nfty-2.11.1-win-x64-single-file-net10.zip",
+      "size": 15834997,
+      "digest": "sha256:aa749c9c2b51823fd9bb0dc58e3d046473433f4bc7d10e44b1c40eb6c1c113b8",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-win-x64-single-file-net10.zip"
+    },
+    {
+      "name": "nfty-2.11.1-win-x64-single-file.zip",
+      "size": 81465039,
+      "digest": "sha256:3f9c045fc2f2bb150ca4ec6aabc7f2a2a64d113c20d36e07743cb5cd6f2da0bf",
+      "browser_download_url": "https://github.com/corderro-artz/nfty/releases/download/v2.11.1/nfty-2.11.1-win-x64-single-file.zip"
+    }
+  ],
+  "verification": {
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "localAppPassed": 2417,
+    "localAppSkipped": 3,
+    "ci": "https://github.com/corderro-artz/nfty/actions/runs/43135802850",
+    "ciJobsPassed": 9,
+    "packageShapesVerified": 8
+  }
+}

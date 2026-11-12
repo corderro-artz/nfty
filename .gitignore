@@ -30,7 +30,7 @@ sixlabors.lic
 build-output.txt
 
 # Built user manual (Material for MkDocs); the source is docs/manual/
-.mkdocs-site/
+.mkdocs-site*/
 .demo/
 
 # VisualCapture's output (NFTY_CAPTURE_DIR); frames are regenerated, never committed
@@ -45,3 +45,6 @@ __pycache__/
 
 # Built release artifacts.
 .release/
+
+# Scratch from cutting a release (build logs, notes) - the artifacts themselves are in .release/.
+.release-*
