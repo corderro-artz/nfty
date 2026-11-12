@@ -34,7 +34,8 @@ public class FullScreenTests
     [AvaloniaFact]
     public void Caption_icons_keep_equal_spacing_in_both_fullscreen_states()
     {
-        var window = new MainWindow { DataContext = Shell() };
+        var shell = Shell();
+        var window = new MainWindow { DataContext = shell };
         window.Show();
         try
         {
@@ -46,7 +47,9 @@ public class FullScreenTests
             var before = Centers();
             foreach (var state in new[] { WindowState.FullScreen, WindowState.Normal })
             {
-                window.WindowState = state;
+                // Full screen is left only through its own control, so go out the way a user does.
+                if (state == WindowState.FullScreen) window.WindowState = state;
+                else shell.ToggleFullScreenCommand.Execute(null);
                 Dispatcher.UIThread.RunJobs();
                 var centers = Centers();
                 double spacing = centers[1].X - centers[0].X;
@@ -126,10 +129,10 @@ public class FullScreenTests
     [AvaloniaTheory]
     [InlineData(WindowState.Normal)]
     [InlineData(WindowState.Maximized)]
-    public void Dragging_the_titlebar_leaves_full_screen_and_the_icon_follows(WindowState before)
+    public void Dragging_the_titlebar_never_leaves_full_screen(WindowState before)
     {
-        // Moving the full screen window used to leave a screen-sized window wherever it was dropped,
-        // still reported as full screen, so the titlebar button kept its "leave" glyph.
+        // A title-bar press used to pull the window out of full screen. Only the full screen control
+        // (F11 / the button) leaves it now; the titlebar is inert.
         var shell = Shell();
         var window = new MainWindow { DataContext = shell, Width = 1280, Height = 720 };
         window.Show();
@@ -147,8 +150,8 @@ public class FullScreenTests
             window.MouseUp(empty, MouseButton.Left, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();
 
-            Assert.Equal(before, window.WindowState);
-            Assert.False(shell.IsFullScreen);
+            Assert.Equal(WindowState.FullScreen, window.WindowState);
+            Assert.True(shell.IsFullScreen);
         }
         finally { window.Close(); }
     }

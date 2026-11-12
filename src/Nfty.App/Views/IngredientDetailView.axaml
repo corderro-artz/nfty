@@ -98,7 +98,22 @@
               </Border>
             </StackPanel>
           </StackPanel>
-          <Button Grid.Column="2" Command="{Binding EditIngredientCommand}" Classes="accent" VerticalAlignment="Top" ToolTip.Tip="Edit variant images, names and weights"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+            <!-- DYNAMIC ONLY. A Dynamic variant is a gray value-map colored per asset, so a pane
+                 showing one frozen color misdescribes it; the die rolls another sample. A layer's kind
+                 never changes while its pane is open, so IsVisible moves nothing. Same die, faces and
+                 tumble as the Recipe pane's roll. -->
+            <Button Classes="sampleroll" Command="{Binding RollColorCommand}" IsVisible="{Binding IsDynamic}"
+                    ToolTip.Tip="Roll another sample color. A Dynamic layer is colored per asset when cooked; this is one roll of it, not a stored color.">
+              <Panel Classes="dieroll">
+                <Path Classes="ico ti"
+                      Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.Instance}}" />
+                <Path Classes="ico ti pip1"
+                      Data="{Binding DieFace, Converter={x:Static conv:DieFaceConverter.AccentPip}}" />
+              </Panel>
+            </Button>
+            <Button Command="{Binding EditIngredientCommand}" Classes="accent" ToolTip.Tip="Edit variant images, names and weights"><Path Classes="ico" Data="{StaticResource IconPencil}" /></Button>
+          </StackPanel>
 
           <!-- .rarity: how the layer's weight actually splits, at a glance. The table below carries
                the same numbers, but a column of percentages does not show the SHAPE of the split. -->

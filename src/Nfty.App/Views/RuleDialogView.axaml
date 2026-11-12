@@ -28,7 +28,7 @@
         <StackPanel Spacing="14">
           <StackPanel Orientation="Horizontal" Spacing="7">
             <Ellipse Classes="kdot" />
-            <TextBlock Text="INCOMPATIBILITY" Classes="slbl" />
+            <TextBlock Text="{Binding Kicker}" Classes="slbl" />
           </StackPanel>
           <TextBlock Text="{Binding Title}" Classes="m-h" />
 

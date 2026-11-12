@@ -106,7 +106,12 @@ public partial class RuleDialogViewModel : ViewModelBase
     /// <summary>True for "never together", false for "always together".</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RelationText))]
+    [NotifyPropertyChangedFor(nameof(Kicker))]
     private bool _isExclude = true;
+
+    /// <summary>The eyebrow: names the kind of rule being written. "Incompatibility" is only true of
+    /// a never-together rule; an always-together rule is a dependency.</summary>
+    public string Kicker => IsExclude ? "INCOMPATIBILITY" : "DEPENDENCY";
 
     /// <summary>The relationship in the same words the panel prints, so the dialog and the row it
     /// produces cannot describe the same rule differently.</summary>

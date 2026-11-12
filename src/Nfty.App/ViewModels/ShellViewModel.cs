@@ -134,7 +134,7 @@ public partial class ShellViewModel : ViewModelBase
     /// the other two, and with the brand mark (and Ctrl+W) dead on it, it was the one page in the app the logo
     /// did not lead out of.</para>
     /// </summary>
-    public bool HasOpenDocument => CurrentPage is ExplorerViewModel or SetBrowserViewModel or CommunityViewModel;
+    public bool HasOpenDocument => _nav.Pages.Count > 1;
 
     partial void OnCurrentPageChanged(ViewModelBase? value)
     {
@@ -154,6 +154,7 @@ public partial class ShellViewModel : ViewModelBase
         OnPropertyChanged(nameof(CurrentExplorer));
         OnPropertyChanged(nameof(HasOpenDocument));
         CloseDocumentCommand.NotifyCanExecuteChanged();
+        GoBackCommand.NotifyCanExecuteChanged();
     }
 
     private readonly IStatusService _status;
@@ -406,6 +407,7 @@ public partial class ShellViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasDialog));
         CloseDialogCommand.NotifyCanExecuteChanged();
         CloseDocumentCommand.NotifyCanExecuteChanged();
+        GoBackCommand.NotifyCanExecuteChanged();
         ShowHelpCommand.NotifyCanExecuteChanged();
         ShowSettingsCommand.NotifyCanExecuteChanged();
     }
@@ -442,16 +444,30 @@ public partial class ShellViewModel : ViewModelBase
     /// every item below it" — and closing a book is not leaving the workspace.</para>
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanCloseDocument))]
-    private async Task CloseDocument()
+    private Task CloseDocument() => LeaveAsync(toRoot: true);
+
+    /// <summary>One page back, from any page above Landing - the titlebar's Back arrow. Every page
+    /// has one this way, whatever its own toolbar carries. Asks the page it leaves exactly what
+    /// <see cref="CloseDocument"/> asks.</summary>
+    [RelayCommand(CanExecute = nameof(CanCloseDocument))]
+    private Task GoBack() => LeaveAsync(toRoot: false);
+
+    /// <summary>Pops one page, or every page down to Landing, asking each unsaved one first. The
+    /// walk stops at the first page that refuses; a book is closed only if its page was popped.</summary>
+    private async Task LeaveAsync(bool toRoot)
     {
-        if (!CanCloseDocument()) return;
-        var page = CurrentPage;
-        if (page is IUnsavedWork work && !await work.ConfirmLeaveAsync()) return;
-        if (!ReferenceEquals(page, CurrentPage) || HasDialog || _session?.IsWriting == true
-            || page is IUnsavedWork { IsBusy: true }) return;
-        bool wasCookBook = page is ExplorerViewModel;
-        _nav.Back();
-        if (wasCookBook) _session?.Close();
+        bool closedBook = false;
+        while (CanCloseDocument())
+        {
+            var page = CurrentPage;
+            if (page is IUnsavedWork work && !await work.ConfirmLeaveAsync()) break;
+            if (!ReferenceEquals(page, CurrentPage) || HasDialog || _session?.IsWriting == true
+                || page is IUnsavedWork { IsBusy: true }) break;
+            closedBook |= page is ExplorerViewModel;
+            _nav.Back();
+            if (!toRoot) break;
+        }
+        if (closedBook) _session?.Close();
     }
 
     private bool CanCloseDocument() => HasOpenDocument && !HasDialog;

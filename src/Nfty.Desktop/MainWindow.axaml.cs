@@ -72,26 +72,38 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private WindowState _beforeFullScreen = WindowState.Normal;
+    private bool _leavingFullScreen;
 
     /// <summary>Enters or leaves full screen, returning to the state (normal or maximized) it left.</summary>
     private void ToggleFullScreen()
     {
         if (WindowState == WindowState.FullScreen)
         {
-            WindowState = _beforeFullScreen == WindowState.Minimized ? WindowState.Normal : _beforeFullScreen;
+            _leavingFullScreen = true;
+            try { WindowState = _beforeFullScreen == WindowState.Minimized ? WindowState.Normal : _beforeFullScreen; }
+            finally { _leavingFullScreen = false; }
             return;
         }
         _beforeFullScreen = WindowState;
         WindowState = WindowState.FullScreen;
     }
 
-    /// <summary>Keeps the shell's full screen flag equal to the real window state.</summary>
+    /// <summary>Keeps the shell's full screen flag equal to the real window state, and keeps full
+    /// screen until its own control (F11 / the status-bar button) leaves it: Escape, a title-bar drag,
+    /// a double-click or any other gesture that would restore or maximize the window is put back.
+    /// Minimizing is the OS's and stays allowed.</summary>
     /// <param name="change">The changed property.</param>
     protected override void OnPropertyChanged(Avalonia.AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == WindowStateProperty && _attachedShell is { } shell)
-            shell.IsFullScreen = WindowState == WindowState.FullScreen;
+        if (change.Property != WindowStateProperty) return;
+        if (!_leavingFullScreen && change.OldValue is WindowState.FullScreen
+            && change.NewValue is WindowState.Normal or WindowState.Maximized)
+        {
+            WindowState = WindowState.FullScreen;
+            return;
+        }
+        if (_attachedShell is { } shell) shell.IsFullScreen = WindowState == WindowState.FullScreen;
     }
 
     private void DetachShell()

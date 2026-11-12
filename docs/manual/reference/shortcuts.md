@@ -31,7 +31,7 @@ closes the sheet).
 | ++ctrl+grave-accent++ | Show every other window (viewer) as you left it, or put them all away. Works from inside a viewer too |
 | ++ctrl+shift+grave-accent++ | Bring the next other window forward |
 | ++ctrl+shift+w++ | List the other windows, to show, minimize or close one |
-| ++f11++ | Enter or leave full screen (also the first button in the titlebar). Esc closes dialogs and does not leave full screen |
+| ++f11++ | Enter or leave full screen (also the first button in the titlebar). Esc closes dialogs and does not leave full screen; neither does dragging or double-clicking the titlebar |
 | ++esc++ | Close the open dialog |
 
 ## Opening screen

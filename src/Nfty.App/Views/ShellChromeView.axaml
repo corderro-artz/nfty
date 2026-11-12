@@ -30,6 +30,11 @@
 
     <ctl:WindowFrame.TitleLeft>
       <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Spacing="9">
+        <!-- Back, on EVERY page above Landing: the shell owns it, so no page can ship without one.
+             Present on Landing too, dimmed (reserve space, toggle ink), so the brand never shifts. -->
+        <Button Classes="zoomctl" Command="{Binding GoBackCommand}" ToolTip.Tip="Back  ·  one page up">
+          <Path Classes="ico sm" Data="{StaticResource IconArrowLeft}" />
+        </Button>
         <!-- The brand is also the way out of an open document, the way a logo is "home" almost
              everywhere. Deliberately reusing an element the locked titlebar already has rather
              than inventing a Close button: there is no such control in explorer.html, and
@@ -37,7 +42,7 @@
              Button carries no paint of its own (Classes="bare"), so the titlebar renders
              identically; it is disabled on Landing, where there is nothing to close. -->
         <Button Classes="bare" Command="{Binding CloseDocumentCommand}"
-                ToolTip.Tip="Close and return to the start screen  ·  Ctrl+W">
+                ToolTip.Tip="Home: close everything and return to the start screen  ·  Ctrl+W">
           <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
             <!-- The mark is the application icon's own symbol: a stack of layers, the top
                  one live. One control, shared with the quick-reference sheet and the viewer's

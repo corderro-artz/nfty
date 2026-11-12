@@ -48,8 +48,9 @@ public partial class VariantRow : ObservableObject
     public string WithinText => RarityText.Percent(WithinPercent);
     /// <summary>Its share across the whole collection, as the table prints it.</summary>
     public string OverallText => RarityText.Percent(OverallPercent);
-    /// <summary>A rendered swatch.</summary>
-    public Bitmap Thumbnail { get; }
+    /// <summary>A rendered swatch. Replaced (the old one disposed by the owner) when a Dynamic layer
+    /// rolls another color.</summary>
+    [ObservableProperty] private Bitmap _thumbnail;
 
     /// <summary>Whether this is the row the hero and Delete variant act on.</summary>
     [ObservableProperty] private bool _isSelected;
@@ -65,7 +66,7 @@ public partial class VariantRow : ObservableObject
         double overallPercent, Bitmap thumbnail)
     {
         Id = id; Name = name; Weight = weight;
-        WithinPercent = withinPercent; OverallPercent = overallPercent; Thumbnail = thumbnail;
+        WithinPercent = withinPercent; OverallPercent = overallPercent; _thumbnail = thumbnail;
     }
 }
 
@@ -589,9 +590,43 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         row.IsSelected = true;
 
         var old = Hero;
-        Hero = VariantImagery.Render(_bridge, _ing, id);
+        Hero = VariantImagery.Render(_bridge, _ing, id, _rollSalt);
         old?.Dispose();
         OnPropertyChanged(nameof(DeleteVariantTip));
+    }
+
+    /// <summary>Which sampled color a Dynamic layer is showing. 0 is what the pane has always opened
+    /// on, so nothing changes until the die is pressed.</summary>
+    private int _rollSalt;
+
+    /// <summary>The die's face. Pure feedback, as on the Recipe pane: it never repeats on consecutive
+    /// presses, because the glyph changing is the only confirmation the button gives.</summary>
+    [ObservableProperty] private int _dieFace = 4;
+
+    /// <summary>Rolls another color for this Dynamic layer: the hero and every variant swatch redraw
+    /// with it. A Dynamic variant is stored as a gray value-map and colored per asset at cook time, so
+    /// one frozen color is a sample, not the variant; Static and Custom layers have one look and no die.</summary>
+    [RelayCommand]
+    private void RollColor()
+    {
+        if (!IsDynamic) return;
+        _rollSalt++;
+        int pick = Random.Shared.Next(1, Converters.DieFaceConverter.Faces);
+        DieFace = pick >= DieFace ? pick + 1 : pick;
+
+        foreach (var v in _variants)
+        {
+            var old = v.Thumbnail;
+            v.Thumbnail = VariantImagery.Render(_bridge, _ing, v.Id, _rollSalt);
+            old.Dispose();
+        }
+        if (Selected is { } selected)
+        {
+            var old = Hero;
+            Hero = VariantImagery.Render(_bridge, _ing, selected.Id, _rollSalt);
+            old?.Dispose();
+        }
+        OnPropertyChanged(nameof(SelectedThumb));
     }
 
     /// <summary>Whether the current layer's variant order can be saved.</summary>
