@@ -9,7 +9,8 @@ namespace Nfty.Core.Model;
 /// <param name="RecipeWeights">Roll weight per Recipe id. Zero shelves a Recipe without deleting it.</param>
 /// <param name="SchemaVersion">The manifest format version; see <see cref="Schema"/>.</param>
 /// <param name="TargetSupply">How many assets this collection intends to mint, or null when the
-/// author has not committed to a number. Purely declarative: nothing in the generation pipeline
+/// author has not committed to a number. A stated target is between 1 and <see cref="MaxTargetSupply"/>.
+/// Purely declarative: nothing in the generation pipeline
 /// reads it — <c>generate</c> takes its count from the caller — so setting it can never change what
 /// a cook produces. It exists so the book can state its intent, and so a UI can hold that intent up
 /// against <c>UniqueSpace</c>'s count and say whether it is actually achievable.
@@ -64,4 +65,8 @@ public record CookBookManifest(
     int? TargetSupply = null,
     IReadOnlyList<string>? Palette = null,
     IReadOnlyList<string>? RecipeOrder = null,
-    bool PartialAlpha = false) : ISchemaVersioned;
+    bool PartialAlpha = false) : ISchemaVersioned
+{
+    /// <summary>The largest intended supply: nine decimal digits.</summary>
+    public const int MaxTargetSupply = 999_999_999;
+}

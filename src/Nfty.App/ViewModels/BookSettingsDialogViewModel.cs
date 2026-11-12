@@ -134,6 +134,8 @@ public sealed partial class BookSettingsDialogViewModel : ViewModelBase, IUnsave
     /// <summary>The target supply a stepper starts from when the book had none and the author
     /// switches one on.</summary>
     public const int DefaultTargetSupply = 1000;
+    /// <summary>The largest intended supply accepted by the editor.</summary>
+    public const decimal MaxTargetSupply = CookBookManifest.MaxTargetSupply;
 
     private readonly IDialogService _dialogs;
     private readonly IPaletteService? _palette;
@@ -257,7 +259,7 @@ public sealed partial class BookSettingsDialogViewModel : ViewModelBase, IUnsave
     private bool PaletteChanged =>
         !Swatches.Select(s => s.Rgb).SequenceEqual(_originalPalette);
 
-    private int? EffectiveTarget => NoTarget ? null : Math.Max(1, TargetSupply);
+    private int? EffectiveTarget => NoTarget ? null : Math.Clamp(TargetSupply, 1, CookBookManifest.MaxTargetSupply);
 
     private bool NamesPresent =>
         !string.IsNullOrWhiteSpace(Name) && !string.IsNullOrWhiteSpace(CollectionName);
@@ -296,7 +298,8 @@ public sealed partial class BookSettingsDialogViewModel : ViewModelBase, IUnsave
     {
         // The stepper's floor is 1 and the property enforces it too: a bound control can be
         // bypassed by the keyboard, a property cannot.
-        if (value < 1) { TargetSupply = 1; return; }
+        int clamped = Math.Clamp(value, 1, CookBookManifest.MaxTargetSupply);
+        if (value != clamped) { TargetSupply = clamped; return; }
         Changed();
     }
 
@@ -417,7 +420,8 @@ public sealed partial class BookSettingsDialogViewModel : ViewModelBase, IUnsave
         _symbol = _original.Collection.Symbol;
         _description = _original.Collection.Description;
         _noTarget = _original.TargetSupply is null;
-        _targetSupply = _original.TargetSupply is { } t && t >= 1 ? t : DefaultTargetSupply;
+        _targetSupply = _original.TargetSupply is { } t && t >= 1
+            ? Math.Min(t, CookBookManifest.MaxTargetSupply) : DefaultTargetSupply;
 
         _syncing = true;
         Weights = book.Recipes

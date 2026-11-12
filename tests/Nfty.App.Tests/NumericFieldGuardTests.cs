@@ -88,6 +88,9 @@ public partial class NumericFieldGuardTests
         Dispatcher.UIThread.RunJobs();
         var nud = view.GetVisualDescendants().OfType<NumericUpDown>().Single(n => n.Increment == 100);
 
+        vm.TargetSupply = 1_000_000_000;
+        Assert.Equal(999_999_999, vm.TargetSupplyOrNull);
+
         nud.Value = null;
         Dispatcher.UIThread.RunJobs();
 

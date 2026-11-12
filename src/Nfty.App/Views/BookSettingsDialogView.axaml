@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nfty.App.ViewModels"
              xmlns:conv="using:Nfty.App.Converters"
+             xmlns:glob="using:System.Globalization"
              x:Class="Nfty.App.Views.BookSettingsDialogView"
              x:DataType="vm:BookSettingsDialogViewModel"
              Focusable="True">
@@ -63,7 +64,9 @@
                     </StackPanel>
                     <Grid ColumnDefinitions="140,Auto" ColumnSpacing="12">
                       <NumericUpDown Grid.Column="0" Value="{Binding TargetSupply}" Minimum="1" Increment="100"
-                                     FormatString="0" IsEnabled="{Binding !NoTarget}" />
+                                     Maximum="{x:Static vm:BookSettingsDialogViewModel.MaxTargetSupply}"
+                                     FormatString="N0" NumberFormat="{x:Static glob:NumberFormatInfo.InvariantInfo}"
+                                     IsEnabled="{Binding !NoTarget}" />
                       <CheckBox Grid.Column="1" Content="None" IsChecked="{Binding NoTarget}"
                                 VerticalAlignment="Center" />
                     </Grid>

@@ -141,11 +141,12 @@
       <!-- The supply rail: does the intended supply fit in the space? Sized and cornered like the
            mint bar below, because they are the same kind of object - a track read as a proportion.
            It was a 3px line on a cell's bottom edge and read as a rule rather than a measurement. -->
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" IsVisible="{Binding HasSupplyRail}">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+      <!-- 276 + the 12px gap aligns the track with the DNA tile's leading edge (3 × 88 + 3 × 8). -->
+      <Grid ColumnDefinitions="276,*,Auto" ColumnSpacing="12" IsVisible="{Binding HasSupplyRail}">
+        <Grid Grid.Column="0" ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalAlignment="Center">
           <TextBlock Classes="raill" Text="TARGET SUPPLY" />
-          <TextBlock Classes="raill strong" Text="{Binding TargetSupplyText}" />
-        </StackPanel>
+          <TextBlock Grid.Column="1" Classes="raill strong" Text="{Binding TargetSupplyText}" HorizontalAlignment="Right" />
+        </Grid>
         <Border Grid.Column="1" Classes="meter">
           <!-- A 0.05% fill rounds to nothing, so the fill carries a minimum width: "almost none of
                it" is a real answer, and an empty track reads as a broken control. -->
@@ -201,7 +202,7 @@
                label on the card that started nowhere. -->
           <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Classes="th" Text="RECIPE" />
           <TextBlock Grid.Column="2" Classes="th r" Text="SHARE" />
-          <TextBlock Grid.Column="3" Classes="th r" Text="LAYERS" />
+          <TextBlock Grid.Column="3" Classes="th" Text="LAYERS" Margin="16,0,0,0" />
           <TextBlock Grid.Column="5" Classes="th r" Text="UNIQUE DNA" />
         </Grid>
       </Border>

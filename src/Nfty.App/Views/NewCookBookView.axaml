@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctl="using:Nfty.App.Controls"
              xmlns:vm="using:Nfty.App.ViewModels"
+             xmlns:glob="using:System.Globalization"
              x:Class="Nfty.App.Views.NewCookBookView"
              x:DataType="vm:NewCookBookViewModel"
              Focusable="True">
@@ -100,7 +101,9 @@
                     <Path Classes="ico xs" Data="{StaticResource IconHelp}" />
                   </Border>
                 </StackPanel>
-                <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" FormatString="0" PlaceholderText="not decided" />
+                <NumericUpDown Value="{Binding TargetSupply}" Minimum="0" Increment="100" FormatString="N0"
+                               Maximum="{x:Static vm:NewCookBookViewModel.MaxTargetSupply}"
+                               NumberFormat="{x:Static glob:NumberFormatInfo.InvariantInfo}" PlaceholderText="not decided" />
               </StackPanel>
 
               <TextBlock Classes="m-sub" Margin="0" TextWrapping="Wrap"

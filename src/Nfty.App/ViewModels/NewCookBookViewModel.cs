@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Nfty.App.Services;
+using Nfty.Core.Model;
 
 namespace Nfty.App.ViewModels;
 
@@ -9,6 +10,8 @@ namespace Nfty.App.ViewModels;
 /// manifest and write the .cbk.</summary>
 public partial class NewCookBookViewModel : WizardViewModelBase
 {
+    /// <summary>The largest intended supply accepted by the wizard.</summary>
+    public const decimal MaxTargetSupply = CookBookManifest.MaxTargetSupply;
     /// <summary>The display name used to derive the CookBook id.</summary>
     [ObservableProperty] private string _name = "";
     /// <summary>The collection symbol written by the caller.</summary>
@@ -33,7 +36,12 @@ public partial class NewCookBookViewModel : WizardViewModelBase
     [ObservableProperty] private int? _targetSupply;
 
     /// <summary>Null when unset, so the optional target-supply field is omitted. Supported archives use the v2 floor.</summary>
-    public int? TargetSupplyOrNull => TargetSupply > 0 ? TargetSupply : null;
+    public int? TargetSupplyOrNull => TargetSupply > 0 ? Math.Min(TargetSupply.Value, CookBookManifest.MaxTargetSupply) : null;
+
+    partial void OnTargetSupplyChanged(int? value)
+    {
+        if (value is > CookBookManifest.MaxTargetSupply) TargetSupply = CookBookManifest.MaxTargetSupply;
+    }
 
     private readonly AspectLink _link = new();
 

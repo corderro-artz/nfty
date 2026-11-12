@@ -23,6 +23,46 @@ namespace Nfty.App.Tests;
 
 public partial class VisualCapture
 {
+    /// <summary>The supply rail reserves nine comma-grouped digits and starts beneath the DNA tile.</summary>
+    [AvaloniaFact]
+    public void Single_layer_and_nine_digit_supply_fit_the_cookbook_card()
+    {
+        var original = NamedBook("Book", "Recipe", "Only layer", 1);
+        using var book = new LoadedCookBook { Manifest = original.Manifest with { TargetSupply = 999_999_999 }, Recipes = original.Recipes };
+        foreach (var theme in Themes)
+        foreach (var width in new[] { 730.0, 2600.0 })
+        {
+            var view = new Views.CookBookDetailView { DataContext = new CookBookDetailViewModel(book, () => { }) };
+            var window = new Window { Content = view, Width = width, Height = PageHeight, RequestedThemeVariant = theme };
+            window.Show();
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                var elements = view.GetVisualDescendants().OfType<Control>().ToArray();
+                var meter = elements.OfType<Border>().Single(b => b.Classes.Contains("meter"));
+                var dna = elements.OfType<Border>().Single(b => b.Classes.Contains("metric") && b.Classes.Contains("accent"));
+                Assert.Equal(dna.TranslatePoint(default, view)!.Value.X, meter.TranslatePoint(default, view)!.Value.X, 0.5);
+                var supply = elements.OfType<TextBlock>().Single(t => t.Classes.Contains("raill") && t.Classes.Contains("strong"));
+                Assert.Equal("999,999,999", supply.Text);
+                Assert.True(supply.TextLayout.WidthIncludingTrailingWhitespace <= supply.Bounds.Width + 0.5);
+                var heading = elements.OfType<TextBlock>().Single(t => t.Text == "LAYERS" && t.Classes.Contains("th"));
+                var chip = elements.OfType<Border>().Single(b => b.Classes.Contains("fchip"));
+                Assert.Equal(heading.TranslatePoint(default, view)!.Value.X, chip.TranslatePoint(default, view)!.Value.X, 0.5);
+                if (Dir is not null)
+                    window.CaptureRenderedFrame()!.Save(Path.Combine(Dir, $"supply-nine-digits-{width}-{KeyOf(theme)}.png"), PngBitmapEncoderOptions.Default);
+            }
+            finally { window.Close(); }
+        }
+        if (Dir is not null)
+        {
+            var settings = new BookSettingsDialogViewModel(new FakeDialogs(), book, null, () => true,
+                _ => Task.FromResult(new BookSettingsOutcome(false, [])));
+            foreach (var theme in Themes)
+                Shoot(new Views.BookSettingsDialogView { DataContext = settings }, theme,
+                    $"supply-settings-max-{KeyOf(theme)}.png", width: PageWidth, height: PageHeight);
+        }
+    }
+
     /// <summary>Exercise real compact tables and the settings card with their scrollbar expanded.
     /// The content must end before the bar, and hovering must leave its geometry unchanged.</summary>
     [AvaloniaFact]
