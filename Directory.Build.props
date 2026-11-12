@@ -17,7 +17,7 @@
       Release policy: fixes alone bump PATCH. Compatible user-facing features bump MINOR and
       reset PATCH to zero, including mixed feature/fix batches. Breaking public APIs bump MAJOR.
     -->
-    <Version>2.11.2</Version>
+    <Version>2.11.3</Version>
 
     <!--
       WHO MADE THIS, stamped into every assembly. Windows reads these for the file's Details tab and

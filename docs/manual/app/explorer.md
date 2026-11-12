@@ -74,7 +74,7 @@ error.
 | **BOOK NAME** | The file's own name, shown in the title bar, tree and recents. |
 | **COLLECTION NAME** | What every asset is published as (`<name> #1`) and what an export is named after. |
 | **SYMBOL**, **DESCRIPTION** | Collection metadata, written into exports and `collection.json`. |
-| **TARGET SUPPLY** | How many you intend to mint, or **None**. Declarative: it never limits a cook. |
+| **TARGET SUPPLY** | How many you intend to mint: **1–999,999,999**, or **None**. Declarative: it never limits a cook. |
 | **RECIPE WEIGHTS** | Each Recipe's roll weight and resulting share. `0` shelves a Recipe. |
 | **PALETTE** | Swatches stored in the book, so they travel with it. **Add the editor's saved palette** copies yours in. |
 

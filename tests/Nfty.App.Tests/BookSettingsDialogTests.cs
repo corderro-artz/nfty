@@ -165,6 +165,8 @@ public class BookSettingsDialogTests
             var first = await Open(vm, dialogs);
             Assert.True(first.NoTarget);                                   // the fixture states none
             first.NoTarget = false;
+            first.TargetSupply = 1_000_000_000;
+            Assert.Equal(999_999_999, first.TargetSupply);
             first.TargetSupply = 500;
             await first.SaveCommand.ExecuteAsync(null);
             using (var stated = CookBookArchive.Read(path))

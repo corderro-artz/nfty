@@ -284,7 +284,8 @@ public class SchemaCompatibilityTests
     [Theory]
     [InlineData(0)]
     [InlineData(-5)]
-    public void A_target_supply_below_one_is_a_validation_problem(int target)
+    [InlineData(1_000_000_000)]
+    public void A_target_supply_outside_the_allowed_range_is_a_validation_problem(int target)
     {
         using var book = Book(targetSupply: target);
         var problems = Validator.Validate(book);
@@ -296,6 +297,7 @@ public class SchemaCompatibilityTests
     [InlineData(null)]
     [InlineData(1)]
     [InlineData(10_000)]
+    [InlineData(999_999_999)]
     public void An_unset_or_positive_target_supply_is_not_a_problem(int? target)
     {
         using var book = Book(targetSupply: target);

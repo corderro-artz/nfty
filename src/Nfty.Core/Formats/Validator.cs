@@ -85,6 +85,8 @@ public static class Validator
         // UniqueSpace.Count, which enumerates, and Validator must stay cheap enough to run on open.
         if (cb.Manifest.TargetSupply is { } target && target < 1)
             problems.Add($"CookBook target supply must be at least 1 (found {target}).");
+        if (cb.Manifest.TargetSupply is > CookBookManifest.MaxTargetSupply)
+            problems.Add("CookBook target supply must be at most 999,999,999.");
 
         // Canvas is the single source of truth for every image size. A non-positive dimension
         // is an impossible collection — ImageSharp cannot allocate a zero- or negative-sized

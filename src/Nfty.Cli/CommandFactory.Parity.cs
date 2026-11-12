@@ -335,7 +335,7 @@ public static partial class CommandFactory
             "The collection name every asset is published under (\"<name> #1\").");
         var symbol = OptionalText("--symbol", "The collection symbol.");
         var description = OptionalText("--description", "The collection description.");
-        var supply = OptionalText("--target-supply", "Intended supply: a whole number above zero, or `none` to clear.");
+        var supply = OptionalText("--target-supply", "Intended supply: 1 to 999999999, or `none` to clear.");
         var cmd = new Command("cookbook", "Change a .cbk's name, collection metadata or target supply.")
             { file, name, collection, symbol, description, supply };
         cmd.SetAction(parse =>
@@ -354,6 +354,8 @@ public static partial class CommandFactory
                     throw new InvalidOperationException(
                         $"--target-supply '{ts}' is not a whole number above zero. Use `none` to clear it.");
                 target = parsed;
+                if (parsed > CookBookManifest.MaxTargetSupply)
+                    throw new InvalidOperationException("--target-supply must be at most 999999999. Use `none` to clear it.");
             }
             ExpectKind(path, ArchiveKind.CookBook);
             return EditBook(path, b => CookBookEdits.EditIdentity(b,
