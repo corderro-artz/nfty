@@ -151,7 +151,18 @@ public class ExplorerAddGuidanceTests
             var onSelect = status.Last!;
 
             var detail = Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
-            detail.EditIngredientCommand.Execute(null);               // pencil: NOT gated by the lock
+
+            // The pencil follows the lock: a locked book opens no editor, so nothing painted there
+            // can be refused at Save and left with only Discard.
+            Assert.Equal(unlocked, detail.EditIngredientCommand.CanExecute(null));
+            detail.EditIngredientCommand.Execute(null);
+            if (!unlocked)
+            {
+                Assert.Equal(onSelect, status.Last);
+                Assert.IsNotType<IngredientEditorViewModel>(vm.CurrentDetail);
+                vm.Dispose();
+                return;
+            }
 
             // Whatever the Explorer said last is gone, and the layer's own name is in its place.
             Assert.NotEqual(onSelect, status.Last);

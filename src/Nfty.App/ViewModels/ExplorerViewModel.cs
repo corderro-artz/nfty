@@ -481,6 +481,8 @@ public partial class ExplorerViewModel : ViewModelBase, IDisposable, IUnsavedWor
             && newValue?.Domain is (LoadedRecipe owner, LoadedIngredient layer))
         {
             string recipeId = owner.Manifest.Id, ingredientId = layer.Manifest.Id;
+            // By id, read from the live book at click time, as the Recipe pane's PopOutLayer is.
+            ingredientPane.PopOutAction = () => PopOutIngredient(recipeId, ingredientId);
             ingredientPane.ReorderVariants = async ids =>
             {
                 var outcome = await CommitBookSettingsAsync(book =>

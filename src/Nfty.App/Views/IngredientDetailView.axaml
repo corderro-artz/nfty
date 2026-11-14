@@ -41,11 +41,11 @@
         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
           <!-- Match the Recipe pane: controls belong under the picture they act on. -->
           <StackPanel Grid.Column="0" Margin="0,0,16,0" Spacing="7" VerticalAlignment="Top">
-            <Border Width="84" Height="84" CornerRadius="{DynamicResource RadiusMd}"
+            <Border Width="92" Height="92" CornerRadius="{DynamicResource RadiusMd}"
                     Background="{DynamicResource TileBrush}" ClipToBounds="True">
               <Image Source="{Binding Hero}" Stretch="UniformToFill" />
             </Border>
-            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
               <Button Classes="sampleroll" Command="{Binding RollColorCommand}" IsVisible="{Binding IsDynamic}"
                       ToolTip.Tip="Roll another sample color. A Dynamic layer is colored per asset when cooked; this is one roll of it, not a stored color.">
                 <Panel Classes="dieroll">
@@ -56,12 +56,16 @@
               <Button Classes="sampleroll" Command="{Binding RiseCommand}" ToolTip.Tip="{Binding RiseTip}">
                 <Path Classes="ico sm" Data="{StaticResource IconRise}" />
               </Button>
+              <Button Classes="sampleroll" Command="{Binding PopOutCommand}"
+                      ToolTip.Tip="Open this layer in its own viewer window">
+                <Path Classes="ico sm" Data="{StaticResource IconPopout}" />
+              </Button>
             </StackPanel>
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
             <!-- The name and its hover pencil open the editor; renaming stays in the pane header. -->
             <Button Classes="titlelink" Command="{Binding EditIngredientCommand}" HorizontalAlignment="Left"
-                    ToolTip.Tip="Edit variant images, names and weights">
+                    ToolTip.Tip="{Binding EditTip}">
               <Panel Margin="0,0,14,0">
                 <TextBlock Classes="mono" FontSize="17" FontWeight="Bold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                 <Path Classes="ico xs pen" Data="{StaticResource IconPencil}" IsHitTestVisible="False"

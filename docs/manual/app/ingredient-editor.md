@@ -7,8 +7,8 @@ canvas in the middle, and a rail on the right with two tabs, **COLORIZE** and **
 ![The Ingredient Editor](../images/editor-light.png#only-light)
 ![The Ingredient Editor](../images/editor-dark.png#only-dark)
 
-Painting works whether the book is locked or not; **Save** needs editing unlocked in the Explorer.
-The footer says why when Save is unavailable.
+The editor opens only while editing is unlocked in the Explorer, so nothing painted here can be refused at **Save**.
+To look at a layer on a locked book, open it in the viewer instead.
 
 ## Variants (left pane)
 

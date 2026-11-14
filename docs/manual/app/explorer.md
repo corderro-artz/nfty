@@ -15,8 +15,8 @@ reads **editing**. A second badge in the status bar shows the same state; the me
 
 | Locked | Allowed |
 |---|---|
-| Adding, deleting, importing, reordering, rules, optional layers, weights, book settings, and **saving** from the Ingredient Editor or Rise page | No, until you unlock |
-| Opening the Ingredient Editor or the Rise page, painting, previewing, cooking, exporting a Menu | Yes. A locked book is a scratch surface: you can paint, but not save. |
+| Adding, deleting, importing, reordering, rules, optional layers, weights, book settings, opening the Ingredient Editor, and **saving** from the Rise page | No, until you unlock |
+| Opening the viewer, the Rise page, previewing, cooking, exporting a Menu | Yes. A locked book is a scratch surface on the Rise page: you can paint, but not save. |
 
 ## The toolbar
 
@@ -106,6 +106,7 @@ The layer table is never sorted by column: its order *is* the paint order.
 | **Share strip** | The biggest variants' shares as bars, four at a time. |
 | **VARIANT table** | Each variant's thumbnail, **WEIGHT**, its share **IN RECIPE**, and its share **OVERALL** (of the whole collection). Click a header to sort. One variant is always selected (the first, when the panel opens); double-click a row to edit it. Unlocked, rows gain the same drag grip as the layer table. Its rows are the layer table's height. See [Weights and rarity](weights.md). |
 | **COLORWAYS** | The actual colors this layer can roll, by hue and saturation, and how many it **ADMITS**. Static shows one swatch; Custom says colorization does not apply. |
+| **Viewer button** | Under the picture, beside the roll and Rise buttons: opens the layer in its own viewer window, locked or not. The row menu has the same **Open in viewer**. |
 | **Delete variant** | Removes the selected variant, after asking. |
 | **Delete ingredient** | Removes the whole layer from its Recipe, after asking. **Delete recipe** on the Recipe panel removes the whole Recipe. Both require editing unlocked. |
 | **Export preview…** | Writes the selected variant as a PNG, exactly as generation renders it. |
