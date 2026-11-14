@@ -348,6 +348,29 @@ public class ViewerOpeningTests
         foreach (var s in host.Opened) s.Dispose();
     }
 
+    [AvaloniaFact]
+    public void The_ingredient_pane_opens_a_viewer_whether_or_not_the_book_is_locked()
+    {
+        var host = new ArchiveGalleryTests.Host();
+        using var vm = Explorer(host);
+        vm.SelectNodeCommand.Execute(vm.Roots[0].Children[0].Children[0]);
+        var pane = Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
+
+        // Looking is not editing: the viewer answers the lock with nothing, the editor with a refusal.
+        foreach (bool editing in new[] { false, true })
+        {
+            if (vm.IsEditing != editing) vm.ToggleLockCommand.Execute(null);
+            pane = Assert.IsType<IngredientDetailViewModel>(vm.CurrentDetail);
+            Assert.True(pane.PopOutCommand.CanExecute(null));
+            Assert.Equal(editing, pane.EditIngredientCommand.CanExecute(null));
+            pane.PopOutCommand.Execute(null);
+        }
+
+        Assert.Equal(2, host.Opened.Count);
+        Assert.All(host.Opened, s => Assert.Contains(pane.Name, s.Title));
+        foreach (var s in host.Opened) s.Dispose();
+    }
+
     // ------------------------------------------------------------------ Landing
 
     private sealed class Picks(string path) : IFilePickerService

@@ -49,13 +49,16 @@ public partial class IngredientDetailView : UserControl
         var edit = new MenuItem { Header = "Edit variant" };
         delete.Click += (_, _) => (DataContext as IngredientDetailViewModel)?.DeleteVariantCommand.Execute(null);
         edit.Click += (_, _) => (DataContext as IngredientDetailViewModel)?.EditIngredientCommand.Execute(null);
-        _rows.ContextMenu = new ContextMenu { Items = { edit, delete } };
+        var view = new MenuItem { Header = "Open in viewer" };
+        view.Click += (_, _) => (DataContext as IngredientDetailViewModel)?.PopOutCommand.Execute(null);
+        _rows.ContextMenu = new ContextMenu { Items = { edit, delete, new Separator(), view } };
         _rows.ContextRequested += (_, e) =>
         {
             if (DataContext is not IngredientDetailViewModel vm || RowUnder(e.Source as Visual) is not { } row)
             { e.Handled = true; return; }
             if (!ReferenceEquals(vm.Selected, row)) vm.SelectVariantCommand.Execute(row.Id);
-            edit.IsEnabled = vm.CanReorder;
+            edit.IsEnabled = vm.EditIngredientCommand.CanExecute(null);
+            view.IsEnabled = vm.PopOutCommand.CanExecute(null);
             delete.IsEnabled = vm.DeleteVariantCommand.CanExecute(null);
         };
     }

@@ -2862,6 +2862,9 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
   </Style>
+  <!-- Locked, the Ingredient pane's title button is disabled but the NAME is a heading, not a
+       control: only the pencil (never inked while disabled, a disabled control takes no hover) goes. -->
+  <Style Selector="Button.titlelink:disabled"><Setter Property="Opacity" Value="1" /></Style>
   <Style Selector="Button.titlelink:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>

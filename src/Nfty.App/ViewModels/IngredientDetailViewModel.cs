@@ -575,7 +575,9 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     public void RaiseCanExecuteChanged()
     {
         DeleteVariantCommand.NotifyCanExecuteChanged();
+        EditIngredientCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(DeleteVariantTip));
+        OnPropertyChanged(nameof(EditTip));
         OnPropertyChanged(nameof(CanReorder));
     }
 
@@ -694,7 +696,37 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
     /// looked available and did nothing. It is now the .hflag pill, shown only when there is
     /// something to jump to.</summary>
     [RelayCommand] private void JumpToRules() => _jumpToRecipe?.Invoke();
-    [RelayCommand] private void EditIngredient() => _editIngredient();
+
+    /// <summary>The editor is for changing the layer, so it follows the edit lock: opening it on a
+    /// locked book let the author paint work that Save then refused, leaving only Discard. Looking at
+    /// a layer is the viewer's job (<see cref="PopOutCommand"/>), which the lock never touches.</summary>
+    private bool CanEditIngredient() => _isEditing();
+
+    [RelayCommand(CanExecute = nameof(CanEditIngredient))]
+    private void EditIngredient()
+    {
+        if (CanEditIngredient()) _editIngredient();     // RelayCommand.Execute does not consult CanExecute
+    }
+
+    /// <summary>The pencil's tooltip: says why it is dim while the book is locked.</summary>
+    public string EditTip => _isEditing()
+        ? "Edit variant images, names and weights"
+        : "Editing is locked. Unlock to edit this layer - or open it in the viewer to look.";
+
+    /// <summary>Opens the layer in its own viewer window; set by the Explorer that owns the book.
+    /// Null leaves <see cref="PopOutCommand"/> disabled.</summary>
+    public Action? PopOutAction
+    {
+        get => _popOut;
+        set { _popOut = value; PopOutCommand.NotifyCanExecuteChanged(); }
+    }
+    private Action? _popOut;
+
+    private bool CanPopOut() => _popOut is not null && !_disposed;
+
+    /// <summary>The hero's viewer button, available whatever the lock says: looking is not editing.</summary>
+    [RelayCommand(CanExecute = nameof(CanPopOut))]
+    private void PopOut() { if (CanPopOut()) _popOut!(); }
 
     /// <summary>Opens the Rise page on the selected variant. Rise is read-and-paint: the page itself
     /// gates Save on the edit lock, so this is available on a locked book too, as the pencil is.
@@ -760,11 +792,6 @@ public partial class IngredientDetailViewModel : ViewModelBase, IDisposable
         _dialogs is null
             ? Task.CompletedTask
             : _dialogs.ShowErrorAsync("Could not export preview", message);
-    // There is deliberately no CanEdit here any more. One existed, referenced by nothing — a
-    // predicate written to gate the pencil and never attached to it — which read as though the
-    // pencil were lock-gated while EditIngredientCommand carries no CanExecute at all. The pencil
-    // stays ungated on purpose (the editor is also how you LOOK at a layer); what is gated is the
-    // editor's Save, see IngredientEditorViewModel.IsReadOnly.
 
     private bool _disposed;
     /// <summary>Frees every rendered swatch and thumbnail without materializing lazy swatches.</summary>
